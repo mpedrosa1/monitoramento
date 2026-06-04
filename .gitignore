@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+build/
+*.exe
+.env
+.env.local
+.env.example
+apps/web/.env.local
+services/api/.env
+services/api/vendor/
+services/api/api.exe
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
