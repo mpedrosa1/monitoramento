@@ -1,43 +1,5 @@
 import type { SnmpPonto, SnmpTipoDado } from "./types";
 
-export type SnmpPreset = Omit<SnmpPonto, "_localId">;
-
-/** OIDs comuns da MIB-2 (system group), como no Scada-LTS / browsers MIB. */
-export const SNMP_MIB2_PRESETS: SnmpPreset[] = [
-  {
-    nome: "Descrição do sistema",
-    oid: "1.3.6.1.2.1.1.1.0",
-    tipoDado: "texto",
-    unidade: "",
-    descricao: "sysDescr — fabricante, modelo e versão do firmware",
-  },
-  {
-    nome: "Tempo ativo",
-    oid: "1.3.6.1.2.1.1.3.0",
-    tipoDado: "tempo",
-    unidade: "timeticks",
-    descricao: "sysUpTime — tempo desde o último boot do agente SNMP",
-  },
-  {
-    nome: "Contato",
-    oid: "1.3.6.1.2.1.1.4.0",
-    tipoDado: "texto",
-    descricao: "sysContact — pessoa responsável pelo equipamento",
-  },
-  {
-    nome: "Nome do host",
-    oid: "1.3.6.1.2.1.1.5.0",
-    tipoDado: "texto",
-    descricao: "sysName — hostname configurado no dispositivo",
-  },
-  {
-    nome: "Localização",
-    oid: "1.3.6.1.2.1.1.6.0",
-    tipoDado: "texto",
-    descricao: "sysLocation — local físico do equipamento",
-  },
-];
-
 export const SNMP_TIPOS_DADO: SnmpTipoDado[] = [
   "numerico",
   "texto",
@@ -52,6 +14,7 @@ export function newSnmpPonto(partial?: Partial<SnmpPonto>): SnmpPonto {
     nome: "",
     oid: "",
     tipoDado: "numerico",
+    multiplicador: 1,
     unidade: "",
     descricao: "",
     desabilitado: false,
@@ -66,6 +29,8 @@ export function normalizeSnmpPontos(
     return config.pontos.map((p) => ({
       ...p,
       _localId: p._localId ?? crypto.randomUUID(),
+      multiplicador:
+        p.tipoDado === "numerico" ? (p.multiplicador ?? 1) : undefined,
     }));
   }
   if (config?.oids?.length) {
@@ -73,15 +38,27 @@ export function normalizeSnmpPontos(
       newSnmpPonto({ nome: `Ponto ${i + 1}`, oid, tipoDado: "numerico" })
     );
   }
-  return [newSnmpPonto(SNMP_MIB2_PRESETS[1])];
+  return [];
 }
 
 export function serializeSnmpPontos(pontos: SnmpPonto[]): SnmpPonto[] {
   return pontos
     .filter((p) => p.oid.trim())
-    .map(({ _localId: _, ...p }) => ({
-      ...p,
-      nome: p.nome.trim() || p.oid.trim(),
-      oid: p.oid.trim().replace(/^\./, ""),
-    }));
+    .map(({ _localId: _, ...p }) => {
+      const base = {
+        ...p,
+        nome: p.nome.trim() || p.oid.trim(),
+        oid: p.oid.trim().replace(/^\./, ""),
+      };
+      if (base.tipoDado !== "numerico") {
+        const { multiplicador: _m, ...rest } = base;
+        return rest;
+      }
+      const mult = base.multiplicador;
+      if (mult == null || mult === 1) {
+        const { multiplicador: _m, ...rest } = base;
+        return rest;
+      }
+      return base;
+    });
 }

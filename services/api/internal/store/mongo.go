@@ -243,6 +243,28 @@ func (s *MongoStore) UpdateDispositivo(ctx context.Context, d *domain.Dispositiv
 	return s.UpdateEquipamento(ctx, d)
 }
 
+func (s *MongoStore) DeleteEquipamento(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("equipamentos").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		result, err = s.col("dispositivos").DeleteOne(ctx, bson.M{"_id": id})
+		if err != nil {
+			return err
+		}
+		if result.DeletedCount == 0 {
+			return mongoErrNotFound()
+		}
+	}
+	_, err = s.col("unidades").UpdateMany(
+		ctx,
+		bson.M{"equipamentos.equipamentoId": id},
+		bson.M{"$pull": bson.M{"equipamentos": bson.M{"equipamentoId": id}}},
+	)
+	return err
+}
+
 func (s *MongoStore) CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error {
 	e.CreatedAt = time.Now().UTC()
 	res, err := s.col("eventos_monitoramento").InsertOne(ctx, e)

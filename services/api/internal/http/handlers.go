@@ -20,6 +20,14 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// writeJSONList evita `null` no JSON quando o slice Go é nil (lista vazia).
+func writeJSONList[T any](w http.ResponseWriter, status int, list []T) {
+	if list == nil {
+		list = []T{}
+	}
+	writeJSON(w, status, list)
+}
+
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
@@ -59,7 +67,7 @@ func (a *API) ListChamados(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	writeJSONList(w, http.StatusOK, list)
 }
 
 func (a *API) GetChamado(w http.ResponseWriter, r *http.Request, id string) {
@@ -125,7 +133,7 @@ func (a *API) ListUnidades(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	writeJSONList(w, http.StatusOK, list)
 }
 
 func (a *API) CreateUnidade(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +178,7 @@ func (a *API) ListColaboradores(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	writeJSONList(w, http.StatusOK, list)
 }
 
 func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +223,7 @@ func (a *API) ListEquipamentos(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	writeJSONList(w, http.StatusOK, list)
 }
 
 func (a *API) CreateEquipamento(w http.ResponseWriter, r *http.Request) {
@@ -264,6 +272,23 @@ func (a *API) UpdateEquipamento(w http.ResponseWriter, r *http.Request, id strin
 	writeJSON(w, http.StatusOK, e)
 }
 
+func (a *API) DeleteEquipamento(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteEquipamento(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) ListEventos(w http.ResponseWriter, r *http.Request) {
 	limit := parseLimit(r.URL.Query().Get("limit"), 20)
 	list, err := a.Store.ListEventos(r.Context(), limit)
@@ -271,5 +296,5 @@ func (a *API) ListEventos(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	writeJSONList(w, http.StatusOK, list)
 }

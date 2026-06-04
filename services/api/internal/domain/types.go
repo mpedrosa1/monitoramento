@@ -107,8 +107,9 @@ type DispositivoConfig struct {
 type SnmpPonto struct {
 	Nome         string `json:"nome" bson:"nome"`
 	OID          string `json:"oid" bson:"oid"`
-	Unidade      string `json:"unidade,omitempty" bson:"unidade,omitempty"`
-	TipoDado     string `json:"tipoDado,omitempty" bson:"tipoDado,omitempty"`
+	Unidade       string  `json:"unidade,omitempty" bson:"unidade,omitempty"`
+	Multiplicador float64 `json:"multiplicador,omitempty" bson:"multiplicador,omitempty"`
+	TipoDado      string  `json:"tipoDado,omitempty" bson:"tipoDado,omitempty"`
 	Descricao    string `json:"descricao,omitempty" bson:"descricao,omitempty"`
 	Desabilitado bool   `json:"desabilitado,omitempty" bson:"desabilitado,omitempty"`
 }

@@ -232,6 +232,35 @@ func (s *MemoryStore) UpdateDispositivo(ctx context.Context, d *domain.Dispositi
 	return s.UpdateEquipamento(ctx, d)
 }
 
+func (s *MemoryStore) DeleteEquipamento(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.dispositivos[:0]
+	for _, e := range s.dispositivos {
+		if e.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, e)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.dispositivos = next
+	for i := range s.unidades {
+		links := s.unidades[i].Equipamentos
+		filtered := links[:0]
+		for _, l := range links {
+			if l.EquipamentoID != id {
+				filtered = append(filtered, l)
+			}
+		}
+		s.unidades[i].Equipamentos = filtered
+	}
+	return nil
+}
+
 func (s *MemoryStore) CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

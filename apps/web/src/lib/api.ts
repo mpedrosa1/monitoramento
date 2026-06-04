@@ -16,7 +16,19 @@ export async function apiFetch<T>(
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error((err as { error?: string }).error ?? "Erro na API");
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  const text = await res.text();
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
+}
+
+/** Garante array quando a API retorna `null` para lista vazia. */
+export function asArray<T>(data: T[] | null | undefined): T[] {
+  return Array.isArray(data) ? data : [];
 }
 
 export { API_URL };

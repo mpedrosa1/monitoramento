@@ -20,6 +20,8 @@ export interface SnmpPonto {
   nome: string;
   oid: string;
   unidade?: string;
+  /** Aplicado na exibição quando tipoDado é "numerico". */
+  multiplicador?: number;
   tipoDado?: SnmpTipoDado;
   descricao?: string;
   desabilitado?: boolean;
