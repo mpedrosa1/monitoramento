@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -24,6 +25,15 @@ func (t MonitorTarget) Endpoint() string {
 		return fmt.Sprintf("%s:%d", t.Host, t.Porta)
 	}
 	return t.Host
+}
+
+// MonitorTargetEqual indica se dois alvos devem usar a mesma goroutine de coleta.
+func MonitorTargetEqual(a, b MonitorTarget) bool {
+	return a.Host == b.Host &&
+		a.Porta == b.Porta &&
+		a.IntervaloS == b.IntervaloS &&
+		a.Tipo == b.Tipo &&
+		reflect.DeepEqual(a.Config, b.Config)
 }
 
 func MonitorTargetID(unidadeID, equipamentoID primitive.ObjectID) string {

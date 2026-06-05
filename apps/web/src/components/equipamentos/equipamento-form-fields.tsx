@@ -19,6 +19,16 @@ import {
 const tiposEquipamento: TipoEquipamento[] = ["nobreak", "sensor"];
 const tiposMonitoramento: TipoMonitoramento[] = ["modbus", "snmp"];
 
+const tipoEquipamentoItems = tiposEquipamento.map((t) => ({
+  value: t,
+  label: tipoEquipamentoLabel[t],
+}));
+
+const tipoMonitoramentoItems = tiposMonitoramento.map((t) => ({
+  value: t,
+  label: tipoMonitoramentoLabel[t],
+}));
+
 export function EquipamentoFormFields({
   nome,
   onNomeChange,
@@ -68,6 +78,7 @@ export function EquipamentoFormFields({
         <div className="grid gap-2">
           <Label>Tipo de equipamento</Label>
           <Select
+            items={tipoEquipamentoItems}
             value={tipoEquipamento}
             onValueChange={(v) => onTipoEquipamentoChange(v as TipoEquipamento)}
           >
@@ -86,6 +97,7 @@ export function EquipamentoFormFields({
         <div className="grid gap-2">
           <Label>Tipo de monitoramento</Label>
           <Select
+            items={tipoMonitoramentoItems}
             value={tipoMonitoramento}
             onValueChange={(v) => {
               const t = v as TipoMonitoramento;

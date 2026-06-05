@@ -37,12 +37,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8081/ws
 
 ### MongoDB Atlas
 
-Defina `MONGODB_URI` com a connection string do Atlas. Execute o seed (apenas se o banco estiver vazio):
-
-```bash
-cd services/api
-go run ./cmd/seed
-```
+Defina `MONGODB_URI` com a connection string do Atlas. O banco inicia vazio — cadastre unidades, equipamentos, colaboradores e chamados pela interface.
 
 ## Executar localmente
 

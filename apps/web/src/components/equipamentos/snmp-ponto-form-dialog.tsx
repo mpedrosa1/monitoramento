@@ -22,6 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const tipoDadoItems = SNMP_TIPOS_DADO.map((t) => ({
+  value: t,
+  label: snmpTipoDadoLabel[t],
+}));
+
 export function SnmpPontoFormDialog({
   open,
   onOpenChange,
@@ -88,6 +93,7 @@ export function SnmpPontoFormDialog({
             <div className="grid gap-1.5">
               <Label>Tipo de dado</Label>
               <Select
+                items={tipoDadoItems}
                 value={draft.tipoDado ?? "numerico"}
                 onValueChange={(v) => {
                   const tipoDado = v as SnmpTipoDado;

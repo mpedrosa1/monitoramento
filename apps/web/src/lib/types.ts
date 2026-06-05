@@ -47,6 +47,20 @@ export interface UnidadeEndereco {
   estado: string;
 }
 
+export interface AntenaProxima {
+  id: string;
+  nomeEntidade: string;
+  tecnologia: string;
+  latitude: number;
+  longitude: number;
+  azimute?: string;
+  potenciaW?: string;
+  alturaAntena?: string;
+  municipio: string;
+  numEstacao: string;
+  distanciaKm: number;
+}
+
 export interface Unidade {
   id: string;
   /** ID institucional (ex.: PC-01). */
@@ -79,10 +93,23 @@ export interface Colaborador {
 
 export interface Chamado {
   id: string;
+  numero?: string;
   titulo: string;
   descricao: string;
   status: ChamadoStatus;
   unidadeId: string;
+  abertoPor?: string;
+  /** Data no formato YYYY-MM-DD */
+  data?: string;
+  hora?: string;
+  horaTeste?: string;
+  sinaisDetectados?: string[];
+  sinaisOutros?: string;
+  locaisAfetados?: string;
+  comunicacao?: string[];
+  comunicacaoOutros?: string;
+  emailAssunto?: string;
+  emailCorpo?: string;
   createdAt: string;
   updatedAt: string;
 }

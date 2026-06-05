@@ -49,7 +49,7 @@ func decodeUnidadeBody(r io.Reader) (domain.Unidade, error) {
 	}
 
 	u := domain.Unidade{
-		Codigo:       strings.TrimSpace(in.Codigo),
+		Codigo:       sanitizeUnidadeCodigo(in.Codigo),
 		Nome:         strings.TrimSpace(in.Nome),
 		Diretores:    in.Diretores,
 		Telefones:    in.Telefones,
@@ -65,6 +65,9 @@ func decodeUnidadeBody(r io.Reader) (domain.Unidade, error) {
 	}
 	if in.Longitude != nil {
 		u.Longitude = *in.Longitude
+	}
+	if u.Codigo == "" {
+		return domain.Unidade{}, fmt.Errorf("codigo (ID) deve conter apenas números")
 	}
 	return u, nil
 }
@@ -147,4 +150,30 @@ func parseAlertaOfflineS(raw json.RawMessage) int {
 		}
 	}
 	return 60
+}
+
+func sanitizeUnidadeCodigo(raw string) string {
+	var b strings.Builder
+	for _, r := range raw {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func compareUnidadeCodigo(a, b string) int {
+	na, ea := strconv.Atoi(a)
+	nb, eb := strconv.Atoi(b)
+	if ea == nil && eb == nil {
+		switch {
+		case na < nb:
+			return -1
+		case na > nb:
+			return 1
+		default:
+			return 0
+		}
+	}
+	return strings.Compare(a, b)
 }

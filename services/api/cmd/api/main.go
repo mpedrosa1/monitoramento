@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mmrtec/monitoramento/api/internal/antenas"
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/config"
@@ -30,21 +31,14 @@ func main() {
 		mongoStore, err := store.NewMongoStore(ctx, cfg.MongoURI, cfg.MongoDatabase)
 		if err != nil {
 			log.Printf("mongo indisponível, usando memória: %v", err)
-			mem := store.NewMemoryStore()
-			_ = mem.SeedIfEmpty(ctx)
-			st = mem
+			st = store.NewMemoryStore()
 		} else {
-			if err := mongoStore.SeedIfEmpty(ctx); err != nil {
-				log.Fatalf("seed: %v", err)
-			}
 			st = mongoStore
 			log.Println("conectado ao MongoDB")
 		}
 	} else {
 		log.Println("MONGODB_URI vazio — store em memória")
-		mem := store.NewMemoryStore()
-		_ = mem.SeedIfEmpty(ctx)
-		st = mem
+		st = store.NewMemoryStore()
 	}
 
 	stateCache := cache.NewStateCache()
@@ -55,7 +49,20 @@ func main() {
 	colCtx, colCancel := context.WithCancel(context.Background())
 	col.Start(colCtx)
 
-	api := &httpapi.API{Store: st, Cache: stateCache, Collector: col}
+	var antenasStore *antenas.Store
+	if antenasPath := config.ResolveAntenasDBPath(); antenasPath != "" {
+		as, err := antenas.Open(antenasPath)
+		if err != nil {
+			log.Printf("base de antenas indisponível: %v", err)
+		} else {
+			antenasStore = as
+			log.Printf("base de antenas carregada: %s", antenasPath)
+		}
+	} else {
+		log.Println("ANTENAS_DB_PATH não configurado e base/antenas.db não encontrado")
+	}
+
+	api := &httpapi.API{Store: st, Cache: stateCache, Collector: col, Antenas: antenasStore}
 	router := httpapi.NewRouter(cfg, api, hub)
 
 	addr := ":" + cfg.Port

@@ -58,6 +58,8 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 			})
 		})
 
+		r.Get("/antenas/proximas", api.ListAntenasProximas)
+
 		r.Route("/equipamentos", func(r chi.Router) {
 			r.Get("/", api.ListEquipamentos)
 			r.Post("/", api.CreateEquipamento)

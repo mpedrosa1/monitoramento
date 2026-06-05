@@ -65,7 +65,16 @@ function Remove-Utf8Bom([string]$path) {
 }
 Remove-Utf8Bom (Join-Path $build "go.mod")
 
+$antenasDb = Join-Path $root "base\antenas.db"
+if (Test-Path $antenasDb) {
+  $env:ANTENAS_DB_PATH = $antenasDb
+  Write-Host "Antenas DB: $antenasDb"
+} else {
+  Write-Host "AVISO: base\antenas.db não encontrado — mapa de antenas ficará indisponível."
+}
+
 Set-Location $build
+$env:GOFLAGS = "-mod=mod"
 Write-Host "Atualizando módulos Go..."
 go mod tidy
 

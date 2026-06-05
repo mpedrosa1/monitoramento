@@ -9,7 +9,6 @@ import (
 
 type Store interface {
 	Ping(ctx context.Context) error
-	SeedIfEmpty(ctx context.Context) error
 
 	ListUnidades(ctx context.Context) ([]domain.Unidade, error)
 	GetUnidade(ctx context.Context, id primitive.ObjectID) (*domain.Unidade, error)

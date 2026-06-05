@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   tipoEquipamentoLabel,
@@ -13,6 +13,7 @@ import {
   defaultPortaForEquipamento,
   labelEquipamentoCatalogo,
   nomeEquipamentoVinculo,
+  sanitizeUnidadeCodigo,
   type UnidadeFormState,
 } from "@/lib/unidade-form";
 import {
@@ -62,6 +63,20 @@ export function UnidadeFormFields({
   const [newNomeLocal, setNewNomeLocal] = useState("");
 
   const selectedEquip = catalogo.find((e) => e.id === newEquipId);
+
+  const estadoItems = useMemo(
+    () => BR_ESTADOS.map((uf) => ({ value: uf, label: uf })),
+    []
+  );
+
+  const equipamentoItems = useMemo(
+    () =>
+      catalogo.map((e) => ({
+        value: e.id,
+        label: labelEquipamentoCatalogo(e),
+      })),
+    [catalogo]
+  );
 
   const [cepLoading, setCepLoading] = useState(false);
   const [cepErro, setCepErro] = useState<string | null>(null);
@@ -177,9 +192,17 @@ export function UnidadeFormFields({
         <Input
           id="unidade-id"
           value={form.codigo}
-          onChange={(e) => onChange({ codigo: e.target.value })}
-          placeholder="Ex.: PC-01"
+          onChange={(e) =>
+            onChange({ codigo: sanitizeUnidadeCodigo(e.target.value) })
+          }
+          placeholder="Ex.: 1"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
         />
+        <p className="text-xs text-muted-foreground">
+          Somente números.
+        </p>
       </div>
 
       <div className="grid gap-2">
@@ -283,6 +306,7 @@ export function UnidadeFormFields({
             <Label className="text-xs">Estado</Label>
             <Select
               key={`uf-${form.endereco.estado || "vazio"}`}
+              items={estadoItems}
               value={
                 form.endereco.estado &&
                 BR_ESTADOS.includes(
@@ -437,7 +461,8 @@ export function UnidadeFormFields({
               <div className="grid gap-2">
                 <Label className="text-xs">Equipamento do catálogo</Label>
                 <Select
-                  value={newEquipId || ""}
+                  items={equipamentoItems}
+                  value={newEquipId || null}
                   onValueChange={(v) => {
                     const id = v ?? "";
                     setNewEquipId(id);

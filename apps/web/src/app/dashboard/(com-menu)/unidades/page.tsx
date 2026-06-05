@@ -9,6 +9,8 @@ import {
   emptyUnidadeForm,
   formToUnidadeBody,
   formatUnidadeEndereco,
+  isValidUnidadeCodigo,
+  sortUnidadesByCodigo,
   unidadeToForm,
   type UnidadeFormState,
 } from "@/lib/unidade-form";
@@ -64,6 +66,8 @@ export default function UnidadesPage() {
     const map = new Map(catalogo.map((e) => [e.id, e.nome]));
     return (id: string) => map.get(id) ?? id;
   }, [catalogo]);
+
+  const sortedList = useMemo(() => sortUnidadesByCodigo(list), [list]);
 
   const load = useCallback(async () => {
     const [uns, eqs] = await Promise.all([
@@ -152,8 +156,9 @@ export default function UnidadesPage() {
   }
 
   const createValid =
-    createForm.codigo.trim() !== "" && createForm.nome.trim() !== "";
-  const editValid = editForm.codigo.trim() !== "" && editForm.nome.trim() !== "";
+    isValidUnidadeCodigo(createForm.codigo) && createForm.nome.trim() !== "";
+  const editValid =
+    isValidUnidadeCodigo(editForm.codigo) && editForm.nome.trim() !== "";
 
   return (
     <>
@@ -194,7 +199,7 @@ export default function UnidadesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.length === 0 ? (
+            {sortedList.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={8}
@@ -204,7 +209,7 @@ export default function UnidadesPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              list.map((u) => {
+              sortedList.map((u) => {
                 const hostOnline = unidadeHostOnline(u);
                 return (
                 <TableRow

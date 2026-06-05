@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import { Map as MapIcon, Phone, Satellite } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatCoord } from "@/lib/geocode";
@@ -12,6 +13,7 @@ import {
   nomeEquipamentoVinculo,
   unidadeToForm,
 } from "@/lib/unidade-form";
+import { UnidadeChamadosSection } from "@/components/unidades/unidade-chamados-section";
 
 function DetailRow({
   label,
@@ -28,12 +30,55 @@ function DetailRow({
   );
 }
 
-/** Badge com detalhes ao passar o mouse (estilo ONLINE/OFFLINE). */
-function InfoTag({ label, detail }: { label: string; detail: string }) {
+function SatelliteStatusIcon({ inactive }: { inactive: boolean }) {
+  return (
+    <span className="relative inline-flex shrink-0" aria-hidden>
+      <Satellite className="h-3.5 w-3.5" strokeWidth={2} />
+      {inactive ? (
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="block h-[1.5px] w-[140%] rotate-45 rounded-full bg-current opacity-95" />
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function ConnectivityStatusBadge({
+  hasIp,
+  online,
+}: {
+  hasIp: boolean;
+  online: boolean;
+}) {
+  const label = !hasIp ? "SEM IP" : online ? "ONLINE" : "OFFLINE";
+  const inactive = !hasIp || !online;
+
+  return (
+    <Badge
+      variant={!hasIp ? "secondary" : online ? "default" : "destructive"}
+      className="gap-1.5"
+    >
+      <SatelliteStatusIcon inactive={inactive} />
+      {label}
+    </Badge>
+  );
+}
+
+/** Badge com detalhes ao passar o mouse. */
+function InfoTag({
+  label,
+  detail,
+  icon,
+}: {
+  label: string;
+  detail: string;
+  icon?: ReactNode;
+}) {
   if (!detail.trim()) return null;
   return (
     <span className="group/tag relative inline-flex">
-      <Badge variant="outline" className="cursor-default select-none">
+      <Badge variant="outline" className="cursor-default select-none gap-1.5">
+        {icon}
         {label}
       </Badge>
       <span
@@ -46,7 +91,11 @@ function InfoTag({ label, detail }: { label: string; detail: string }) {
   );
 }
 
-function formatEnderecoTooltip(e: UnidadeEndereco): string {
+function formatEnderecoTooltip(
+  e: UnidadeEndereco,
+  latitude?: number | null,
+  longitude?: number | null
+): string {
   const lines = [
     e.logradouro && e.numero
       ? `${e.logradouro}, nº ${e.numero}`
@@ -56,10 +105,18 @@ function formatEnderecoTooltip(e: UnidadeEndereco): string {
     e.cidade && e.estado ? `${e.cidade} — ${e.estado}` : e.cidade || e.estado,
     e.cep && `CEP ${e.cep}`,
   ].filter(Boolean);
+
+  const lat =
+    latitude != null && latitude !== 0 ? formatCoord(latitude) : null;
+  const lng =
+    longitude != null && longitude !== 0 ? formatCoord(longitude) : null;
+  if (lat) lines.push(`Latitude: ${lat}`);
+  if (lng) lines.push(`Longitude: ${lng}`);
+
   return lines.join("\n");
 }
 
-function formatInformacoesTooltip(form: ReturnType<typeof unidadeToForm>): string {
+function formatContatoTooltip(form: ReturnType<typeof unidadeToForm>): string {
   const blocos: string[] = [];
 
   const diretores = form.diretores.map((s) => s.trim()).filter(Boolean);
@@ -97,27 +154,49 @@ export function UnidadeDetailPanel({
     [catalogo]
   );
 
-  const enderecoTooltip = formatEnderecoTooltip(form.endereco);
-  const informacoesTooltip = formatInformacoesTooltip(form);
+  const enderecoTooltip = formatEnderecoTooltip(
+    form.endereco,
+    unidade.latitude,
+    unidade.longitude
+  );
+  const contatoTooltip = formatContatoTooltip(form);
 
   return (
     <div className="space-y-6 pr-2">
       <div>
-        <p className="font-mono text-xs text-muted-foreground">{unidade.codigo}</p>
-        <h2 className="text-xl font-semibold tracking-tight">{unidade.nome}</h2>
+        <p className="font-mono text-xs text-muted-foreground">
+          ID {unidade.codigo}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge variant={hostOnline ? "default" : "destructive"}>
-            {unidade.ip?.trim()
-              ? hostOnline
-                ? "ONLINE"
-                : "OFFLINE"
-              : "SEM IP"}
-          </Badge>
+          <ConnectivityStatusBadge
+            hasIp={Boolean(unidade.ip?.trim())}
+            online={hostOnline}
+          />
           {enderecoTooltip ? (
-            <InfoTag label="Endereço" detail={enderecoTooltip} />
+            <InfoTag
+              label="Endereço"
+              detail={enderecoTooltip}
+              icon={
+                <MapIcon
+                  className="h-3.5 w-3.5 shrink-0"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              }
+            />
           ) : null}
-          {informacoesTooltip ? (
-            <InfoTag label="Informações" detail={informacoesTooltip} />
+          {contatoTooltip ? (
+            <InfoTag
+              label="Contato"
+              detail={contatoTooltip}
+              icon={
+                <Phone
+                  className="h-3.5 w-3.5 shrink-0"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              }
+            />
           ) : null}
         </div>
       </div>
@@ -134,22 +213,6 @@ export function UnidadeDetailPanel({
         <DetailRow
           label="Alerta offline"
           value={`${unidade.alertaOfflineS ?? 60} s`}
-        />
-        <DetailRow
-          label="Latitude"
-          value={
-            unidade.latitude != null && unidade.latitude !== 0
-              ? formatCoord(unidade.latitude)
-              : "—"
-          }
-        />
-        <DetailRow
-          label="Longitude"
-          value={
-            unidade.longitude != null && unidade.longitude !== 0
-              ? formatCoord(unidade.longitude)
-              : "—"
-          }
         />
       </section>
 
@@ -196,6 +259,10 @@ export function UnidadeDetailPanel({
           </p>
         )}
       </section>
+
+      <Separator />
+
+      <UnidadeChamadosSection unidade={unidade} />
     </div>
   );
 }

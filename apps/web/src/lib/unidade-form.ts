@@ -59,6 +59,31 @@ export function emptyUnidadeForm(): UnidadeFormState {
   };
 }
 
+/** Mantém apenas dígitos no ID institucional da unidade. */
+export function sanitizeUnidadeCodigo(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
+
+export function isValidUnidadeCodigo(codigo: string): boolean {
+  return /^\d+$/.test(codigo.trim());
+}
+
+/** Ordenação crescente por ID numérico (fallback lexicográfico). */
+export function compareUnidadeCodigo(a: string, b: string): number {
+  const da = sanitizeUnidadeCodigo(a);
+  const db = sanitizeUnidadeCodigo(b);
+  const na = Number(da);
+  const nb = Number(db);
+  if (da && db && Number.isFinite(na) && Number.isFinite(nb)) {
+    return na - nb;
+  }
+  return da.localeCompare(db, undefined, { numeric: true });
+}
+
+export function sortUnidadesByCodigo(list: Unidade[]): Unidade[] {
+  return [...list].sort((a, b) => compareUnidadeCodigo(a.codigo, b.codigo));
+}
+
 function normalizeEndereco(raw: unknown): UnidadeEndereco {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const o = raw as Record<string, unknown>;
@@ -86,7 +111,7 @@ function normalizeStringList(raw: unknown): string[] {
 
 export function unidadeToForm(u: Unidade): UnidadeFormState {
   return {
-    codigo: u.codigo ?? "",
+    codigo: sanitizeUnidadeCodigo(u.codigo ?? ""),
     nome: u.nome ?? "",
     diretores: normalizeStringList(u.diretores),
     telefones: normalizeStringList(u.telefones),
@@ -120,7 +145,7 @@ export function formToUnidadeBody(
   const lat = Number.parseFloat(form.latitude.replace(",", "."));
   const lng = Number.parseFloat(form.longitude.replace(",", "."));
   const body: Record<string, unknown> = {
-    codigo: form.codigo.trim(),
+    codigo: sanitizeUnidadeCodigo(form.codigo),
     nome: form.nome.trim(),
     diretores: filterNonEmpty(form.diretores),
     telefones: filterNonEmpty(form.telefones),

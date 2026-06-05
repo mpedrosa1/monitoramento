@@ -3,7 +3,9 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 
+	"github.com/mmrtec/monitoramento/api/internal/antenas"
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
@@ -15,6 +17,7 @@ type API struct {
 	Store     store.Store
 	Cache     *cache.StateCache
 	Collector *collector.Collector
+	Antenas   *antenas.Store
 }
 
 func (a *API) refreshCollector() {
@@ -105,6 +108,12 @@ func (a *API) CreateChamado(w http.ResponseWriter, r *http.Request) {
 	if c.Status == "" {
 		c.Status = domain.ChamadoAberto
 	}
+	if c.Titulo == "" && c.EmailAssunto != "" {
+		c.Titulo = c.EmailAssunto
+	}
+	if c.Descricao == "" && c.EmailCorpo != "" {
+		c.Descricao = c.EmailCorpo
+	}
 	if err := a.Store.CreateChamado(r.Context(), &c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -144,6 +153,9 @@ func (a *API) ListUnidades(w http.ResponseWriter, r *http.Request) {
 	for i := range list {
 		normalizeUnidade(&list[i])
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return compareUnidadeCodigo(list[i].Codigo, list[j].Codigo) < 0
+	})
 	writeJSONList(w, http.StatusOK, list)
 }
 

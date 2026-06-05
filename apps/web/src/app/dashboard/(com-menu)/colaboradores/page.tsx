@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch, asArray } from "@/lib/api";
 import type { Colaborador, ColaboradorStatus, Unidade } from "@/lib/types";
 import { colaboradorStatusLabel } from "@/lib/labels";
@@ -27,6 +27,11 @@ const statusOptions: ColaboradorStatus[] = [
   "atestado",
 ];
 
+const statusSelectItems = statusOptions.map((s) => ({
+  value: s,
+  label: colaboradorStatusLabel[s],
+}));
+
 export default function ColaboradoresPage() {
   const { status: socketStatus } = useMonitoring();
   const [list, setList] = useState<Colaborador[]>([]);
@@ -36,14 +41,20 @@ export default function ColaboradoresPage() {
   const [colStatus, setColStatus] = useState<ColaboradorStatus>("escritorio");
   const [unidadeId, setUnidadeId] = useState("");
 
+  const unidadeSelectItems = useMemo(
+    () => unidades.map((u) => ({ value: u.id, label: u.nome })),
+    [unidades]
+  );
+
   const load = useCallback(async () => {
     const [cols, uns] = await Promise.all([
       apiFetch<Colaborador[] | null>("/api/v1/colaboradores"),
       apiFetch<Unidade[] | null>("/api/v1/unidades"),
     ]);
+    const listaUnidades = asArray(uns);
     setList(asArray(cols));
-    setUnidades(asArray(uns));
-    if (!unidadeId && uns[0]) setUnidadeId(uns[0].id);
+    setUnidades(listaUnidades);
+    if (!unidadeId && listaUnidades[0]) setUnidadeId(listaUnidades[0].id);
   }, [unidadeId]);
 
   useEffect(() => {
@@ -95,6 +106,7 @@ export default function ColaboradoresPage() {
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
+                  items={statusSelectItems}
                   value={colStatus}
                   onValueChange={(v) => setColStatus(v as ColaboradorStatus)}
                 >
@@ -113,7 +125,8 @@ export default function ColaboradoresPage() {
               <div className="grid gap-2">
                 <Label>Unidade</Label>
                 <Select
-                  value={unidadeId}
+                  items={unidadeSelectItems}
+                  value={unidadeId || null}
                   onValueChange={(v) => setUnidadeId(v ?? "")}
                 >
                   <SelectTrigger>

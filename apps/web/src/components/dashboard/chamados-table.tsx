@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { chamadoStatusLabel, chamadoStatusVariant } from "@/lib/labels";
+import { formatNumeroExibicao } from "@/lib/chamado-email";
 import type { Chamado } from "@/lib/types";
 
 function formatDate(iso: string) {
@@ -34,7 +35,7 @@ export function ChamadosTable({ chamados }: { chamados: Chamado[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Título</TableHead>
+          <TableHead>Chamado</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Data</TableHead>
         </TableRow>
@@ -42,7 +43,9 @@ export function ChamadosTable({ chamados }: { chamados: Chamado[] }) {
       <TableBody>
         {chamados.map((c) => (
           <TableRow key={c.id}>
-            <TableCell className="font-medium">{c.titulo}</TableCell>
+            <TableCell className="font-medium">
+              {c.numero ? formatNumeroExibicao(c.numero) : c.titulo}
+            </TableCell>
             <TableCell>
               <Badge variant={chamadoStatusVariant[c.status]}>
                 {chamadoStatusLabel[c.status]}

@@ -17,6 +17,11 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/ws"
 )
 
+type targetWorker struct {
+	cancel context.CancelFunc
+	target domain.MonitorTarget
+}
+
 type Collector struct {
 	cfg       config.Config
 	store     store.Store
@@ -25,7 +30,7 @@ type Collector struct {
 	parentCtx context.Context
 	cancel    context.CancelFunc
 	mu        sync.Mutex
-	active    map[string]context.CancelFunc
+	active    map[string]targetWorker
 	wg        sync.WaitGroup
 }
 
@@ -35,7 +40,7 @@ func New(cfg config.Config, st store.Store, state *cache.StateCache, hub *ws.Hub
 		store:  st,
 		cache:  state,
 		hub:    hub,
-		active: make(map[string]context.CancelFunc),
+		active: make(map[string]targetWorker),
 	}
 }
 
@@ -69,22 +74,35 @@ func (c *Collector) RefreshTargets() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for id, cancel := range c.active {
-		if _, ok := want[id]; !ok {
-			cancel()
+	started := 0
+	restarted := 0
+	changed := make(map[string]bool)
+
+	for id, w := range c.active {
+		cur, ok := want[id]
+		if !ok {
+			w.cancel()
 			delete(c.active, id)
+			continue
+		}
+		if !domain.MonitorTargetEqual(w.target, cur) {
+			w.cancel()
+			delete(c.active, id)
+			changed[id] = true
+			restarted++
 		}
 	}
 
-	started := 0
 	for id, t := range want {
 		if _, ok := c.active[id]; ok {
 			continue
 		}
+		if !changed[id] {
+			started++
+		}
 		tctx, cancel := context.WithCancel(c.parentCtx)
-		c.active[id] = cancel
+		c.active[id] = targetWorker{cancel: cancel, target: t}
 		c.wg.Add(1)
-		started++
 		go c.monitorTarget(tctx, t)
 	}
 
@@ -94,7 +112,8 @@ func (c *Collector) RefreshTargets() {
 			pingHosts++
 		}
 	}
-	log.Printf("collector: %d alvos ativos (+%d novos, %d ping ICMP)", len(c.active), started, pingHosts)
+	log.Printf("collector: %d alvos ativos (+%d novos, %d reiniciados, %d ping ICMP)",
+		len(c.active), started, restarted, pingHosts)
 }
 
 func (c *Collector) Stop() {
@@ -102,10 +121,10 @@ func (c *Collector) Stop() {
 		c.cancel()
 	}
 	c.mu.Lock()
-	for _, cancel := range c.active {
-		cancel()
+	for _, w := range c.active {
+		w.cancel()
 	}
-	c.active = make(map[string]context.CancelFunc)
+	c.active = make(map[string]targetWorker)
 	c.mu.Unlock()
 	c.wg.Wait()
 }

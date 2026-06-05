@@ -117,13 +117,25 @@ type Colaborador struct {
 }
 
 type Chamado struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Titulo    string             `json:"titulo" bson:"titulo"`
-	Descricao string             `json:"descricao" bson:"descricao"`
-	Status    ChamadoStatus      `json:"status" bson:"status"`
-	UnidadeID primitive.ObjectID `json:"unidadeId" bson:"unidadeId"`
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Numero            string             `json:"numero,omitempty" bson:"numero,omitempty"`
+	Titulo            string             `json:"titulo" bson:"titulo"`
+	Descricao         string             `json:"descricao" bson:"descricao"`
+	Status            ChamadoStatus      `json:"status" bson:"status"`
+	UnidadeID         primitive.ObjectID `json:"unidadeId" bson:"unidadeId"`
+	AbertoPor         string             `json:"abertoPor,omitempty" bson:"abertoPor,omitempty"`
+	Data              string             `json:"data,omitempty" bson:"data,omitempty"`
+	Hora              string             `json:"hora,omitempty" bson:"hora,omitempty"`
+	HoraTeste         string             `json:"horaTeste,omitempty" bson:"horaTeste,omitempty"`
+	SinaisDetectados  []string           `json:"sinaisDetectados,omitempty" bson:"sinaisDetectados,omitempty"`
+	SinaisOutros      string             `json:"sinaisOutros,omitempty" bson:"sinaisOutros,omitempty"`
+	LocaisAfetados    string             `json:"locaisAfetados,omitempty" bson:"locaisAfetados,omitempty"`
+	Comunicacao       []string           `json:"comunicacao,omitempty" bson:"comunicacao,omitempty"`
+	ComunicacaoOutros string             `json:"comunicacaoOutros,omitempty" bson:"comunicacaoOutros,omitempty"`
+	EmailAssunto      string             `json:"emailAssunto,omitempty" bson:"emailAssunto,omitempty"`
+	EmailCorpo        string             `json:"emailCorpo,omitempty" bson:"emailCorpo,omitempty"`
+	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt         time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Missao struct {

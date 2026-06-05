@@ -17,7 +17,6 @@ type MemoryStore struct {
 	missoes       []domain.Missao
 	dispositivos  []domain.Equipamento
 	eventos       []domain.EventoMonitoramento
-	seeded        bool
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -25,17 +24,6 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) Ping(ctx context.Context) error { return nil }
-
-func (s *MemoryStore) SeedIfEmpty(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.seeded {
-		return nil
-	}
-	seedData(s)
-	s.seeded = true
-	return nil
-}
 
 func (s *MemoryStore) ListUnidades(ctx context.Context) ([]domain.Unidade, error) {
 	s.mu.RLock()
@@ -307,20 +295,6 @@ func (s *MemoryStore) DashboardSummary(ctx context.Context) (*domain.DashboardSu
 		UltimosChamados:    chamados,
 		Colaboradores:      cols,
 	}, nil
-}
-
-func (s *MemoryStore) setSeedData(unidades []domain.Unidade, cols []domain.Colaborador, chamados []domain.Chamado, missoes []domain.Missao, eqs []domain.Equipamento) {
-	s.unidades = unidades
-	s.colaboradores = cols
-	s.chamados = chamados
-	s.missoes = missoes
-	s.dispositivos = eqs
-}
-
-func seedData(s *MemoryStore) {
-	data := BuildSeedData()
-	s.setSeedData(data.Unidades, data.Colaboradores, data.Chamados, data.Missoes, data.Equipamentos)
-	s.seeded = true
 }
 
 func sortChamadosByDate(ch []domain.Chamado) {
