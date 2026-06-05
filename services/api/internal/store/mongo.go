@@ -91,8 +91,25 @@ func (s *MongoStore) CreateUnidade(ctx context.Context, u *domain.Unidade) error
 
 func (s *MongoStore) UpdateUnidade(ctx context.Context, u *domain.Unidade) error {
 	u.UpdatedAt = time.Now().UTC()
-	_, err := s.col("unidades").UpdateOne(ctx, bson.M{"_id": u.ID}, bson.M{"$set": u})
-	return err
+	result, err := s.col("unidades").UpdateOne(ctx, bson.M{"_id": u.ID}, bson.M{"$set": u})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) DeleteUnidade(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("unidades").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
 }
 
 func (s *MongoStore) ListColaboradores(ctx context.Context) ([]domain.Colaborador, error) {

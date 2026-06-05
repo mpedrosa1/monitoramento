@@ -5,14 +5,22 @@ import (
 	"net/http"
 
 	"github.com/mmrtec/monitoramento/api/internal/cache"
+	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type API struct {
-	Store store.Store
-	Cache *cache.StateCache
+	Store     store.Store
+	Cache     *cache.StateCache
+	Collector *collector.Collector
+}
+
+func (a *API) refreshCollector() {
+	if a.Collector != nil {
+		a.Collector.RefreshTargets()
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -133,19 +141,45 @@ func (a *API) ListUnidades(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	for i := range list {
+		normalizeUnidade(&list[i])
+	}
 	writeJSONList(w, http.StatusOK, list)
 }
 
+func normalizeUnidade(u *domain.Unidade) {
+	if u.Diretores == nil {
+		u.Diretores = []string{}
+	}
+	if u.Telefones == nil {
+		u.Telefones = []string{}
+	}
+	if u.Emails == nil {
+		u.Emails = []string{}
+	}
+	if u.Equipamentos == nil {
+		u.Equipamentos = []domain.UnidadeEquipamento{}
+	}
+	if u.IntervaloS <= 0 {
+		u.IntervaloS = 30
+	}
+	if u.AlertaOfflineS <= 0 {
+		u.AlertaOfflineS = 60
+	}
+}
+
 func (a *API) CreateUnidade(w http.ResponseWriter, r *http.Request) {
-	var u domain.Unidade
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		writeError(w, http.StatusBadRequest, "json inválido")
+	u, err := decodeUnidadeBody(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	normalizeUnidade(&u)
 	if err := a.Store.CreateUnidade(r.Context(), &u); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.refreshCollector()
 	writeJSON(w, http.StatusCreated, u)
 }
 
@@ -155,12 +189,13 @@ func (a *API) UpdateUnidade(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusBadRequest, "id inválido")
 		return
 	}
-	var u domain.Unidade
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		writeError(w, http.StatusBadRequest, "json inválido")
+	u, err := decodeUnidadeBody(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	u.ID = oid
+	normalizeUnidade(&u)
 	if err := a.Store.UpdateUnidade(r.Context(), &u); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -169,7 +204,26 @@ func (a *API) UpdateUnidade(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.refreshCollector()
 	writeJSON(w, http.StatusOK, u)
+}
+
+func (a *API) DeleteUnidade(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteUnidade(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	a.refreshCollector()
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) ListColaboradores(w http.ResponseWriter, r *http.Request) {

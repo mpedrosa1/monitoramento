@@ -15,6 +15,7 @@ type Store interface {
 	GetUnidade(ctx context.Context, id primitive.ObjectID) (*domain.Unidade, error)
 	CreateUnidade(ctx context.Context, u *domain.Unidade) error
 	UpdateUnidade(ctx context.Context, u *domain.Unidade) error
+	DeleteUnidade(ctx context.Context, id primitive.ObjectID) error
 
 	ListColaboradores(ctx context.Context) ([]domain.Colaborador, error)
 	GetColaborador(ctx context.Context, id primitive.ObjectID) (*domain.Colaborador, error)

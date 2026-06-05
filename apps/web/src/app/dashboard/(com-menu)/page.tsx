@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, asArray } from "@/lib/api";
 import type { DashboardSummary } from "@/lib/types";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ChamadosTable } from "@/components/dashboard/chamados-table";
@@ -34,7 +34,7 @@ export default function DashboardHomePage() {
   }, [load]);
 
   const displayMetrics =
-    metrics.length > 0 ? metrics : summary?.metricas ?? [];
+    metrics.length > 0 ? metrics : asArray(summary?.metricas);
 
   return (
     <>
@@ -68,7 +68,7 @@ export default function DashboardHomePage() {
               <CardTitle>Últimos chamados</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChamadosTable chamados={summary?.ultimosChamados ?? []} />
+              <ChamadosTable chamados={asArray(summary?.ultimosChamados)} />
               <Link
                 href="/dashboard/chamados"
                 className="mt-4 inline-block text-sm text-primary hover:underline"
@@ -91,7 +91,7 @@ export default function DashboardHomePage() {
         <div>
           <h2 className="mb-4 text-lg font-semibold">Colaboradores</h2>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {(summary?.colaboradores ?? []).map((c) => (
+            {asArray(summary?.colaboradores).map((c) => (
               <ColaboradorCard key={c.id} colaborador={c} />
             ))}
           </div>

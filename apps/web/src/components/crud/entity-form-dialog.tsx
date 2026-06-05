@@ -32,6 +32,8 @@ export function EntityFormDialog({
     try {
       await onSubmit();
       setOpen(false);
+    } catch {
+      // Erro exibido pelo onSubmit (ex.: alert na página)
     } finally {
       setLoading(false);
     }

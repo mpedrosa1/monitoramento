@@ -80,6 +80,25 @@ func (s *MemoryStore) UpdateUnidade(ctx context.Context, u *domain.Unidade) erro
 	return mongoErrNotFound()
 }
 
+func (s *MemoryStore) DeleteUnidade(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.unidades[:0]
+	for _, u := range s.unidades {
+		if u.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, u)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.unidades = next
+	return nil
+}
+
 func (s *MemoryStore) ListColaboradores(ctx context.Context) ([]domain.Colaborador, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

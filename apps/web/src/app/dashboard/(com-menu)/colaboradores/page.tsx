@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
-import type { Chamado, ChamadoStatus, Unidade } from "@/lib/types";
-import { chamadoStatusLabel } from "@/lib/labels";
+import { apiFetch, asArray } from "@/lib/api";
+import type { Colaborador, ColaboradorStatus, Unidade } from "@/lib/types";
+import { colaboradorStatusLabel } from "@/lib/labels";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { ChamadosTable } from "@/components/dashboard/chamados-table";
+import { ColaboradorCard } from "@/components/dashboard/colaborador-card";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { Input } from "@/components/ui/input";
@@ -18,28 +18,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const statusOptions: ChamadoStatus[] = [
-  "aberto",
-  "em_andamento",
-  "encerrado",
+const statusOptions: ColaboradorStatus[] = [
+  "atrasado",
+  "em_missao",
+  "escritorio",
+  "almoco",
+  "ferias",
+  "atestado",
 ];
 
-export default function ChamadosPage() {
+export default function ColaboradoresPage() {
   const { status: socketStatus } = useMonitoring();
-  const [list, setList] = useState<Chamado[]>([]);
+  const [list, setList] = useState<Colaborador[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [chamadoStatus, setChamadoStatus] = useState<ChamadoStatus>("aberto");
+  const [nome, setNome] = useState("");
+  const [fotoUrl, setFotoUrl] = useState("");
+  const [colStatus, setColStatus] = useState<ColaboradorStatus>("escritorio");
   const [unidadeId, setUnidadeId] = useState("");
 
   const load = useCallback(async () => {
-    const [ch, uns] = await Promise.all([
-      apiFetch<Chamado[]>("/api/v1/chamados"),
-      apiFetch<Unidade[]>("/api/v1/unidades"),
+    const [cols, uns] = await Promise.all([
+      apiFetch<Colaborador[] | null>("/api/v1/colaboradores"),
+      apiFetch<Unidade[] | null>("/api/v1/unidades"),
     ]);
-    setList(ch);
-    setUnidades(uns);
+    setList(asArray(cols));
+    setUnidades(asArray(uns));
     if (!unidadeId && uns[0]) setUnidadeId(uns[0].id);
   }, [unidadeId]);
 
@@ -48,50 +51,52 @@ export default function ChamadosPage() {
   }, [load]);
 
   async function create() {
-    await apiFetch<Chamado>("/api/v1/chamados", {
+    await apiFetch<Colaborador>("/api/v1/colaboradores", {
       method: "POST",
       body: JSON.stringify({
-        titulo,
-        descricao,
-        status: chamadoStatus,
+        nome,
+        fotoUrl:
+          fotoUrl ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(nome)}`,
+        status: colStatus,
         unidadeId,
       }),
     });
-    setTitulo("");
-    setDescricao("");
+    setNome("");
+    setFotoUrl("");
     await load();
   }
 
   return (
     <>
-      <DashboardHeader title="Chamados" socketStatus={socketStatus} />
-      <div className="space-y-4 p-6">
+      <DashboardHeader
+        title="Colaboradores"
+        socketStatus={socketStatus}
+      />
+      <div className="space-y-6 p-6">
         <div className="flex justify-end">
           <EntityFormDialog
-            title="Novo chamado"
-            triggerLabel="Abrir chamado"
+            title="Novo colaborador"
+            triggerLabel="Adicionar colaborador"
             onSubmit={create}
           >
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
-                <Label>Título</Label>
-                <Input
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                />
+                <Label>Nome</Label>
+                <Input value={nome} onChange={(e) => setNome(e.target.value)} />
               </div>
               <div className="grid gap-2">
-                <Label>Descrição</Label>
+                <Label>URL da foto (opcional)</Label>
                 <Input
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
+                  value={fotoUrl}
+                  onChange={(e) => setFotoUrl(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select
-                  value={chamadoStatus}
-                  onValueChange={(v) => setChamadoStatus(v as ChamadoStatus)}
+                  value={colStatus}
+                  onValueChange={(v) => setColStatus(v as ColaboradorStatus)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -99,7 +104,7 @@ export default function ChamadosPage() {
                   <SelectContent>
                     {statusOptions.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {chamadoStatusLabel[s]}
+                        {colaboradorStatusLabel[s]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -112,7 +117,7 @@ export default function ChamadosPage() {
                   onValueChange={(v) => setUnidadeId(v ?? "")}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
                     {unidades.map((u) => (
@@ -126,7 +131,11 @@ export default function ChamadosPage() {
             </div>
           </EntityFormDialog>
         </div>
-        <ChamadosTable chamados={list} />
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {list.map((c) => (
+            <ColaboradorCard key={c.id} colaborador={c} />
+          ))}
+        </div>
       </div>
     </>
   );

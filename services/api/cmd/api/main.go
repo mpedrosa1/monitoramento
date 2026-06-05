@@ -55,7 +55,7 @@ func main() {
 	colCtx, colCancel := context.WithCancel(context.Background())
 	col.Start(colCtx)
 
-	api := &httpapi.API{Store: st, Cache: stateCache}
+	api := &httpapi.API{Store: st, Cache: stateCache, Collector: col}
 	router := httpapi.NewRouter(cfg, api, hub)
 
 	addr := ":" + cfg.Port

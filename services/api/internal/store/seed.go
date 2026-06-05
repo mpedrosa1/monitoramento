@@ -58,8 +58,14 @@ func BuildSeedData() SeedData {
 	equipamentos := []domain.Equipamento{eqNobreak, eqCLP, eqSensorTemp, eqSwitch}
 
 	u1 := domain.Unidade{
-		ID: primitive.NewObjectID(), Nome: "Penitenciária Central", Codigo: "PC-01", Endereco: "Av. Principal, 1000",
-		IP: "8.8.8.8", IntervaloS: 10,
+		ID: primitive.NewObjectID(), Codigo: "PC-01", Nome: "Penitenciária Central",
+		Diretores: []string{"João Silva"}, Telefones: []string{"(11) 3000-1000"},
+		Emails:    []string{"central@penitenciaria.gov.br"},
+		Endereco: domain.UnidadeEndereco{
+			CEP: "01000-000", Logradouro: "Av. Principal", Numero: "1000",
+			Bairro: "Centro", Cidade: "São Paulo", Estado: "SP",
+		},
+		Latitude: -23.55, Longitude: -46.63, IP: "8.8.8.8", IntervaloS: 10, AlertaOfflineS: 60,
 		Equipamentos: []domain.UnidadeEquipamento{
 			{EquipamentoID: eqNobreak.ID, Porta: 161},
 			{EquipamentoID: eqCLP.ID, Porta: 502},
@@ -67,16 +73,28 @@ func BuildSeedData() SeedData {
 		CreatedAt: now, UpdatedAt: now,
 	}
 	u2 := domain.Unidade{
-		ID: primitive.NewObjectID(), Nome: "CDP Norte", Codigo: "CDP-02", Endereco: "Rua das Flores, 250",
-		IP: "1.1.1.1", IntervaloS: 30,
+		ID: primitive.NewObjectID(), Codigo: "CDP-02", Nome: "CDP Norte",
+		Diretores: []string{"Maria Santos"}, Telefones: []string{"(11) 3000-2000"},
+		Emails:    []string{"norte@cdp.gov.br"},
+		Endereco: domain.UnidadeEndereco{
+			CEP: "02000-000", Logradouro: "Rua das Flores", Numero: "250",
+			Bairro: "Vila Norte", Cidade: "São Paulo", Estado: "SP",
+		},
+		Latitude: -23.48, Longitude: -46.62, IP: "1.1.1.1", IntervaloS: 30, AlertaOfflineS: 60,
 		Equipamentos: []domain.UnidadeEquipamento{
 			{EquipamentoID: eqSwitch.ID, Porta: 161},
 		},
 		CreatedAt: now, UpdatedAt: now,
 	}
 	u3 := domain.Unidade{
-		ID: primitive.NewObjectID(), Nome: "Presídio Feminino", Codigo: "PF-03", Endereco: "Estrada Vicinal, km 12",
-		IP: "127.0.0.1", IntervaloS: 15,
+		ID: primitive.NewObjectID(), Codigo: "PF-03", Nome: "Presídio Feminino",
+		Diretores: []string{"Ana Costa"}, Telefones: []string{"(11) 3000-3000"},
+		Emails:    []string{"feminino@presidio.gov.br"},
+		Endereco: domain.UnidadeEndereco{
+			CEP: "03000-000", Logradouro: "Estrada Vicinal", Numero: "km 12",
+			Bairro: "Zona Rural", Cidade: "Guarulhos", Estado: "SP",
+		},
+		Latitude: -23.46, Longitude: -46.53, IP: "127.0.0.1", IntervaloS: 15,
 		Equipamentos: []domain.UnidadeEquipamento{
 			{EquipamentoID: eqSensorTemp.ID, Porta: 502},
 		},

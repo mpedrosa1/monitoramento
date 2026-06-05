@@ -40,8 +40,13 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 		r.Route("/unidades", func(r chi.Router) {
 			r.Get("/", api.ListUnidades)
 			r.Post("/", api.CreateUnidade)
-			r.Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
-				api.UpdateUnidade(w, req, chi.URLParam(req, "id"))
+			r.Route("/{id}", func(r chi.Router) {
+				r.Put("/", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateUnidade(w, req, chi.URLParam(req, "id"))
+				})
+				r.Delete("/", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteUnidade(w, req, chi.URLParam(req, "id"))
+				})
 			})
 		})
 

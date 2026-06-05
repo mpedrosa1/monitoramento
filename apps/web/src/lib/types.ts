@@ -33,16 +33,36 @@ export type DispositivoTipo = TipoMonitoramento | "ping";
 export interface UnidadeEquipamento {
   equipamentoId: string;
   porta: number;
+  /** Nome de exibição nesta unidade (não altera o catálogo). */
+  nomeLocal?: string;
+}
+
+export interface UnidadeEndereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
 }
 
 export interface Unidade {
   id: string;
-  nome: string;
+  /** ID institucional (ex.: PC-01). */
   codigo: string;
-  endereco: string;
+  nome: string;
+  diretores: string[];
+  telefones: string[];
+  emails: string[];
+  endereco: UnidadeEndereco;
+  latitude?: number;
+  longitude?: number;
   ip: string;
-  intervaloS: number;
   equipamentos: UnidadeEquipamento[];
+  intervaloS: number;
+  /** Segundos offline/sem resposta antes de exibir toast (padrão 60). */
+  alertaOfflineS?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,6 +107,11 @@ export interface Equipamento {
 
 export function monitorTargetId(unidadeId: string, equipamentoId: string) {
   return `${unidadeId}:${equipamentoId}`;
+}
+
+/** Alvo de ping ICMP do IP cadastrado na unidade. */
+export function monitorUnidadeHostTargetId(unidadeId: string) {
+  return `${unidadeId}:host`;
 }
 
 export interface DeviceMetric {

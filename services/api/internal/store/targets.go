@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"strings"
 
 	"github.com/mmrtec/monitoramento/api/internal/domain"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, error) {
@@ -22,9 +24,24 @@ func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, 
 
 	var targets []domain.MonitorTarget
 	for _, u := range unidades {
-		if u.IP == "" {
+		host := strings.TrimSpace(u.IP)
+		if host == "" {
 			continue
 		}
+		intervalo := u.IntervaloS
+		if intervalo <= 0 {
+			intervalo = 30
+		}
+		targets = append(targets, domain.MonitorTarget{
+			TargetID:      domain.MonitorUnidadeHostTargetID(u.ID),
+			EquipamentoID: primitive.NilObjectID,
+			UnidadeID:     u.ID,
+			Nome:          u.Nome,
+			Tipo:          domain.DispositivoPing,
+			Host:          host,
+			Porta:         0,
+			IntervaloS:    intervalo,
+		})
 		for _, link := range u.Equipamentos {
 			eq, ok := byID[link.EquipamentoID.Hex()]
 			if !ok {
@@ -34,17 +51,13 @@ func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, 
 			if tipoMon == "" {
 				tipoMon = domain.DispositivoModbus
 			}
-			intervalo := u.IntervaloS
-			if intervalo <= 0 {
-				intervalo = 30
-			}
 			targets = append(targets, domain.MonitorTarget{
 				TargetID:      domain.MonitorTargetID(u.ID, eq.ID),
 				EquipamentoID: eq.ID,
 				UnidadeID:     u.ID,
 				Nome:          eq.Nome,
 				Tipo:          tipoMon,
-				Host:          u.IP,
+				Host:          host,
 				Porta:         link.Porta,
 				IntervaloS:    intervalo,
 				Config:        eq.Config,

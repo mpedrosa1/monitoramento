@@ -29,3 +29,8 @@ func (t MonitorTarget) Endpoint() string {
 func MonitorTargetID(unidadeID, equipamentoID primitive.ObjectID) string {
 	return unidadeID.Hex() + ":" + equipamentoID.Hex()
 }
+
+// MonitorUnidadeHostTargetID identifica o ping ICMP do IP cadastrado na unidade.
+func MonitorUnidadeHostTargetID(unidadeID primitive.ObjectID) string {
+	return unidadeID.Hex() + ":host"
+}

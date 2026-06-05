@@ -3,6 +3,8 @@ package domain
 import (
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -44,6 +46,38 @@ const (
 type UnidadeEquipamento struct {
 	EquipamentoID primitive.ObjectID `json:"equipamentoId" bson:"equipamentoId"`
 	Porta         int                `json:"porta" bson:"porta"`
+	// NomeLocal apelido nesta unidade (não altera o nome no catálogo).
+	NomeLocal string `json:"nomeLocal,omitempty" bson:"nomeLocal,omitempty"`
+}
+
+// UnidadeEndereco endereço estruturado da unidade prisional.
+type UnidadeEndereco struct {
+	CEP         string `json:"cep" bson:"cep"`
+	Logradouro  string `json:"logradouro" bson:"logradouro"`
+	Numero      string `json:"numero" bson:"numero"`
+	Complemento string `json:"complemento" bson:"complemento"`
+	Bairro      string `json:"bairro" bson:"bairro"`
+	Cidade      string `json:"cidade" bson:"cidade"`
+	Estado      string `json:"estado" bson:"estado"`
+}
+
+// UnmarshalBSONValue aceita documento estruturado ou string legada.
+func (e *UnidadeEndereco) UnmarshalBSONValue(t bsontype.Type, data []byte) error {
+	if t == bsontype.String {
+		var s string
+		if err := bson.UnmarshalValue(t, data, &s); err != nil {
+			return err
+		}
+		e.Logradouro = s
+		return nil
+	}
+	type alias UnidadeEndereco
+	var tmp alias
+	if err := bson.UnmarshalValue(t, data, &tmp); err != nil {
+		return err
+	}
+	*e = UnidadeEndereco(tmp)
+	return nil
 }
 
 type TipoEquipamento string
@@ -55,12 +89,19 @@ const (
 
 type Unidade struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Codigo       string               `json:"codigo" bson:"codigo"` // ID institucional
 	Nome         string               `json:"nome" bson:"nome"`
-	Codigo       string               `json:"codigo" bson:"codigo"`
-	Endereco     string               `json:"endereco" bson:"endereco"`
+	Diretores    []string             `json:"diretores" bson:"diretores"`
+	Telefones    []string             `json:"telefones" bson:"telefones"`
+	Emails       []string             `json:"emails" bson:"emails"`
+	Endereco     UnidadeEndereco      `json:"endereco" bson:"endereco"`
+	Latitude     float64              `json:"latitude" bson:"latitude"`
+	Longitude    float64              `json:"longitude" bson:"longitude"`
 	IP           string               `json:"ip" bson:"ip"`
-	IntervaloS   int                  `json:"intervaloS" bson:"intervaloS"`
 	Equipamentos []UnidadeEquipamento `json:"equipamentos" bson:"equipamentos"`
+	IntervaloS   int                  `json:"intervaloS" bson:"intervaloS"`
+	// AlertaOfflineS segundos sem resposta (IP/OID) antes de alertar no painel.
+	AlertaOfflineS int `json:"alertaOfflineS" bson:"alertaOfflineS"`
 	CreatedAt    time.Time            `json:"createdAt" bson:"createdAt"`
 	UpdatedAt    time.Time            `json:"updatedAt" bson:"updatedAt"`
 }

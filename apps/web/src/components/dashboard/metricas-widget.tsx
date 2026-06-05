@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, asArray } from "@/lib/api";
 import {
   findSnmpPontoByKey,
   formatSnmpMetricValue,
@@ -14,8 +14,8 @@ export function MetricasWidget({ metrics }: { metrics: DeviceMetric[] }) {
   const [catalog, setCatalog] = useState<Equipamento[]>([]);
 
   useEffect(() => {
-    apiFetch<Equipamento[]>("/api/v1/equipamentos")
-      .then(setCatalog)
+    apiFetch<Equipamento[] | null>("/api/v1/equipamentos")
+      .then((data) => setCatalog(asArray(data)))
       .catch(() => setCatalog([]));
   }, []);
 
