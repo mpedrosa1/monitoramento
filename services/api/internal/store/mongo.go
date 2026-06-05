@@ -184,8 +184,25 @@ func (s *MongoStore) CreateChamado(ctx context.Context, c *domain.Chamado) error
 
 func (s *MongoStore) UpdateChamado(ctx context.Context, c *domain.Chamado) error {
 	c.UpdatedAt = time.Now().UTC()
-	_, err := s.col("chamados").UpdateOne(ctx, bson.M{"_id": c.ID}, bson.M{"$set": c})
-	return err
+	result, err := s.col("chamados").UpdateOne(ctx, bson.M{"_id": c.ID}, bson.M{"$set": c})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) DeleteChamado(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("chamados").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
 }
 
 func (s *MongoStore) ListMissoes(ctx context.Context) ([]domain.Missao, error) {

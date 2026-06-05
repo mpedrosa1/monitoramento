@@ -168,12 +168,32 @@ func (s *MemoryStore) UpdateChamado(ctx context.Context, c *domain.Chamado) erro
 	defer s.mu.Unlock()
 	for i := range s.chamados {
 		if s.chamados[i].ID == c.ID {
+			c.CreatedAt = s.chamados[i].CreatedAt
 			c.UpdatedAt = time.Now().UTC()
 			s.chamados[i] = *c
 			return nil
 		}
 	}
 	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) DeleteChamado(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.chamados[:0]
+	for _, c := range s.chamados {
+		if c.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, c)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.chamados = next
+	return nil
 }
 
 func (s *MemoryStore) ListMissoes(ctx context.Context) ([]domain.Missao, error) {

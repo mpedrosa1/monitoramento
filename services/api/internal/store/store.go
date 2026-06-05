@@ -25,6 +25,7 @@ type Store interface {
 	GetChamado(ctx context.Context, id primitive.ObjectID) (*domain.Chamado, error)
 	CreateChamado(ctx context.Context, c *domain.Chamado) error
 	UpdateChamado(ctx context.Context, c *domain.Chamado) error
+	DeleteChamado(ctx context.Context, id primitive.ObjectID) error
 
 	ListMissoes(ctx context.Context) ([]domain.Missao, error)
 	CountMissoesEmAndamento(ctx context.Context) (int, error)

@@ -1,4 +1,6 @@
+import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -22,7 +24,23 @@ function formatDate(iso: string) {
   }
 }
 
-export function ChamadosTable({ chamados }: { chamados: Chamado[] }) {
+function chamadoLabel(c: Chamado): string {
+  return c.numero ? formatNumeroExibicao(c.numero) : c.titulo;
+}
+
+export function ChamadosTable({
+  chamados,
+  onEdit,
+  onDelete,
+  deleting = false,
+}: {
+  chamados: Chamado[];
+  onEdit?: (chamado: Chamado) => void;
+  onDelete?: (chamado: Chamado) => void;
+  deleting?: boolean;
+}) {
+  const showActions = Boolean(onEdit || onDelete);
+
   if (chamados.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -38,6 +56,9 @@ export function ChamadosTable({ chamados }: { chamados: Chamado[] }) {
           <TableHead>Chamado</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Data</TableHead>
+          {showActions && (
+            <TableHead className="w-[100px] text-right">Ações</TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -54,6 +75,35 @@ export function ChamadosTable({ chamados }: { chamados: Chamado[] }) {
             <TableCell className="text-right text-muted-foreground">
               {formatDate(c.createdAt)}
             </TableCell>
+            {showActions && (
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  {onEdit && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onEdit(c)}
+                      aria-label={`Editar ${chamadoLabel(c)}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onDelete(c)}
+                      disabled={deleting}
+                      aria-label={`Excluir ${chamadoLabel(c)}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

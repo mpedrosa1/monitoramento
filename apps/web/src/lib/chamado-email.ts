@@ -75,6 +75,12 @@ export function sanitizeNumeroChamado(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 6);
 }
 
+/** Número do chamado sempre com 6 dígitos (ex.: 101 → 000101). */
+export function normalizeNumeroChamado(raw: string): string {
+  const n = sanitizeNumeroChamado(raw);
+  return n ? n.padStart(6, "0") : "";
+}
+
 export function formatNumeroExibicao(numero: string): string {
   const n = sanitizeNumeroChamado(numero);
   return n ? `#${n.padStart(6, "0")}` : "#000000";

@@ -35,6 +35,9 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 			r.Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 				api.UpdateChamado(w, req, chi.URLParam(req, "id"))
 			})
+			r.Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				api.DeleteChamado(w, req, chi.URLParam(req, "id"))
+			})
 		})
 
 		r.Route("/unidades", func(r chi.Router) {

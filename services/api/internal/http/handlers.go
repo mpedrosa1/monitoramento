@@ -127,12 +127,22 @@ func (a *API) UpdateChamado(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusBadRequest, "id inválido")
 		return
 	}
+	existing, err := a.Store.GetChamado(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	var c domain.Chamado
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 		writeError(w, http.StatusBadRequest, "json inválido")
 		return
 	}
 	c.ID = oid
+	c.CreatedAt = existing.CreatedAt
 	if err := a.Store.UpdateChamado(r.Context(), &c); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -142,6 +152,23 @@ func (a *API) UpdateChamado(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	writeJSON(w, http.StatusOK, c)
+}
+
+func (a *API) DeleteChamado(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteChamado(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) ListUnidades(w http.ResponseWriter, r *http.Request) {

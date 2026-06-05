@@ -3,6 +3,7 @@ import {
   buildEmailAssunto,
   buildEmailCorpo,
   hojeIso,
+  normalizeNumeroChamado,
   sanitizeNumeroChamado,
   type ChamadoEmailInput,
 } from "./chamado-email";
@@ -25,10 +26,11 @@ export type AbrirChamadoFormState = {
 export function emptyAbrirChamadoForm(
   unidadeId = "",
   dataIso = hojeIso(),
-  hora = agoraHora()
+  hora = agoraHora(),
+  numero = ""
 ): AbrirChamadoFormState {
   return {
-    numero: "",
+    numero,
     unidadeId,
     abertoPor: "",
     dataIso,
@@ -67,6 +69,23 @@ export function emailInputFromForm(
   };
 }
 
+export function chamadoToForm(c: Chamado | null): AbrirChamadoFormState {
+  if (!c) return emptyAbrirChamadoForm();
+  return {
+    numero: c.numero ?? "",
+    unidadeId: c.unidadeId,
+    abertoPor: c.abertoPor ?? "",
+    dataIso: c.data ?? hojeIso(),
+    hora: c.hora ?? agoraHora(),
+    horaTeste: c.horaTeste ?? "",
+    sinais: c.sinaisDetectados ?? [],
+    sinaisOutros: c.sinaisOutros ?? "",
+    locaisAfetados: c.locaisAfetados ?? "",
+    comunicacao: c.comunicacao ?? [],
+    comunicacaoOutros: c.comunicacaoOutros ?? "",
+  };
+}
+
 export function validateAbrirChamadoForm(form: AbrirChamadoFormState): string | null {
   if (!sanitizeNumeroChamado(form.numero)) {
     return "Informe o número do chamado.";
@@ -86,17 +105,18 @@ export function validateAbrirChamadoForm(form: AbrirChamadoFormState): string | 
 
 export function formToChamadoBody(
   form: AbrirChamadoFormState,
-  unidades: Unidade[]
+  unidades: Unidade[],
+  existing?: Chamado
 ): Omit<Chamado, "id" | "createdAt" | "updatedAt"> {
   const emailIn = emailInputFromForm(form, unidades);
   const assunto = buildEmailAssunto(emailIn);
   const corpo = buildEmailCorpo(emailIn);
 
   return {
-    numero: sanitizeNumeroChamado(form.numero),
+    numero: normalizeNumeroChamado(form.numero),
     titulo: assunto,
     descricao: corpo,
-    status: "aberto",
+    status: existing?.status ?? "aberto",
     unidadeId: form.unidadeId,
     abertoPor: form.abertoPor.trim(),
     data: emailIn.dataIso,
