@@ -1,20 +1,45 @@
+import { clearAuthSession, getAuthToken } from "@/lib/auth-session";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+export type ApiFetchOptions = RequestInit & {
+  skipAuth?: boolean;
+};
 
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit
+  init?: ApiFetchOptions
 ): Promise<T> {
+  const { skipAuth, ...requestInit } = init ?? {};
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...(init?.headers ?? {}),
+    ...(requestInit.headers ?? {}),
   };
-  // Authorization header preparado para auth futura
-  // headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  if (!skipAuth) {
+    const token = getAuthToken();
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { ...requestInit, headers });
+
+  if (res.status === 401 && !skipAuth) {
+    clearAuthSession();
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? "Erro na API");
+    const message = (err as { error?: string }).error ?? "Erro na API";
+    if (res.status === 403) {
+      throw new Error(message || "Você não tem permissão para esta ação.");
+    }
+    throw new Error(message);
   }
   if (res.status === 204) {
     return undefined as T;

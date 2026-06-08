@@ -81,12 +81,78 @@ export interface Unidade {
   updatedAt: string;
 }
 
+export type EstadoCivil =
+  | "solteiro"
+  | "casado"
+  | "divorciado"
+  | "viuvo"
+  | "uniao_estavel";
+
+export type LocalTrabalho =
+  | "campo"
+  | "escritorio"
+  | "oficina"
+  | "laboratorio";
+
+export type TipoAcessoSistema =
+  | "usuario"
+  | "admin_com_financeiro"
+  | "admin_sem_financeiro"
+  | "desenvolvedor";
+
+export interface ColaboradorEndereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
+export interface ColaboradorDependente {
+  nome: string;
+  dataNascimento?: string;
+  rg?: string;
+  cpf?: string;
+}
+
 export interface Colaborador {
   id: string;
   nome: string;
   fotoUrl: string;
+  dataNascimento?: string;
+  cpf?: string;
+  rg?: string;
+  rgOrgaoEmissor?: string;
+  telefoneContato?: string;
+  email?: string;
+  estadoCivil?: EstadoCivil;
+  conjuge?: string;
+  dependentes?: ColaboradorDependente[];
+  endereco?: ColaboradorEndereco;
+  cargo?: string;
+  localTrabalho?: LocalTrabalho;
+  telefoneCorporativo?: string;
+  emailCorporativo?: string;
+  salario?: number;
+  tipoAcesso?: TipoAcessoSistema;
+  /** Status operacional (presença / missão) — não exibido no cadastro. */
   status: ColaboradorStatus;
+  unidadeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MissaoStatus = "planejada" | "em_andamento" | "concluida";
+
+export interface Missao {
+  id: string;
+  titulo: string;
+  status: MissaoStatus;
   unidadeId: string;
+  chamadoId?: string;
+  colaboradorIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +176,23 @@ export interface Chamado {
   comunicacaoOutros?: string;
   emailAssunto?: string;
   emailCorpo?: string;
+  encerradoPor?: string;
+  dataEncerramento?: string;
+  horaEncerramento?: string;
+  horaTestePos?: string;
+  diagnostico?: string;
+  acoesRealizadas?: string;
+  sinaisPosTeste?: string[];
+  sinaisPosTesteOutros?: string;
+  observacoesEncerramento?: string;
+  emailEncerramentoAssunto?: string;
+  emailEncerramentoCorpo?: string;
+  colaboradorIds?: string[];
+  previsaoChegadaData?: string;
+  previsaoChegadaHora?: string;
+  missaoId?: string;
+  emailAutorizacaoAssunto?: string;
+  emailAutorizacaoCorpo?: string;
   createdAt: string;
   updatedAt: string;
 }

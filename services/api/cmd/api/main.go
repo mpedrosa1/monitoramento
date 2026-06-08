@@ -62,7 +62,14 @@ func main() {
 		log.Println("ANTENAS_DB_PATH não configurado e base/antenas.db não encontrado")
 	}
 
-	api := &httpapi.API{Store: st, Cache: stateCache, Collector: col, Antenas: antenasStore}
+	api := &httpapi.API{
+		Store:     st,
+		Cache:     stateCache,
+		Collector: col,
+		Antenas:   antenasStore,
+		JWTSecret: cfg.JWTSecret,
+		JWTExpiry: cfg.JWTExpiry,
+	}
 	router := httpapi.NewRouter(cfg, api, hub)
 
 	addr := ":" + cfg.Port

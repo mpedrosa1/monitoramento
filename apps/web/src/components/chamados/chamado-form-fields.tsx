@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-function MultiCheckboxGroup({
+export function MultiCheckboxGroup({
   label,
   options,
   selected,

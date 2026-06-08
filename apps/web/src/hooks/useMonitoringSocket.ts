@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getAuthToken } from "@/lib/auth-session";
 import type { DeviceMetric, WSMessage } from "@/lib/types";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws";
+const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws";
+
+function wsUrlWithToken(): string | null {
+  const token = getAuthToken();
+  if (!token) return null;
+  const sep = WS_BASE.includes("?") ? "&" : "?";
+  return `${WS_BASE}${sep}token=${encodeURIComponent(token)}`;
+}
 
 export type SocketStatus = "connecting" | "connected" | "disconnected";
 
@@ -16,8 +24,14 @@ export function useMonitoringSocket() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    const url = wsUrlWithToken();
+    if (!url) {
+      setStatus("disconnected");
+      return;
+    }
+
     setStatus("connecting");
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => setStatus("connected");

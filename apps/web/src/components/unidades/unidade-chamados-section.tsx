@@ -6,14 +6,19 @@ import { formatNumeroExibicao } from "@/lib/chamado-email";
 import { ultimosChamadosAbertosDaUnidade } from "@/lib/chamados";
 import type { Chamado, Unidade } from "@/lib/types";
 import { AbrirChamadoDialog } from "@/components/chamados/abrir-chamado-dialog";
+import { ChamadoDetailDialog } from "@/components/chamados/chamado-detail-dialog";
 import { EditarChamadoDialog } from "@/components/chamados/editar-chamado-dialog";
 import { ChamadosTable } from "@/components/dashboard/chamados-table";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
+  const { canManageData } = usePermissions();
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Chamado | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selected, setSelected] = useState<Chamado | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
@@ -37,6 +42,11 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
 
   const unidadesDialogo = useMemo(() => [unidade], [unidade]);
 
+  function openDetail(chamado: Chamado) {
+    setSelected(chamado);
+    setDetailOpen(true);
+  }
+
   function openEdit(chamado: Chamado) {
     setEditing(chamado);
     setEditOpen(true);
@@ -58,6 +68,10 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
         setEditOpen(false);
         setEditing(null);
       }
+      if (selected?.id === chamado.id) {
+        setDetailOpen(false);
+        setSelected(null);
+      }
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao excluir";
@@ -75,12 +89,14 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Chamados</h3>
-        <AbrirChamadoDialog
-          unidades={unidadesDialogo}
-          chamados={chamados}
-          fixedUnidadeId={unidade.id}
-          onSuccess={load}
-        />
+        {canManageData && (
+          <AbrirChamadoDialog
+            unidades={unidadesDialogo}
+            chamados={chamados}
+            fixedUnidadeId={unidade.id}
+            onSuccess={load}
+          />
+        )}
       </div>
 
       {loading ? (
@@ -92,11 +108,20 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
       ) : (
         <ChamadosTable
           chamados={ultimosAbertos}
-          onEdit={openEdit}
-          onDelete={remove}
+          onRowClick={openDetail}
+          onEdit={canManageData ? openEdit : undefined}
+          onDelete={canManageData ? remove : undefined}
           deleting={deleting}
         />
       )}
+
+      <ChamadoDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        chamado={selected}
+        unidades={unidadesDialogo}
+        onSuccess={load}
+      />
 
       <EditarChamadoDialog
         open={editOpen}

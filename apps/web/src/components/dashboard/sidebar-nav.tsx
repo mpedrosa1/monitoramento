@@ -7,21 +7,54 @@ import {
   Cpu,
   Headphones,
   Home,
+  MapPinned,
   Shield,
   Users,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/dashboard", label: "Início", icon: Home },
-  { href: "/dashboard/unidades", label: "Unidades Prisionais", icon: Building2 },
-  { href: "/dashboard/equipamentos", label: "Equipamentos", icon: Cpu },
-  { href: "/dashboard/colaboradores", label: "Colaboradores", icon: Users },
-  { href: "/dashboard/chamados", label: "Chamados", icon: Headphones },
+  { href: "/dashboard", label: "Início", icon: Home, equipamentosOnly: false },
+  {
+    href: "/dashboard/unidades",
+    label: "Unidades Prisionais",
+    icon: Building2,
+    equipamentosOnly: false,
+  },
+  {
+    href: "/dashboard/equipamentos",
+    label: "Equipamentos",
+    icon: Cpu,
+    equipamentosOnly: true,
+  },
+  {
+    href: "/dashboard/colaboradores",
+    label: "Colaboradores",
+    icon: Users,
+    equipamentosOnly: false,
+  },
+  {
+    href: "/dashboard/chamados",
+    label: "Chamados",
+    icon: Headphones,
+    equipamentosOnly: false,
+  },
+  {
+    href: "/dashboard/missoes",
+    label: "Missões",
+    icon: MapPinned,
+    equipamentosOnly: false,
+  },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { canAccessEquipamentos } = usePermissions();
+
+  const visibleItems = items.filter(
+    (item) => !item.equipamentosOnly || canAccessEquipamentos
+  );
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
@@ -33,7 +66,7 @@ export function SidebarNav() {
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {items.map(({ href, label, icon: Icon }) => {
+        {visibleItems.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/dashboard"
               ? pathname === "/dashboard"

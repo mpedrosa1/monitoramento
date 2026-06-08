@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -107,6 +108,19 @@ func (s *MemoryStore) GetColaborador(ctx context.Context, id primitive.ObjectID)
 	return nil, mongoErrNotFound()
 }
 
+func (s *MemoryStore) GetColaboradorByEmail(ctx context.Context, email string) (*domain.Colaborador, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.colaboradores {
+		c := s.colaboradores[i]
+		if strings.EqualFold(c.Email, email) || strings.EqualFold(c.EmailCorporativo, email) {
+			cc := c
+			return &cc, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
 func (s *MemoryStore) CreateColaborador(ctx context.Context, c *domain.Colaborador) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -122,12 +136,32 @@ func (s *MemoryStore) UpdateColaborador(ctx context.Context, c *domain.Colaborad
 	defer s.mu.Unlock()
 	for i := range s.colaboradores {
 		if s.colaboradores[i].ID == c.ID {
+			c.CreatedAt = s.colaboradores[i].CreatedAt
 			c.UpdatedAt = time.Now().UTC()
 			s.colaboradores[i] = *c
 			return nil
 		}
 	}
 	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) DeleteColaborador(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.colaboradores[:0]
+	for _, c := range s.colaboradores {
+		if c.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, c)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.colaboradores = next
+	return nil
 }
 
 func (s *MemoryStore) ListChamados(ctx context.Context, limit int) ([]domain.Chamado, error) {
@@ -202,6 +236,61 @@ func (s *MemoryStore) ListMissoes(ctx context.Context) ([]domain.Missao, error) 
 	out := make([]domain.Missao, len(s.missoes))
 	copy(out, s.missoes)
 	return out, nil
+}
+
+func (s *MemoryStore) GetMissao(ctx context.Context, id primitive.ObjectID) (*domain.Missao, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.missoes {
+		if s.missoes[i].ID == id {
+			m := s.missoes[i]
+			return &m, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) CreateMissao(ctx context.Context, m *domain.Missao) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	m.ID = primitive.NewObjectID()
+	m.CreatedAt, m.UpdatedAt = now, now
+	s.missoes = append(s.missoes, *m)
+	return nil
+}
+
+func (s *MemoryStore) UpdateMissao(ctx context.Context, m *domain.Missao) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.missoes {
+		if s.missoes[i].ID == m.ID {
+			m.CreatedAt = s.missoes[i].CreatedAt
+			m.UpdatedAt = time.Now().UTC()
+			s.missoes[i] = *m
+			return nil
+		}
+	}
+	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) DeleteMissao(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.missoes[:0]
+	for _, m := range s.missoes {
+		if m.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, m)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.missoes = next
+	return nil
 }
 
 func (s *MemoryStore) CountMissoesEmAndamento(ctx context.Context) (int, error) {

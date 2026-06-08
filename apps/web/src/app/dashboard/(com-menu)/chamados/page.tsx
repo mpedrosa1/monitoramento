@@ -5,17 +5,22 @@ import { apiFetch, asArray } from "@/lib/api";
 import { formatNumeroExibicao } from "@/lib/chamado-email";
 import type { Chamado, Unidade } from "@/lib/types";
 import { AbrirChamadoDialog } from "@/components/chamados/abrir-chamado-dialog";
+import { ChamadoDetailDialog } from "@/components/chamados/chamado-detail-dialog";
 import { EditarChamadoDialog } from "@/components/chamados/editar-chamado-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ChamadosTable } from "@/components/dashboard/chamados-table";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function ChamadosPage() {
   const { status: socketStatus } = useMonitoring();
+  const { canManageData } = usePermissions();
   const [list, setList] = useState<Chamado[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Chamado | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selected, setSelected] = useState<Chamado | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
@@ -30,6 +35,11 @@ export default function ChamadosPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  function openDetail(chamado: Chamado) {
+    setSelected(chamado);
+    setDetailOpen(true);
+  }
 
   function openEdit(chamado: Chamado) {
     setEditing(chamado);
@@ -52,6 +62,10 @@ export default function ChamadosPage() {
         setEditOpen(false);
         setEditing(null);
       }
+      if (selected?.id === chamado.id) {
+        setDetailOpen(false);
+        setSelected(null);
+      }
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao excluir";
@@ -69,20 +83,31 @@ export default function ChamadosPage() {
     <>
       <DashboardHeader title="Chamados" socketStatus={socketStatus} />
       <div className="space-y-4 p-6">
-        <div className="flex justify-end">
-          <AbrirChamadoDialog
-            unidades={unidades}
-            chamados={list}
-            onSuccess={load}
-          />
-        </div>
+        {canManageData && (
+          <div className="flex justify-end">
+            <AbrirChamadoDialog
+              unidades={unidades}
+              chamados={list}
+              onSuccess={load}
+            />
+          </div>
+        )}
         <ChamadosTable
           chamados={list}
-          onEdit={openEdit}
-          onDelete={remove}
+          onRowClick={openDetail}
+          onEdit={canManageData ? openEdit : undefined}
+          onDelete={canManageData ? remove : undefined}
           deleting={deleting}
         />
       </div>
+
+      <ChamadoDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        chamado={selected}
+        unidades={unidades}
+        onSuccess={load}
+      />
 
       <EditarChamadoDialog
         open={editOpen}

@@ -1,6 +1,7 @@
 import type {
   ChamadoStatus,
   ColaboradorStatus,
+  MissaoStatus,
   SnmpTipoDado,
   TipoEquipamento,
   TipoMonitoramento,
@@ -10,6 +11,21 @@ export const chamadoStatusLabel: Record<ChamadoStatus, string> = {
   aberto: "Aberto",
   em_andamento: "Em andamento",
   encerrado: "Encerrado",
+};
+
+export const missaoStatusLabel: Record<MissaoStatus, string> = {
+  planejada: "Planejada",
+  em_andamento: "Em andamento",
+  concluida: "Concluída",
+};
+
+export const missaoStatusVariant: Record<
+  MissaoStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  planejada: "outline",
+  em_andamento: "default",
+  concluida: "secondary",
 };
 
 export const colaboradorStatusLabel: Record<ColaboradorStatus, string> = {

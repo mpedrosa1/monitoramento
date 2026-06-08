@@ -131,6 +131,21 @@ func (s *MongoStore) GetColaborador(ctx context.Context, id primitive.ObjectID) 
 	return &c, nil
 }
 
+func (s *MongoStore) GetColaboradorByEmail(ctx context.Context, email string) (*domain.Colaborador, error) {
+	filter := bson.M{
+		"$or": []bson.M{
+			{"email": email},
+			{"emailCorporativo": email},
+		},
+	}
+	var c domain.Colaborador
+	err := s.col("colaboradores").FindOne(ctx, filter).Decode(&c)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
 func (s *MongoStore) CreateColaborador(ctx context.Context, c *domain.Colaborador) error {
 	now := time.Now().UTC()
 	c.CreatedAt, c.UpdatedAt = now, now
@@ -144,8 +159,25 @@ func (s *MongoStore) CreateColaborador(ctx context.Context, c *domain.Colaborado
 
 func (s *MongoStore) UpdateColaborador(ctx context.Context, c *domain.Colaborador) error {
 	c.UpdatedAt = time.Now().UTC()
-	_, err := s.col("colaboradores").UpdateOne(ctx, bson.M{"_id": c.ID}, bson.M{"$set": c})
-	return err
+	result, err := s.col("colaboradores").UpdateOne(ctx, bson.M{"_id": c.ID}, bson.M{"$set": c})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) DeleteColaborador(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("colaboradores").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
 }
 
 func (s *MongoStore) ListChamados(ctx context.Context, limit int) ([]domain.Chamado, error) {
@@ -206,13 +238,56 @@ func (s *MongoStore) DeleteChamado(ctx context.Context, id primitive.ObjectID) e
 }
 
 func (s *MongoStore) ListMissoes(ctx context.Context) ([]domain.Missao, error) {
-	cur, err := s.col("missoes").Find(ctx, bson.M{})
+	cur, err := s.col("missoes").Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
 	if err != nil {
 		return nil, err
 	}
 	defer cur.Close(ctx)
 	var out []domain.Missao
 	return out, cur.All(ctx, &out)
+}
+
+func (s *MongoStore) GetMissao(ctx context.Context, id primitive.ObjectID) (*domain.Missao, error) {
+	var m domain.Missao
+	err := s.col("missoes").FindOne(ctx, bson.M{"_id": id}).Decode(&m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (s *MongoStore) CreateMissao(ctx context.Context, m *domain.Missao) error {
+	now := time.Now().UTC()
+	m.CreatedAt, m.UpdatedAt = now, now
+	res, err := s.col("missoes").InsertOne(ctx, m)
+	if err != nil {
+		return err
+	}
+	m.ID = res.InsertedID.(primitive.ObjectID)
+	return nil
+}
+
+func (s *MongoStore) UpdateMissao(ctx context.Context, m *domain.Missao) error {
+	m.UpdatedAt = time.Now().UTC()
+	result, err := s.col("missoes").UpdateOne(ctx, bson.M{"_id": m.ID}, bson.M{"$set": m})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) DeleteMissao(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("missoes").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
 }
 
 func (s *MongoStore) CountMissoesEmAndamento(ctx context.Context) (int, error) {

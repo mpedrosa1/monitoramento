@@ -18,6 +18,7 @@ import { buildMetricMap } from "@/components/unidades/unidade-detail-panel";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { UnidadeFormFields } from "@/components/unidades/unidade-form-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ function openUnidadeDetailTab(id: string) {
 
 export default function UnidadesPage() {
   const { status, metrics } = useMonitoring();
+  const { canManageData } = usePermissions();
   const [list, setList] = useState<Unidade[]>([]);
   const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
   const [createForm, setCreateForm] = useState<UnidadeFormState>(emptyUnidadeForm);
@@ -165,25 +167,27 @@ export default function UnidadesPage() {
       <DashboardHeader title="Unidades Prisionais" socketStatus={status} />
       <div className="space-y-4 p-6">
         <p className="text-sm text-muted-foreground">
-          Cadastre unidades com identificação, contatos, endereço, IP e
-          equipamentos. Clique na linha para abrir os detalhes em uma nova aba;
-          use o ícone de lápis para editar.
+          {canManageData
+            ? "Cadastre unidades com identificação, contatos, endereço, IP e equipamentos. Clique na linha para abrir os detalhes em uma nova aba; use o ícone de lápis para editar."
+            : "Clique na linha para abrir os detalhes da unidade em uma nova aba."}
         </p>
-        <div className="flex justify-end">
-          <EntityFormDialog
-            title="Nova unidade"
-            triggerLabel="Adicionar unidade"
-            onSubmit={create}
-            contentClassName="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <UnidadeFormFields
-              form={createForm}
-              onChange={patchCreate}
-              catalogo={catalogo}
-              equipNome={equipNome}
-            />
-          </EntityFormDialog>
-        </div>
+        {canManageData && (
+          <div className="flex justify-end">
+            <EntityFormDialog
+              title="Nova unidade"
+              triggerLabel="Adicionar unidade"
+              onSubmit={create}
+              contentClassName="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <UnidadeFormFields
+                form={createForm}
+                onChange={patchCreate}
+                catalogo={catalogo}
+                equipNome={equipNome}
+              />
+            </EntityFormDialog>
+          </div>
+        )}
 
         <Table>
           <TableHeader>
@@ -195,14 +199,16 @@ export default function UnidadesPage() {
               <TableHead>Intervalo (s)</TableHead>
               <TableHead>Equip.</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[100px] text-right">Ações</TableHead>
+              {canManageData && (
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedList.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={canManageData ? 8 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Nenhuma unidade cadastrada.
@@ -234,32 +240,34 @@ export default function UnidadesPage() {
                       {hostOnline ? "ONLINE" : "OFFLINE"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div
-                      className="flex justify-end gap-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => openEdit(u)}
-                        aria-label={`Editar ${u.nome}`}
+                  {canManageData && (
+                    <TableCell className="text-right">
+                      <div
+                        className="flex justify-end gap-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => remove(u)}
-                        disabled={deleting}
-                        aria-label={`Excluir ${u.nome}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => openEdit(u)}
+                          aria-label={`Editar ${u.nome}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => remove(u)}
+                          disabled={deleting}
+                          aria-label={`Excluir ${u.nome}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
               })

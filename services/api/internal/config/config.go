@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -15,9 +16,15 @@ type Config struct {
 	PingIntervalSec   int
 	ModbusIntervalSec int
 	SNMPIntervalSec   int
+	JWTSecret         string
+	JWTExpiry         time.Duration
 }
 
 func Load() Config {
+	hours := getEnvInt("JWT_EXPIRY_HOURS", 8)
+	if hours <= 0 {
+		hours = 8
+	}
 	return Config{
 		Port:              getEnv("PORT", "8081"),
 		MongoURI:          os.Getenv("MONGODB_URI"),
@@ -27,6 +34,8 @@ func Load() Config {
 		PingIntervalSec:   getEnvInt("PING_INTERVAL_SEC", 5),
 		ModbusIntervalSec: getEnvInt("MODBUS_INTERVAL_SEC", 10),
 		SNMPIntervalSec:   getEnvInt("SNMP_INTERVAL_SEC", 30),
+		JWTSecret:         getEnv("JWT_SECRET", "dev-mmrtec-altere-em-producao"),
+		JWTExpiry:         time.Duration(hours) * time.Hour,
 	}
 }
 

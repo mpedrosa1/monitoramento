@@ -18,8 +18,10 @@ type Store interface {
 
 	ListColaboradores(ctx context.Context) ([]domain.Colaborador, error)
 	GetColaborador(ctx context.Context, id primitive.ObjectID) (*domain.Colaborador, error)
+	GetColaboradorByEmail(ctx context.Context, email string) (*domain.Colaborador, error)
 	CreateColaborador(ctx context.Context, c *domain.Colaborador) error
 	UpdateColaborador(ctx context.Context, c *domain.Colaborador) error
+	DeleteColaborador(ctx context.Context, id primitive.ObjectID) error
 
 	ListChamados(ctx context.Context, limit int) ([]domain.Chamado, error)
 	GetChamado(ctx context.Context, id primitive.ObjectID) (*domain.Chamado, error)
@@ -28,6 +30,10 @@ type Store interface {
 	DeleteChamado(ctx context.Context, id primitive.ObjectID) error
 
 	ListMissoes(ctx context.Context) ([]domain.Missao, error)
+	GetMissao(ctx context.Context, id primitive.ObjectID) (*domain.Missao, error)
+	CreateMissao(ctx context.Context, m *domain.Missao) error
+	UpdateMissao(ctx context.Context, m *domain.Missao) error
+	DeleteMissao(ctx context.Context, id primitive.ObjectID) error
 	CountMissoesEmAndamento(ctx context.Context) (int, error)
 
 	ListEquipamentos(ctx context.Context) ([]domain.Equipamento, error)

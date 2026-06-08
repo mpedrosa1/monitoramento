@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/mmrtec/monitoramento/api/internal/antenas"
+	"github.com/mmrtec/monitoramento/api/internal/auth"
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
@@ -18,6 +20,8 @@ type API struct {
 	Cache     *cache.StateCache
 	Collector *collector.Collector
 	Antenas   *antenas.Store
+	JWTSecret string
+	JWTExpiry time.Duration
 }
 
 func (a *API) refreshCollector() {
@@ -143,6 +147,20 @@ func (a *API) UpdateChamado(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	c.ID = oid
 	c.CreatedAt = existing.CreatedAt
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if domain.CanManageData(claims.TipoAcesso) {
+			// administradores e desenvolvedores: qualquer atualização permitida
+		} else if domain.IsEncerramentoChamado(*existing, c) {
+			cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
+			if err != nil || !domain.CanEncerrarChamado(claims.TipoAcesso, cid, *existing) {
+				writeError(w, http.StatusForbidden, "somente colaboradores atribuídos à missão ou administradores podem encerrar este chamado")
+				return
+			}
+		} else {
+			writeError(w, http.StatusForbidden, "sem permissão para esta operação")
+			return
+		}
+	}
 	if err := a.Store.UpdateChamado(r.Context(), &c); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -280,6 +298,23 @@ func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "json inválido")
 		return
 	}
+	if c.Status == "" {
+		c.Status = domain.ColaboradorEscritorio
+	}
+	if c.FotoURL == "" && c.Nome != "" {
+		c.FotoURL = "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.Nome
+	}
+	senhaInicial, err := auth.SenhaInicialFromDataNascimento(c.DataNascimento)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	senhaHash, err := auth.HashPassword(senhaInicial)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "erro ao gerar senha de acesso")
+		return
+	}
+	c.SenhaHash = senhaHash
 	if err := a.Store.CreateColaborador(r.Context(), &c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -293,12 +328,23 @@ func (a *API) UpdateColaborador(w http.ResponseWriter, r *http.Request, id strin
 		writeError(w, http.StatusBadRequest, "id inválido")
 		return
 	}
+	existing, err := a.Store.GetColaborador(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	var c domain.Colaborador
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 		writeError(w, http.StatusBadRequest, "json inválido")
 		return
 	}
 	c.ID = oid
+	c.CreatedAt = existing.CreatedAt
+	c.SenhaHash = existing.SenhaHash
 	if err := a.Store.UpdateColaborador(r.Context(), &c); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -308,6 +354,114 @@ func (a *API) UpdateColaborador(w http.ResponseWriter, r *http.Request, id strin
 		return
 	}
 	writeJSON(w, http.StatusOK, c)
+}
+
+func (a *API) DeleteColaborador(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteColaborador(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *API) ListMissoes(w http.ResponseWriter, r *http.Request) {
+	list, err := a.Store.ListMissoes(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSONList(w, http.StatusOK, list)
+}
+
+func (a *API) CreateMissao(w http.ResponseWriter, r *http.Request) {
+	var m domain.Missao
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	if m.Titulo == "" {
+		writeError(w, http.StatusBadRequest, "informe o título")
+		return
+	}
+	if m.UnidadeID.IsZero() {
+		writeError(w, http.StatusBadRequest, "informe a unidade")
+		return
+	}
+	if m.Status == "" {
+		m.Status = domain.MissaoEmAndamento
+	}
+	if err := a.Store.CreateMissao(r.Context(), &m); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, m)
+}
+
+func (a *API) UpdateMissao(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	existing, err := a.Store.GetMissao(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var m domain.Missao
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	if m.Titulo == "" {
+		writeError(w, http.StatusBadRequest, "informe o título")
+		return
+	}
+	if m.UnidadeID.IsZero() {
+		writeError(w, http.StatusBadRequest, "informe a unidade")
+		return
+	}
+	m.ID = oid
+	m.CreatedAt = existing.CreatedAt
+	if err := a.Store.UpdateMissao(r.Context(), &m); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (a *API) DeleteMissao(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteMissao(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) ListEquipamentos(w http.ResponseWriter, r *http.Request) {
