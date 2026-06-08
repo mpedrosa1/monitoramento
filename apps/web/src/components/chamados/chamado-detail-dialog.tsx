@@ -28,12 +28,15 @@ import {
   emptyMissaoForm,
   formatColaboradoresMissao,
   tituloMissao,
+  missaoInicioFromForm,
   validateMissaoForm,
   type MissaoFormState,
 } from "@/lib/chamado-missao-form";
 import { chamadoStatusLabel, chamadoStatusVariant } from "@/lib/labels";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { MultiCheckboxGroup } from "@/components/chamados/chamado-form-fields";
+import { ColaboradoresMissaoPicker } from "@/components/chamados/colaboradores-missao-picker";
+import { EmailAutorizacaoPreview } from "@/components/chamados/email-autorizacao-preview";
 import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
 import { canEncerrarChamado } from "@/lib/permissions";
@@ -84,77 +87,6 @@ function resolverListaComOutros(
   if (!items?.length) return "—";
   return formatListPT(
     items.map((s) => (s === "Outros" && outros ? outros : s))
-  );
-}
-
-function ColaboradoresMissaoPicker({
-  colaboradores,
-  selected,
-  onChange,
-}: {
-  colaboradores: Colaborador[];
-  selected: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  function toggle(id: string) {
-    onChange(
-      selected.includes(id)
-        ? selected.filter((s) => s !== id)
-        : [...selected, id]
-    );
-  }
-
-  if (colaboradores.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Nenhum colaborador cadastrado. Adicione em Colaboradores.
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid gap-2">
-      <Label className="text-xs">Colaboradores</Label>
-      <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-md border border-border p-2">
-        {colaboradores.map((c) => {
-          const semRg = !c.rg?.trim() || !c.rgOrgaoEmissor?.trim();
-          return (
-            <label
-              key={c.id}
-              className={`flex cursor-pointer items-start gap-2 rounded-md border px-2.5 py-2 text-xs ${
-                selected.includes(c.id)
-                  ? "border-primary bg-primary/10"
-                  : "border-border"
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5 rounded border-input"
-                checked={selected.includes(c.id)}
-                onChange={() => toggle(c.id)}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium text-foreground">{c.nome}</span>
-                {c.rg && c.rgOrgaoEmissor ? (
-                  <span className="mt-0.5 block text-muted-foreground">
-                    RG: {c.rg} {c.rgOrgaoEmissor}
-                  </span>
-                ) : (
-                  <span className="mt-0.5 block text-destructive">
-                    RG não cadastrado
-                  </span>
-                )}
-                {semRg && selected.includes(c.id) && (
-                  <span className="mt-0.5 block text-destructive">
-                    Complete o RG antes de atribuir
-                  </span>
-                )}
-              </span>
-            </label>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -264,6 +196,7 @@ export function ChamadoDetailDialog({
           unidadeId: chamado.unidadeId,
           chamadoId: chamado.id,
           colaboradorIds: missaoForm.colaboradorIds,
+          ...missaoInicioFromForm(missaoForm),
         }),
       });
 
@@ -559,32 +492,10 @@ export function ChamadoDetailDialog({
                 </div>
 
                 {emailAutorizacao && (
-                  <div className="space-y-3 rounded-lg border border-border bg-muted/15 p-3">
-                    <p className="text-sm font-medium">
-                      E-mail de autorização de entrada
-                    </p>
-                    <div className="grid gap-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Assunto
-                      </Label>
-                      <Input
-                        readOnly
-                        value={emailAutorizacao.assunto}
-                        className="bg-background font-mono text-xs"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Corpo
-                      </Label>
-                      <textarea
-                        readOnly
-                        rows={12}
-                        value={emailAutorizacao.corpo}
-                        className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed shadow-xs outline-none"
-                      />
-                    </div>
-                  </div>
+                  <EmailAutorizacaoPreview
+                    assunto={emailAutorizacao.assunto}
+                    corpo={emailAutorizacao.corpo}
+                  />
                 )}
               </section>
             </>

@@ -25,3 +25,18 @@ export function ultimosChamadosAbertosDaUnidade(
     )
     .slice(0, limit);
 }
+
+/** Últimos chamados de uma unidade (qualquer status), mais recentes primeiro. */
+export function ultimosChamadosDaUnidade(
+  chamados: Chamado[],
+  unidadeId: string,
+  limit = 5
+): Chamado[] {
+  return chamados
+    .filter((c) => c.unidadeId === unidadeId)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, limit);
+}

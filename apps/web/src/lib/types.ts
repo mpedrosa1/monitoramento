@@ -153,6 +153,13 @@ export interface Missao {
   unidadeId: string;
   chamadoId?: string;
   colaboradorIds: string[];
+  /** Início previsto/real da missão (YYYY-MM-DD). */
+  dataInicio?: string;
+  horaInicio?: string;
+  concluidaPor?: string;
+  dataConclusao?: string;
+  horaConclusao?: string;
+  relatorioConclusao?: string;
   createdAt: string;
   updatedAt: string;
 }

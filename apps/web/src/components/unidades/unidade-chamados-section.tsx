@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch, asArray } from "@/lib/api";
 import { formatNumeroExibicao } from "@/lib/chamado-email";
-import { ultimosChamadosAbertosDaUnidade } from "@/lib/chamados";
+import { ultimosChamadosDaUnidade } from "@/lib/chamados";
 import type { Chamado, Unidade } from "@/lib/types";
 import { AbrirChamadoDialog } from "@/components/chamados/abrir-chamado-dialog";
 import { ChamadoDetailDialog } from "@/components/chamados/chamado-detail-dialog";
@@ -35,8 +35,8 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
     void load();
   }, [load]);
 
-  const ultimosAbertos = useMemo(
-    () => ultimosChamadosAbertosDaUnidade(chamados, unidade.id, 5),
+  const ultimos = useMemo(
+    () => ultimosChamadosDaUnidade(chamados, unidade.id, 5),
     [chamados, unidade.id]
   );
 
@@ -101,13 +101,13 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando chamados…</p>
-      ) : ultimosAbertos.length === 0 ? (
+      ) : ultimos.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nenhum chamado aberto nesta unidade.
+          Nenhum chamado nesta unidade.
         </p>
       ) : (
         <ChamadosTable
-          chamados={ultimosAbertos}
+          chamados={ultimos}
           onRowClick={openDetail}
           onEdit={canManageData ? openEdit : undefined}
           onDelete={canManageData ? remove : undefined}

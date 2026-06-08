@@ -296,13 +296,11 @@ func (s *MemoryStore) DeleteMissao(ctx context.Context, id primitive.ObjectID) e
 func (s *MemoryStore) CountMissoesEmAndamento(ctx context.Context) (int, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	n := 0
-	for _, m := range s.missoes {
-		if m.Status == domain.MissaoEmAndamento {
-			n++
-		}
+	chamadosPorID := make(map[primitive.ObjectID]domain.Chamado, len(s.chamados))
+	for _, c := range s.chamados {
+		chamadosPorID[c.ID] = c
 	}
-	return n, nil
+	return domain.ContarMissoesEmAndamento(s.missoes, chamadosPorID), nil
 }
 
 func (s *MemoryStore) ListEquipamentos(ctx context.Context) ([]domain.Equipamento, error) {

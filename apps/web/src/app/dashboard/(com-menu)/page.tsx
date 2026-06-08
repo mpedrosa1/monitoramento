@@ -71,7 +71,7 @@ export default function DashboardHomePage() {
               <ChamadosTable chamados={asArray(summary?.ultimosChamados)} />
               <Link
                 href="/dashboard/chamados"
-                className="mt-4 inline-block text-sm text-primary hover:underline"
+                className="mt-4 inline-block text-sm font-medium text-foreground underline-offset-4 hover:text-ring hover:underline"
               >
                 Ver todos os chamados
               </Link>

@@ -23,6 +23,18 @@ export function formatRouteDuration(seconds: number): string {
   return m > 0 ? `${h} h ${m} min` : `${h} h`;
 }
 
+/** Horário estimado de chegada com base na duração da rota. */
+export function formatChegadaEstimada(
+  durationSeconds: number,
+  agora = new Date()
+): string {
+  const chegada = new Date(agora.getTime() + durationSeconds * 1000);
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(chegada);
+}
+
 /**
  * Rota de carro entre dois pontos via OSRM (OpenStreetMap).
  * Tempo estimado sem trânsito em tempo real.

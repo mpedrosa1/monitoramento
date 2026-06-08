@@ -148,6 +148,9 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 				r.Get("/", api.ListMissoes)
 				r.With(RequireManageData).Post("/", api.CreateMissao)
 				r.Route("/{id}", func(r chi.Router) {
+					r.Put("/concluir", func(w http.ResponseWriter, req *http.Request) {
+						api.ConcluirMissao(w, req, chi.URLParam(req, "id"))
+					})
 					r.With(RequireManageMissoes).Put("/", func(w http.ResponseWriter, req *http.Request) {
 						api.UpdateMissao(w, req, chi.URLParam(req, "id"))
 					})

@@ -97,6 +97,13 @@ export function tituloMissao(chamado: Chamado, unidadeNome: string): string {
   return `Chamado ${num} — ${unidadeNome}`;
 }
 
+export function missaoInicioFromForm(form: MissaoFormState): {
+  dataInicio: string;
+  horaInicio: string;
+} {
+  return { dataInicio: form.dataIso, horaInicio: form.hora };
+}
+
 /** Lista formatada de colaboradores atribuídos (nome + RG). */
 export function formatColaboradoresMissao(
   ids: string[] | undefined,

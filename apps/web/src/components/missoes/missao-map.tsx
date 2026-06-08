@@ -8,6 +8,7 @@ import { googleMapsDirectionsUrl, type LatLng } from "@/lib/geocode";
 import { Button } from "@/components/ui/button";
 import {
   fetchOsrmRoute,
+  formatChegadaEstimada,
   formatRouteDistance,
   formatRouteDuration,
   type OsrmRouteResult,
@@ -103,7 +104,9 @@ export function MissaoMap({
                 {formatRouteDistance(route.distanceMeters)}
               </span>
               <span>{formatRouteDuration(route.durationSeconds)} estimados</span>
-              <span className="text-[11px]">(sem trânsito em tempo real)</span>
+              <span className="font-medium text-foreground">
+                Chegada estimada: {formatChegadaEstimada(route.durationSeconds)}
+              </span>
             </>
           )}
         </div>

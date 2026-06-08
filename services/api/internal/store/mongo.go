@@ -291,8 +291,19 @@ func (s *MongoStore) DeleteMissao(ctx context.Context, id primitive.ObjectID) er
 }
 
 func (s *MongoStore) CountMissoesEmAndamento(ctx context.Context) (int, error) {
-	n, err := s.col("missoes").CountDocuments(ctx, bson.M{"status": domain.MissaoEmAndamento})
-	return int(n), err
+	missoes, err := s.ListMissoes(ctx)
+	if err != nil {
+		return 0, err
+	}
+	chamados, err := s.ListChamados(ctx, 0)
+	if err != nil {
+		return 0, err
+	}
+	chamadosPorID := make(map[primitive.ObjectID]domain.Chamado, len(chamados))
+	for _, c := range chamados {
+		chamadosPorID[c.ID] = c
+	}
+	return domain.ContarMissoesEmAndamento(missoes, chamadosPorID), nil
 }
 
 func (s *MongoStore) ListEquipamentos(ctx context.Context) ([]domain.Equipamento, error) {

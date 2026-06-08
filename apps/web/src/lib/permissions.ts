@@ -1,4 +1,5 @@
-import type { Chamado, TipoAcessoSistema } from "@/lib/types";
+import { missaoIniciada } from "@/lib/missoes";
+import type { Chamado, Missao, TipoAcessoSistema } from "@/lib/types";
 
 /** Somente administradores — CRUD na página Missões. */
 export function canManageMissoes(
@@ -26,6 +27,31 @@ export function canAccessEquipamentos(
   tipoAcesso: TipoAcessoSistema | undefined | null
 ): boolean {
   return canManageData(tipoAcesso);
+}
+
+/** Colaborador logado faz parte da missão (registro Missao). */
+export function isAtribuidoMissaoDireta(
+  colaboradorId: string | undefined,
+  missao: Missao | null | undefined
+): boolean {
+  if (!colaboradorId || !missao?.colaboradorIds?.length) return false;
+  return missao.colaboradorIds.includes(colaboradorId);
+}
+
+/**
+ * Concluir missão em andamento: administradores/desenvolvedores ou
+ * colaborador atribuído à missão. Missões ainda não iniciadas
+ * (agendadas) não podem ser concluídas.
+ */
+export function canConcluirMissao(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  colaboradorId: string | undefined,
+  missao: Missao | null | undefined,
+  chamado?: Chamado | null
+): boolean {
+  if (!missao || !missaoIniciada(missao, chamado)) return false;
+  if (canManageData(tipoAcesso)) return true;
+  return isAtribuidoMissaoDireta(colaboradorId, missao);
 }
 
 /** Colaborador logado faz parte da missão do chamado. */

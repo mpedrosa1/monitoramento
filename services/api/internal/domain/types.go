@@ -214,6 +214,12 @@ type Missao struct {
 	UnidadeID      primitive.ObjectID   `json:"unidadeId" bson:"unidadeId"`
 	ChamadoID      primitive.ObjectID   `json:"chamadoId,omitempty" bson:"chamadoId,omitempty"`
 	ColaboradorIDs []primitive.ObjectID `json:"colaboradorIds" bson:"colaboradorIds"`
+	DataInicio     string               `json:"dataInicio,omitempty" bson:"dataInicio,omitempty"`
+	HoraInicio     string               `json:"horaInicio,omitempty" bson:"horaInicio,omitempty"`
+	ConcluidaPor   string               `json:"concluidaPor,omitempty" bson:"concluidaPor,omitempty"`
+	DataConclusao  string               `json:"dataConclusao,omitempty" bson:"dataConclusao,omitempty"`
+	HoraConclusao  string               `json:"horaConclusao,omitempty" bson:"horaConclusao,omitempty"`
+	RelatorioConclusao string           `json:"relatorioConclusao,omitempty" bson:"relatorioConclusao,omitempty"`
 	CreatedAt      time.Time            `json:"createdAt" bson:"createdAt"`
 	UpdatedAt      time.Time            `json:"updatedAt" bson:"updatedAt"`
 }

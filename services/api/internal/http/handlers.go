@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/mmrtec/monitoramento/api/internal/antenas"
@@ -444,6 +445,105 @@ func (a *API) UpdateMissao(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	writeJSON(w, http.StatusOK, m)
+}
+
+type concluirMissaoInput struct {
+	DataConclusao      string `json:"dataConclusao"`
+	HoraConclusao      string `json:"horaConclusao"`
+	RelatorioConclusao string `json:"relatorioConclusao"`
+}
+
+func (a *API) ConcluirMissao(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	existing, err := a.Store.GetMissao(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var chamadoVinculado *domain.Chamado
+	if !existing.ChamadoID.IsZero() {
+		if ch, err := a.Store.GetChamado(r.Context(), existing.ChamadoID); err == nil {
+			chamadoVinculado = ch
+		}
+	}
+	if !domain.MissaoPodeSerConcluida(*existing, chamadoVinculado) {
+		writeError(w, http.StatusBadRequest, "somente missões em andamento podem ser concluídas")
+		return
+	}
+	var in concluirMissaoInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	if in.DataConclusao == "" {
+		writeError(w, http.StatusBadRequest, "informe a data de conclusão")
+		return
+	}
+	if in.HoraConclusao == "" {
+		writeError(w, http.StatusBadRequest, "informe a hora de conclusão")
+		return
+	}
+	if in.RelatorioConclusao == "" {
+		writeError(w, http.StatusBadRequest, "informe o relatório de conclusão")
+		return
+	}
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "não autenticado")
+		return
+	}
+	cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
+	if err != nil {
+		writeError(w, http.StatusForbidden, "sem permissão para concluir esta missão")
+		return
+	}
+	if !domain.CanConcluirMissao(claims.TipoAcesso, cid, *existing, chamadoVinculado) {
+		writeError(w, http.StatusForbidden, "somente colaboradores atribuídos à missão ou administradores podem concluí-la")
+		return
+	}
+	nomeConclusao := strings.TrimSpace(claims.Nome)
+	if nomeConclusao == "" {
+		writeError(w, http.StatusBadRequest, "usuário sem nome cadastrado")
+		return
+	}
+
+	m := *existing
+	m.Status = domain.MissaoConcluida
+	m.ConcluidaPor = nomeConclusao
+	m.DataConclusao = in.DataConclusao
+	m.HoraConclusao = in.HoraConclusao
+	m.RelatorioConclusao = in.RelatorioConclusao
+	m.UpdatedAt = time.Now().UTC()
+
+	if err := a.Store.UpdateMissao(r.Context(), &m); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, colID := range existing.ColaboradorIDs {
+		col, err := a.Store.GetColaborador(r.Context(), colID)
+		if err != nil {
+			continue
+		}
+		if col.Status == domain.ColaboradorEmMissao {
+			col.Status = domain.ColaboradorEscritorio
+			_ = a.Store.UpdateColaborador(r.Context(), col)
+		}
+	}
+
 	writeJSON(w, http.StatusOK, m)
 }
 

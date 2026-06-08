@@ -3,7 +3,6 @@
 import { useEffect, useMemo } from "react";
 import L from "leaflet";
 import {
-  CircleMarker,
   MapContainer,
   Marker,
   Polyline,
@@ -16,12 +15,21 @@ import { SP_STATE_CENTER } from "@/lib/geocode";
 
 import "leaflet/dist/leaflet.css";
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+function pinIcon(fill: string, stroke: string) {
+  return L.divIcon({
+    className: "",
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" aria-hidden="true">
+      <path fill="${fill}" stroke="${stroke}" stroke-width="1.2" d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.3 21.7 0 14 0z"/>
+      <circle fill="#ffffff" cx="14" cy="14" r="5"/>
+    </svg>`,
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -34],
+  });
+}
+
+const userPinIcon = pinIcon("#3b82f6", "#1d4ed8");
+const destinationPinIcon = pinIcon("#ef4444", "#b91c1c");
 
 function MapInvalidateSize() {
   const map = useMap();
@@ -120,22 +128,19 @@ export default function MissaoMapInner({
       )}
 
       {userPosition && (
-        <CircleMarker
-          center={[userPosition.lat, userPosition.lng]}
-          radius={9}
-          pathOptions={{
-            color: "#1d4ed8",
-            fillColor: "#3b82f6",
-            fillOpacity: 0.9,
-            weight: 2,
-          }}
+        <Marker
+          position={[userPosition.lat, userPosition.lng]}
+          icon={userPinIcon}
         >
           <Popup>Você está aqui</Popup>
-        </CircleMarker>
+        </Marker>
       )}
 
       {destination && (
-        <Marker position={[destination.lat, destination.lng]}>
+        <Marker
+          position={[destination.lat, destination.lng]}
+          icon={destinationPinIcon}
+        >
           <Popup>{destinationLabel}</Popup>
         </Marker>
       )}

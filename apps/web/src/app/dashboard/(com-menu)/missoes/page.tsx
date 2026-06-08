@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
-import { formatNumeroExibicao } from "@/lib/chamado-email";
 import {
   emptyMissaoForm,
   formToMissaoBody,
@@ -13,6 +12,7 @@ import {
   type MissaoFormState,
 } from "@/lib/missao-form";
 import { missaoStatusLabel, missaoStatusVariant } from "@/lib/labels";
+import { formatInicioMissao, labelChamadoVinculadoMissao, statusEfetivoMissao } from "@/lib/missoes";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -90,13 +90,7 @@ export default function MissoesPage() {
   }, [colaboradores]);
 
   const chamadoLabel = useMemo(() => {
-    const map = new Map(
-      chamados.map((c) => [
-        c.id,
-        c.numero ? formatNumeroExibicao(c.numero) : c.titulo,
-      ])
-    );
-    return (id?: string) => (id ? map.get(id) ?? "—" : "—");
+    return (id?: string) => labelChamadoVinculadoMissao(id, chamados);
   }, [chamados]);
 
   const load = useCallback(async () => {
@@ -232,6 +226,7 @@ export default function MissoesPage() {
               <TableHead>Unidade</TableHead>
               <TableHead>Colaboradores</TableHead>
               <TableHead>Chamado</TableHead>
+              <TableHead>Início</TableHead>
               <TableHead className="text-right">Criada em</TableHead>
               {canManageMissoes && (
                 <TableHead className="w-[100px] text-right">Ações</TableHead>
@@ -242,7 +237,7 @@ export default function MissoesPage() {
             {list.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManageMissoes ? 7 : 6}
+                  colSpan={canManageMissoes ? 8 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Nenhuma missão registrada.
@@ -260,9 +255,19 @@ export default function MissoesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant={missaoStatusVariant[m.status]}>
-                        {missaoStatusLabel[m.status] ?? m.status}
-                      </Badge>
+                      {(() => {
+                        const status = statusEfetivoMissao(
+                          m,
+                          m.chamadoId
+                            ? chamados.find((c) => c.id === m.chamadoId)
+                            : null
+                        );
+                        return (
+                          <Badge variant={missaoStatusVariant[status]}>
+                            {missaoStatusLabel[status] ?? status}
+                          </Badge>
+                        );
+                      })()}
                       {isAtribuidoMissaoLista(user?.id, m) && (
                         <Badge className="border-amber-300 bg-amber-400 font-semibold text-amber-950 shadow-sm ring-1 ring-amber-300/80 dark:border-amber-400 dark:bg-amber-400 dark:text-amber-950">
                           Atribuído a você
@@ -275,6 +280,14 @@ export default function MissoesPage() {
                     {colaboradorNomes(m.colaboradorIds)}
                   </TableCell>
                   <TableCell>{chamadoLabel(m.chamadoId)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatInicioMissao(
+                      m,
+                      m.chamadoId
+                        ? chamados.find((c) => c.id === m.chamadoId)
+                        : null
+                    )}
+                  </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatDate(m.createdAt)}
                   </TableCell>
@@ -349,6 +362,7 @@ export default function MissoesPage() {
         chamados={chamados}
         colaboradores={colaboradores}
         user={user}
+        onSuccess={load}
       />
 
       <ExcluirMissaoDialog

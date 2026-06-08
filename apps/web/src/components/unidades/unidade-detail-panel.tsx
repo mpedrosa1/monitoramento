@@ -14,6 +14,7 @@ import {
   unidadeToForm,
 } from "@/lib/unidade-form";
 import { UnidadeChamadosSection } from "@/components/unidades/unidade-chamados-section";
+import { UnidadeMissoesSection } from "@/components/unidades/unidade-missoes-section";
 
 function DetailRow({
   label,
@@ -200,6 +201,10 @@ export function UnidadeDetailPanel({
           ) : null}
         </div>
       </div>
+
+      <Separator />
+
+      <UnidadeMissoesSection unidade={unidade} />
 
       <Separator />
 
