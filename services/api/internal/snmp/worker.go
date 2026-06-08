@@ -45,23 +45,71 @@ func normalizeOID(oid string) string {
 	return oid
 }
 
-func Probe(t domain.MonitorTarget) (online bool, valores map[string]any) {
-	community := t.Config.Community
+func formatPDU(v gosnmp.SnmpPDU) any {
+	switch v.Type {
+	case gosnmp.TimeTicks:
+		return v.Value
+	case gosnmp.Integer:
+		return v.Value
+	case gosnmp.OctetString:
+		if b, ok := v.Value.([]byte); ok {
+			return string(b)
+		}
+	}
+	return v.Value
+}
+
+func newClient(host string, port uint16, community string) *gosnmp.GoSNMP {
 	if community == "" {
 		community = "public"
 	}
-	port := t.Porta
 	if port == 0 {
 		port = 161
 	}
-	g := &gosnmp.GoSNMP{
-		Target:    t.Host,
-		Port:      uint16(port),
+	return &gosnmp.GoSNMP{
+		Target:    host,
+		Port:      port,
 		Community: community,
 		Version:   gosnmp.Version2c,
 		Timeout:   3 * time.Second,
 		Retries:   1,
 	}
+}
+
+// TestOID consulta um OID SNMP v2c e devolve o valor lido.
+func TestOID(host string, port uint16, community, oid string) (online bool, value any, errMsg string) {
+	oid = normalizeOID(oid)
+	if oid == "" {
+		return false, nil, "informe um OID válido"
+	}
+	if strings.TrimSpace(host) == "" {
+		return false, nil, "informe o host (IP)"
+	}
+	g := newClient(strings.TrimSpace(host), port, community)
+	if err := g.Connect(); err != nil {
+		return false, nil, err.Error()
+	}
+	defer g.Conn.Close()
+
+	result, err := g.Get([]string{oid})
+	if err != nil {
+		return false, nil, err.Error()
+	}
+	for _, v := range result.Variables {
+		if v.Type == gosnmp.NoSuchObject || v.Type == gosnmp.NoSuchInstance {
+			return true, nil, "OID não encontrado no agente"
+		}
+		return true, formatPDU(v), ""
+	}
+	return true, nil, "resposta vazia do agente"
+}
+
+func Probe(t domain.MonitorTarget) (online bool, valores map[string]any) {
+	port := t.Porta
+	if port == 0 {
+		port = 161
+	}
+	g := newClient(t.Host, uint16(port), t.Config.Community)
 	if err := g.Connect(); err != nil {
 		return false, map[string]any{"erro": err.Error()}
 	}
@@ -80,20 +128,6 @@ func Probe(t domain.MonitorTarget) (online bool, valores map[string]any) {
 		}
 	}
 	return true, valores
-}
-
-func formatPDU(v gosnmp.SnmpPDU) any {
-	switch v.Type {
-	case gosnmp.TimeTicks:
-		return v.Value
-	case gosnmp.Integer:
-		return v.Value
-	case gosnmp.OctetString:
-		if b, ok := v.Value.([]byte); ok {
-			return string(b)
-		}
-	}
-	return v.Value
 }
 
 func MetricFromTarget(t domain.MonitorTarget, online bool, valores map[string]any) domain.DeviceMetric {

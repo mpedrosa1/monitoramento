@@ -11,6 +11,7 @@ import {
   normalizeSnmpPontos,
   serializeSnmpPontos,
 } from "@/lib/snmp-presets";
+import { rotuloEquipamento } from "@/lib/unidade-form";
 import type {
   Equipamento,
   SnmpPonto,
@@ -54,10 +55,12 @@ function buildConfig(
   pontos: SnmpPonto[]
 ) {
   if (tipoMonitoramento === "snmp") {
-    return {
-      community: community.trim() || "public",
+    const cfg: NonNullable<Equipamento["config"]> = {
       pontos: serializeSnmpPontos(pontos),
     };
+    const comm = community.trim();
+    if (comm) cfg.community = comm;
+    return cfg;
   }
   return { slaveId: 1, registradores: [0] };
 }
@@ -67,7 +70,7 @@ const emptyForm = {
   marca: "",
   tipoEquipamento: "sensor" as TipoEquipamento,
   tipoMonitoramento: "modbus" as TipoMonitoramento,
-  community: "public",
+  community: "",
   pontos: [] as SnmpPonto[],
 };
 
@@ -97,7 +100,7 @@ export default function EquipamentosPage() {
       marca: eq.marca ?? "",
       tipoEquipamento: eq.tipoEquipamento,
       tipoMonitoramento: eq.tipoMonitoramento,
-      community: eq.config?.community ?? "public",
+      community: eq.config?.community ?? "",
       pontos: normalizeSnmpPontos(eq.config),
     });
     setEditOpen(true);
@@ -150,7 +153,7 @@ export default function EquipamentosPage() {
 
   async function remove(eq: Equipamento) {
     const ok = window.confirm(
-      `Excluir o equipamento "${eq.nome}"? Ele será desvinculado das unidades.`
+      `Excluir o equipamento "${rotuloEquipamento(eq)}"? Ele será desvinculado das unidades.`
     );
     if (!ok) return;
     setDeleting(true);
@@ -193,13 +196,13 @@ export default function EquipamentosPage() {
             contentClassName="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <EquipamentoFormFields
-              nome={createForm.nome}
-              onNomeChange={(nome) =>
-                setCreateForm((f) => ({ ...f, nome }))
-              }
               marca={createForm.marca}
               onMarcaChange={(marca) =>
                 setCreateForm((f) => ({ ...f, marca }))
+              }
+              modelo={createForm.nome}
+              onModeloChange={(nome) =>
+                setCreateForm((f) => ({ ...f, nome }))
               }
               tipoEquipamento={createForm.tipoEquipamento}
               onTipoEquipamentoChange={(tipoEquipamento) =>
@@ -209,10 +212,6 @@ export default function EquipamentosPage() {
               onTipoMonitoramentoChange={(tipoMonitoramento) =>
                 setCreateForm((f) => ({ ...f, tipoMonitoramento }))
               }
-              community={createForm.community}
-              onCommunityChange={(community) =>
-                setCreateForm((f) => ({ ...f, community }))
-              }
               pontos={createForm.pontos}
               onPontosChange={(pontos) =>
                 setCreateForm((f) => ({ ...f, pontos }))
@@ -221,7 +220,6 @@ export default function EquipamentosPage() {
                 if (t === "snmp") {
                   setCreateForm((f) => ({
                     ...f,
-                    community: "public",
                     pontos: [],
                   }));
                 }
@@ -233,10 +231,10 @@ export default function EquipamentosPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
               <TableHead>Marca</TableHead>
+              <TableHead>Modelo</TableHead>
               <TableHead>Tipo</TableHead>
-              <TableHead>Monitoramento</TableHead>
+              <TableHead>Protocolo</TableHead>
               <TableHead>Pontos SNMP</TableHead>
               <TableHead className="w-[100px] text-right">Ações</TableHead>
             </TableRow>
@@ -258,8 +256,8 @@ export default function EquipamentosPage() {
                   className="cursor-pointer hover:bg-muted/40"
                   onClick={() => openEdit(eq)}
                 >
-                  <TableCell className="font-medium">{eq.nome}</TableCell>
-                  <TableCell>{eq.marca || "—"}</TableCell>
+                  <TableCell className="font-medium">{eq.marca || "—"}</TableCell>
+                  <TableCell>{eq.nome || "—"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {tipoEquipamentoLabel[eq.tipoEquipamento] ??
@@ -291,7 +289,7 @@ export default function EquipamentosPage() {
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => openEdit(eq)}
-                        aria-label={`Editar ${eq.nome}`}
+                        aria-label={`Editar ${rotuloEquipamento(eq)}`}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -301,7 +299,7 @@ export default function EquipamentosPage() {
                         size="icon-sm"
                         onClick={() => remove(eq)}
                         disabled={deleting}
-                        aria-label={`Excluir ${eq.nome}`}
+                        aria-label={`Excluir ${rotuloEquipamento(eq)}`}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -319,17 +317,17 @@ export default function EquipamentosPage() {
           <DialogHeader>
             <DialogTitle>
               Editar equipamento
-              {editing ? ` — ${editing.nome}` : ""}
+              {editing ? ` — ${rotuloEquipamento(editing)}` : ""}
             </DialogTitle>
           </DialogHeader>
           <EquipamentoFormFields
-            nome={editForm.nome}
-            onNomeChange={(nome) =>
-              setEditForm((f) => ({ ...f, nome }))
-            }
             marca={editForm.marca}
             onMarcaChange={(marca) =>
               setEditForm((f) => ({ ...f, marca }))
+            }
+            modelo={editForm.nome}
+            onModeloChange={(nome) =>
+              setEditForm((f) => ({ ...f, nome }))
             }
             tipoEquipamento={editForm.tipoEquipamento}
             onTipoEquipamentoChange={(tipoEquipamento) =>
@@ -338,10 +336,6 @@ export default function EquipamentosPage() {
             tipoMonitoramento={editForm.tipoMonitoramento}
             onTipoMonitoramentoChange={(tipoMonitoramento) =>
               setEditForm((f) => ({ ...f, tipoMonitoramento }))
-            }
-            community={editForm.community}
-            onCommunityChange={(community) =>
-              setEditForm((f) => ({ ...f, community }))
             }
             pontos={editForm.pontos}
             onPontosChange={(pontos) =>
@@ -363,7 +357,11 @@ export default function EquipamentosPage() {
               </Button>
               <Button
                 onClick={update}
-                disabled={saving || !editForm.nome.trim()}
+                disabled={
+                  saving ||
+                  !editForm.marca.trim() ||
+                  !editForm.nome.trim()
+                }
               >
                 {saving ? "Salvando…" : "Salvar"}
               </Button>

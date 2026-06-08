@@ -1,28 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";
 import type { SnmpPonto } from "@/lib/types";
+import { SnmpPontoFormDialog } from "@/components/equipamentos/snmp-ponto-form-dialog";
+import { SnmpTestOidDialog } from "@/components/equipamentos/snmp-test-oid-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { SnmpPontoFormDialog } from "@/components/equipamentos/snmp-ponto-form-dialog";
 
 export function SnmpPontosEditor({
-  community,
-  onCommunityChange,
   pontos,
   onChange,
 }: {
-  community: string;
-  onCommunityChange: (v: string) => void;
   pontos: SnmpPonto[];
   onChange: (pontos: SnmpPonto[]) => void;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<SnmpPonto | null>(null);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testingPonto, setTestingPonto] = useState<SnmpPonto | null>(null);
 
   function openNew() {
     setEditing(null);
@@ -32,6 +28,11 @@ export function SnmpPontosEditor({
   function openEdit(ponto: SnmpPonto) {
     setEditing(ponto);
     setFormOpen(true);
+  }
+
+  function openTest(ponto: SnmpPonto) {
+    setTestingPonto(ponto);
+    setTestOpen(true);
   }
 
   function removePonto(localId: string) {
@@ -57,26 +58,13 @@ export function SnmpPontosEditor({
           <p className="text-sm font-medium">Pontos de dados SNMP</p>
           <p className="text-xs text-muted-foreground">
             Adicione OIDs pelo formulário; a lista mostra nome e OID para
-            localizar, editar ou remover.
+            localizar, testar, editar ou remover.
           </p>
         </div>
         <Badge variant="outline" className="shrink-0">
           {pontos.filter((p) => !p.desabilitado).length} ativo(s)
         </Badge>
       </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="snmp-community">Community (SNMP v2c)</Label>
-        <Input
-          id="snmp-community"
-          value={community}
-          onChange={(e) => onCommunityChange(e.target.value)}
-          placeholder="public"
-          className="max-w-xs"
-        />
-      </div>
-
-      <Separator />
 
       <Button type="button" variant="secondary" size="sm" onClick={openNew}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -115,6 +103,16 @@ export function SnmpPontosEditor({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  onClick={() => openTest(ponto)}
+                  aria-label={`Testar OID ${ponto.nome || ponto.oid}`}
+                  title="Testar OID"
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => openEdit(ponto)}
                   aria-label={`Editar ${ponto.nome || ponto.oid}`}
                 >
@@ -140,6 +138,12 @@ export function SnmpPontosEditor({
         onOpenChange={setFormOpen}
         initial={editing}
         onSave={savePonto}
+      />
+
+      <SnmpTestOidDialog
+        open={testOpen}
+        onOpenChange={setTestOpen}
+        ponto={testingPonto}
       />
     </div>
   );

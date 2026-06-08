@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  tipoEquipamentoLabel,
-  tipoMonitoramentoLabel,
-} from "@/lib/labels";
+import { tipoEquipamentoLabel, tipoMonitoramentoLabel } from "@/lib/labels";
 import type { SnmpPonto, TipoEquipamento, TipoMonitoramento } from "@/lib/types";
 import { SnmpPontosEditor } from "@/components/equipamentos/snmp-pontos-editor";
 import { Input } from "@/components/ui/input";
@@ -30,30 +27,28 @@ const tipoMonitoramentoItems = tiposMonitoramento.map((t) => ({
 }));
 
 export function EquipamentoFormFields({
-  nome,
-  onNomeChange,
   marca,
   onMarcaChange,
+  modelo,
+  onModeloChange,
   tipoEquipamento,
   onTipoEquipamentoChange,
   tipoMonitoramento,
   onTipoMonitoramentoChange,
-  community,
-  onCommunityChange,
   pontos,
   onPontosChange,
   onMonitoramentoChange,
 }: {
-  nome: string;
-  onNomeChange: (v: string) => void;
+  /** Marca do equipamento (campo `marca` na API). */
   marca: string;
   onMarcaChange: (v: string) => void;
+  /** Modelo do equipamento (campo `nome` na API). */
+  modelo: string;
+  onModeloChange: (v: string) => void;
   tipoEquipamento: TipoEquipamento;
   onTipoEquipamentoChange: (v: TipoEquipamento) => void;
   tipoMonitoramento: TipoMonitoramento;
   onTipoMonitoramentoChange: (v: TipoMonitoramento) => void;
-  community: string;
-  onCommunityChange: (v: string) => void;
   pontos: SnmpPonto[];
   onPontosChange: (p: SnmpPonto[]) => void;
   onMonitoramentoChange?: (tipo: TipoMonitoramento) => void;
@@ -62,15 +57,19 @@ export function EquipamentoFormFields({
     <div className="grid gap-4 py-2">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Nome</Label>
-          <Input value={nome} onChange={(e) => onNomeChange(e.target.value)} />
-        </div>
-        <div className="grid gap-2">
           <Label>Marca</Label>
           <Input
             value={marca}
             onChange={(e) => onMarcaChange(e.target.value)}
             placeholder="Ex.: APC, Siemens"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Modelo</Label>
+          <Input
+            value={modelo}
+            onChange={(e) => onModeloChange(e.target.value)}
+            placeholder="Ex.: Smart-UPS 1500"
           />
         </div>
       </div>
@@ -95,7 +94,7 @@ export function EquipamentoFormFields({
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label>Tipo de monitoramento</Label>
+          <Label>Protocolo</Label>
           <Select
             items={tipoMonitoramentoItems}
             value={tipoMonitoramento}
@@ -119,12 +118,7 @@ export function EquipamentoFormFields({
         </div>
       </div>
       {tipoMonitoramento === "snmp" && (
-        <SnmpPontosEditor
-          community={community}
-          onCommunityChange={onCommunityChange}
-          pontos={pontos}
-          onChange={onPontosChange}
-        />
+        <SnmpPontosEditor pontos={pontos} onChange={onPontosChange} />
       )}
     </div>
   );

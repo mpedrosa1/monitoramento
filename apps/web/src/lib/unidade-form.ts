@@ -193,8 +193,15 @@ export function defaultPortaForEquipamento(eq: Equipamento | undefined): string 
   return eq.tipoMonitoramento === "snmp" ? "161" : "502";
 }
 
+export function rotuloEquipamento(eq: Equipamento): string {
+  const marca = eq.marca?.trim();
+  const modelo = eq.nome?.trim();
+  if (marca && modelo) return `${marca} ${modelo}`;
+  return marca || modelo || "—";
+}
+
 export function labelEquipamentoCatalogo(eq: Equipamento): string {
-  return `${eq.nome} (${tipoEquipamentoLabel[eq.tipoEquipamento]} · ${tipoMonitoramentoLabel[eq.tipoMonitoramento]})`;
+  return `${rotuloEquipamento(eq)} (${tipoEquipamentoLabel[eq.tipoEquipamento]} · ${tipoMonitoramentoLabel[eq.tipoMonitoramento]})`;
 }
 
 /** Nome exibido do vínculo equipamento ↔ unidade. */
@@ -204,5 +211,5 @@ export function nomeEquipamentoVinculo(
 ): string {
   const local = link.nomeLocal?.trim();
   if (local) return local;
-  return eq?.nome ?? link.equipamentoId;
+  return eq ? rotuloEquipamento(eq) : link.equipamentoId;
 }

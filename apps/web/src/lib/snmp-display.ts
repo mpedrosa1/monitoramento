@@ -34,9 +34,11 @@ export function formatSnmpMetricValue(
       ? String(scaled)
       : scaled.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
     const unit = ponto?.unidade?.trim();
-    return unit ? `${text} ${unit}` : text;
+    return unit ? `${text}${unit}` : text;
   }
-  return String(scaled);
+  const unit = ponto?.unidade?.trim();
+  const text = String(scaled);
+  return unit ? `${text}${unit}` : text;
 }
 
 export function findSnmpPontoByKey(

@@ -27,6 +27,24 @@ const tipoDadoItems = SNMP_TIPOS_DADO.map((t) => ({
   label: snmpTipoDadoLabel[t],
 }));
 
+const MULT_INPUT_DEFAULT = "1";
+
+function multiplicadorToInput(value: number | undefined): string {
+  if (value == null) return MULT_INPUT_DEFAULT;
+  return String(value);
+}
+
+function parseMultiplicadorInput(raw: string): number | null {
+  const trimmed = raw.trim().replace(",", ".");
+  if (trimmed === "" || trimmed === "." || trimmed === "-") return null;
+  const n = Number.parseFloat(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isValidMultiplicadorInput(raw: string): boolean {
+  return /^-?\d*[,.]?\d*$/.test(raw);
+}
+
 export function SnmpPontoFormDialog({
   open,
   onOpenChange,
@@ -39,11 +57,18 @@ export function SnmpPontoFormDialog({
   onSave: (ponto: SnmpPonto) => void;
 }) {
   const [draft, setDraft] = useState<SnmpPonto>(() => newSnmpPonto());
+  const [multInput, setMultInput] = useState(MULT_INPUT_DEFAULT);
   const isEdit = !!initial?._localId;
 
   useEffect(() => {
     if (open) {
-      setDraft(initial ? { ...initial } : newSnmpPonto());
+      const next = initial ? { ...initial } : newSnmpPonto();
+      setDraft(next);
+      setMultInput(
+        next.tipoDado === "numerico" || !next.tipoDado
+          ? multiplicadorToInput(next.multiplicador)
+          : MULT_INPUT_DEFAULT
+      );
     }
   }, [open, initial]);
 
@@ -56,11 +81,13 @@ export function SnmpPontoFormDialog({
   function handleSave() {
     const oid = draft.oid.trim().replace(/^\./, "");
     if (!oid) return;
+    const multParsed = isNumerico ? parseMultiplicadorInput(multInput) : null;
+    if (isNumerico && multParsed == null) return;
     onSave({
       ...draft,
       oid,
       nome: draft.nome.trim() || oid,
-      multiplicador: isNumerico ? (draft.multiplicador ?? 1) : undefined,
+      multiplicador: isNumerico ? (multParsed ?? 1) : undefined,
     });
     onOpenChange(false);
   }
@@ -104,6 +131,9 @@ export function SnmpPontoFormDialog({
                         ? (draft.multiplicador ?? 1)
                         : undefined,
                   });
+                  if (tipoDado === "numerico") {
+                    setMultInput(multiplicadorToInput(draft.multiplicador));
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -122,17 +152,18 @@ export function SnmpPontoFormDialog({
               <div className="grid gap-1.5">
                 <Label>Multiplicador</Label>
                 <Input
-                  type="number"
-                  step="any"
-                  value={draft.multiplicador ?? 1}
+                  type="text"
+                  inputMode="decimal"
+                  value={multInput}
                   onChange={(e) => {
                     const raw = e.target.value;
-                    patch({
-                      multiplicador:
-                        raw === "" ? 1 : Number.parseFloat(raw) || 1,
-                    });
+                    if (!isValidMultiplicadorInput(raw)) return;
+                    setMultInput(raw);
+                    const parsed = parseMultiplicadorInput(raw);
+                    if (parsed != null) {
+                      patch({ multiplicador: parsed });
+                    }
                   }}
-                  placeholder="1"
                 />
               </div>
             ) : (
@@ -169,7 +200,13 @@ export function SnmpPontoFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={!draft.oid.trim()}>
+          <Button
+            onClick={handleSave}
+            disabled={
+              !draft.oid.trim() ||
+              (isNumerico && parseMultiplicadorInput(multInput) == null)
+            }
+          >
             Salvar ponto
           </Button>
         </DialogFooter>

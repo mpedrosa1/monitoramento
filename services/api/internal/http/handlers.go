@@ -12,6 +12,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
+	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -617,6 +618,37 @@ func (a *API) UpdateEquipamento(w http.ResponseWriter, r *http.Request, id strin
 		return
 	}
 	writeJSON(w, http.StatusOK, e)
+}
+
+type testSnmpOidInput struct {
+	Host      string `json:"host"`
+	Port      int    `json:"port"`
+	Community string `json:"community"`
+	OID       string `json:"oid"`
+}
+
+type testSnmpOidOutput struct {
+	Online bool   `json:"online"`
+	Valor  any    `json:"valor,omitempty"`
+	Erro   string `json:"erro,omitempty"`
+}
+
+func (a *API) TestSnmpOID(w http.ResponseWriter, r *http.Request) {
+	var in testSnmpOidInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	port := uint16(in.Port)
+	if port == 0 {
+		port = 161
+	}
+	online, val, errMsg := snmp.TestOID(in.Host, port, in.Community, in.OID)
+	if errMsg != "" {
+		writeJSON(w, http.StatusOK, testSnmpOidOutput{Online: online, Erro: errMsg})
+		return
+	}
+	writeJSON(w, http.StatusOK, testSnmpOidOutput{Online: online, Valor: val})
 }
 
 func (a *API) DeleteEquipamento(w http.ResponseWriter, r *http.Request, id string) {
