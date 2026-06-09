@@ -27,6 +27,14 @@ export function formatSnmpMetricValue(
   value: unknown,
   ponto?: SnmpPonto | null
 ): string {
+  const tipo = ponto?.tipoDado;
+  if (tipo === "binario") {
+    const n = toNumber(value);
+    if (n === 1 || value === true || value === "true") return "Ligado";
+    if (n === 0 || value === false || value === "false") return "Desligado";
+    return value == null ? "—" : String(value);
+  }
+
   const scaled = applySnmpMultiplicador(value, ponto);
   if (scaled == null) return "—";
   if (typeof scaled === "number") {

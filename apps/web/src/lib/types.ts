@@ -12,7 +12,15 @@ export type TipoEquipamento = "nobreak" | "sensor";
 
 export type TipoMonitoramento = "modbus" | "snmp";
 
-export type SnmpTipoDado = "numerico" | "texto" | "contador" | "tempo" | "gauge";
+export type SnmpTipoDado =
+  | "numerico"
+  | "binario"
+  | "multi_estado"
+  | "alfanumerico"
+  | "texto"
+  | "contador"
+  | "tempo"
+  | "gauge";
 
 export interface SnmpPonto {
   /** Identificador local para React (não persistido). */

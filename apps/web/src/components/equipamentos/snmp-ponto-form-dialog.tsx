@@ -63,6 +63,7 @@ export function SnmpPontoFormDialog({
   useEffect(() => {
     if (open) {
       const next = initial ? { ...initial } : newSnmpPonto();
+      if (next.tipoDado === "texto") next.tipoDado = "alfanumerico";
       setDraft(next);
       setMultInput(
         next.tipoDado === "numerico" || !next.tipoDado
@@ -136,10 +137,10 @@ export function SnmpPontoFormDialog({
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="z-[70]">
+                <SelectContent className="z-[100]">
                   {SNMP_TIPOS_DADO.map((t) => (
                     <SelectItem key={t} value={t}>
                       {snmpTipoDadoLabel[t]}

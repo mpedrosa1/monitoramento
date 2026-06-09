@@ -2,11 +2,24 @@ import type { SnmpPonto, SnmpTipoDado } from "./types";
 
 export const SNMP_TIPOS_DADO: SnmpTipoDado[] = [
   "numerico",
-  "texto",
+  "binario",
+  "multi_estado",
+  "alfanumerico",
   "contador",
   "tempo",
   "gauge",
 ];
+
+export function normalizeSnmpTipoDado(
+  tipo?: SnmpTipoDado | string
+): SnmpTipoDado | undefined {
+  if (!tipo) return undefined;
+  if (tipo === "texto") return "alfanumerico";
+  if (SNMP_TIPOS_DADO.includes(tipo as SnmpTipoDado)) {
+    return tipo as SnmpTipoDado;
+  }
+  return undefined;
+}
 
 export function newSnmpPonto(partial?: Partial<SnmpPonto>): SnmpPonto {
   return {
@@ -29,6 +42,7 @@ export function normalizeSnmpPontos(
     return config.pontos.map((p) => ({
       ...p,
       _localId: p._localId ?? crypto.randomUUID(),
+      tipoDado: normalizeSnmpTipoDado(p.tipoDado) ?? p.tipoDado,
       multiplicador:
         p.tipoDado === "numerico" ? (p.multiplicador ?? 1) : undefined,
     }));

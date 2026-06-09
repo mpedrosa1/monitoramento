@@ -70,7 +70,10 @@ export const tipoMonitoramentoLabel: Record<TipoMonitoramento, string> = {
 
 export const snmpTipoDadoLabel: Record<SnmpTipoDado, string> = {
   numerico: "Numérico",
-  texto: "Texto",
+  binario: "Binário",
+  multi_estado: "Multi-estado",
+  alfanumerico: "Alfanumérico",
+  texto: "Alfanumérico",
   contador: "Contador",
   tempo: "Tempo (TimeTicks)",
   gauge: "Gauge",
