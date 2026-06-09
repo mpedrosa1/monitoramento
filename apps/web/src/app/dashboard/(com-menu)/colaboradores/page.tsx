@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
+import { colaboradorStatusLabel } from "@/lib/labels";
 import type { Colaborador } from "@/lib/types";
 import { AdicionarColaboradorDialog } from "@/components/colaboradores/adicionar-colaborador-dialog";
 import { EditarColaboradorDialog } from "@/components/colaboradores/editar-colaborador-dialog";
@@ -10,6 +12,7 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ColaboradorCard } from "@/components/dashboard/colaborador-card";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Input } from "@/components/ui/input";
 
 export default function ColaboradoresPage() {
   const { status: socketStatus } = useMonitoring();
@@ -22,6 +25,23 @@ export default function ColaboradoresPage() {
     null
   );
   const [deleting, setDeleting] = useState(false);
+  const [busca, setBusca] = useState("");
+
+  const filteredList = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return list;
+    return list.filter((c) => {
+      const status = colaboradorStatusLabel[c.status] ?? c.status;
+      return (
+        c.nome.toLowerCase().includes(termo) ||
+        (c.cargo ?? "").toLowerCase().includes(termo) ||
+        (c.cpf ?? "").toLowerCase().includes(termo) ||
+        (c.email ?? "").toLowerCase().includes(termo) ||
+        (c.emailCorporativo ?? "").toLowerCase().includes(termo) ||
+        status.toLowerCase().includes(termo)
+      );
+    });
+  }, [list, busca]);
 
   const load = useCallback(async () => {
     const cols = await apiFetch<Colaborador[] | null>("/api/v1/colaboradores");
@@ -76,18 +96,30 @@ export default function ColaboradoresPage() {
         socketStatus={socketStatus}
       />
       <div className="space-y-6 p-6">
-        {canManageData && (
-          <div className="flex justify-end">
-            <AdicionarColaboradorDialog onSuccess={load} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome, cargo, CPF ou e-mail…"
+              className="pl-8"
+              aria-label="Buscar colaboradores"
+            />
           </div>
-        )}
+          {canManageData && <AdicionarColaboradorDialog onSuccess={load} />}
+        </div>
         {list.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Nenhum colaborador cadastrado.
           </p>
+        ) : filteredList.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum colaborador encontrado para a busca.
+          </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {list.map((c) => (
+            {filteredList.map((c) => (
               <ColaboradorCard
                 key={c.id}
                 colaborador={c}

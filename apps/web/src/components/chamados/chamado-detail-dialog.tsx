@@ -50,6 +50,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
@@ -482,11 +483,10 @@ export function ChamadoDetailDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="missao-hora">Previsão de chegada — hora</Label>
-                    <Input
+                    <TimeInput
                       id="missao-hora"
-                      type="time"
                       value={missaoForm.hora}
-                      onChange={(e) => patchMissao({ hora: e.target.value })}
+                      onChange={(hora) => patchMissao({ hora })}
                     />
                   </div>
                 </div>
@@ -543,21 +543,19 @@ export function ChamadoDetailDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="enc-hora">Hora</Label>
-                    <Input
+                    <TimeInput
                       id="enc-hora"
-                      type="time"
                       value={encForm.hora}
-                      onChange={(e) => patchEnc({ hora: e.target.value })}
+                      onChange={(hora) => patchEnc({ hora })}
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="enc-hora-teste">Hora do teste pós-intervenção</Label>
-                    <Input
+                    <TimeInput
                       id="enc-hora-teste"
-                      type="time"
                       value={encForm.horaTestePos}
-                      onChange={(e) =>
-                        patchEnc({ horaTestePos: e.target.value })
+                      onChange={(horaTestePos) =>
+                        patchEnc({ horaTestePos })
                       }
                     />
                   </div>

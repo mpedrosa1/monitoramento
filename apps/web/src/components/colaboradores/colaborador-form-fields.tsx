@@ -248,8 +248,7 @@ export function ColaboradorFormFields({
               onChange={(e) =>
                 onChange({ rg: formatRgInput(e.target.value) })
               }
-              placeholder="00.000.000-0"
-              inputMode="numeric"
+              placeholder="00.000.000"
               aria-invalid={!!errors.rg}
             />
           </ColaboradorField>
@@ -283,6 +282,7 @@ export function ColaboradorFormFields({
               onChange({
                 estadoCivil: (v ?? "") as ColaboradorFormState["estadoCivil"],
                 conjuge: v === "casado" ? form.conjuge : "",
+                conjugeCpf: v === "casado" ? form.conjugeCpf : "",
               })
             }
           >
@@ -302,20 +302,41 @@ export function ColaboradorFormFields({
           </Select>
         </ColaboradorField>
         {mostrarConjuge && (
-          <ColaboradorField
-            fieldKey="conjuge"
-            label="Cônjuge"
-            required
-            error={errors.conjuge}
-          >
-            <Input
-              id="col-conjuge"
-              value={form.conjuge}
-              onChange={(e) => onChange({ conjuge: e.target.value })}
-              placeholder="Nome do cônjuge"
-              aria-invalid={!!errors.conjuge}
-            />
-          </ColaboradorField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ColaboradorField
+              fieldKey="conjuge"
+              label="Cônjuge"
+              required
+              error={errors.conjuge}
+              className="sm:col-span-2"
+            >
+              <Input
+                id="col-conjuge"
+                value={form.conjuge}
+                onChange={(e) => onChange({ conjuge: e.target.value })}
+                placeholder="Nome do cônjuge"
+                aria-invalid={!!errors.conjuge}
+              />
+            </ColaboradorField>
+            <ColaboradorField
+              fieldKey="conjugeCpf"
+              label="CPF do cônjuge"
+              required
+              error={errors.conjugeCpf}
+              className="sm:col-span-2"
+            >
+              <Input
+                id="col-conjuge-cpf"
+                value={form.conjugeCpf}
+                onChange={(e) =>
+                  onChange({ conjugeCpf: formatCpfInput(e.target.value) })
+                }
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                aria-invalid={!!errors.conjugeCpf}
+              />
+            </ColaboradorField>
+          </div>
         )}
         <div className="grid gap-2">
           <div className="flex items-center justify-between gap-2">
@@ -405,6 +426,7 @@ export function ColaboradorFormFields({
                       label="CPF"
                       required
                       error={errors[dependenteFieldKey(d.localId, "cpf")]}
+                      className="sm:col-span-2"
                     >
                       <Input
                         value={d.cpf}
@@ -417,27 +439,6 @@ export function ColaboradorFormFields({
                         inputMode="numeric"
                         aria-invalid={
                           !!errors[dependenteFieldKey(d.localId, "cpf")]
-                        }
-                      />
-                    </ColaboradorField>
-                    <ColaboradorField
-                      fieldKey={dependenteFieldKey(d.localId, "rg")}
-                      label="RG"
-                      required
-                      error={errors[dependenteFieldKey(d.localId, "rg")]}
-                      className="sm:col-span-2"
-                    >
-                      <Input
-                        value={d.rg}
-                        onChange={(e) =>
-                          updateDependente(d.localId, {
-                            rg: formatRgInput(e.target.value),
-                          })
-                        }
-                        placeholder="00.000.000-0"
-                        inputMode="numeric"
-                        aria-invalid={
-                          !!errors[dependenteFieldKey(d.localId, "rg")]
                         }
                       />
                     </ColaboradorField>
@@ -653,7 +654,6 @@ export function ColaboradorFormFields({
         <ColaboradorField
           fieldKey="salario"
           label="Salário"
-          required
           error={errors.salario}
           className="sm:max-w-xs"
         >

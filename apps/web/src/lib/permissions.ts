@@ -38,6 +38,15 @@ export function isAtribuidoMissaoDireta(
   return missao.colaboradorIds.includes(colaboradorId);
 }
 
+/** Colaborador atribuído pode iniciar missão planejada. */
+export function canIniciarMissao(
+  colaboradorId: string | undefined,
+  missao: Missao | null | undefined
+): boolean {
+  if (!missao || missao.status !== "planejada") return false;
+  return isAtribuidoMissaoDireta(colaboradorId, missao);
+}
+
 /**
  * Concluir missão em andamento: administradores/desenvolvedores ou
  * colaborador atribuído à missão. Missões ainda não iniciadas

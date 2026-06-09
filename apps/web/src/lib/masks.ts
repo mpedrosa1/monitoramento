@@ -15,9 +15,23 @@ export function isCpfComplete(value: string): boolean {
   return cpfDigits(value).length === 11;
 }
 
-/** RG: 00.000.000-0 */
+/** RG: 00.000.000 ou 00.000.000-0 (último caractere opcional; pode ser X) */
+function extractRgChars(value: string): string {
+  const upper = value.toUpperCase();
+  let result = "";
+  for (const ch of upper) {
+    if (result.length < 8) {
+      if (/\d/.test(ch)) result += ch;
+    } else if (result.length === 8 && (/\d/.test(ch) || ch === "X")) {
+      result += ch;
+      break;
+    }
+  }
+  return result;
+}
+
 export function formatRgInput(value: string): string {
-  const d = value.replace(/\D/g, "").slice(0, 9);
+  const d = extractRgChars(value);
   if (d.length <= 2) return d;
   if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
   if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
@@ -25,11 +39,15 @@ export function formatRgInput(value: string): string {
 }
 
 export function rgDigits(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 9);
+  return extractRgChars(value);
 }
 
 export function isRgComplete(value: string): boolean {
-  return rgDigits(value).length === 9;
+  const chars = extractRgChars(value);
+  if (chars.length === 8) return true;
+  if (chars.length !== 9) return false;
+  const last = chars[8];
+  return /\d/.test(last) || last === "X";
 }
 
 /** Telefone celular: (00) 00000-0000 */

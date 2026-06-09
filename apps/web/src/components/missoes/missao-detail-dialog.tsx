@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Ticket } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatCoord } from "@/lib/geocode";
 import { isAtribuidoMissaoLista } from "@/lib/missao-form";
@@ -12,13 +13,20 @@ import {
   type MissaoConclusaoFormState,
 } from "@/lib/missao-conclusao-form";
 import { missaoStatusLabel, missaoStatusVariant } from "@/lib/labels";
-import { formatInicioMissao, labelChamadoVinculadoMissao, statusEfetivoMissao } from "@/lib/missoes";
-import { canConcluirMissao } from "@/lib/permissions";
+import {
+  chamadoVinculadoDaMissao,
+  formatInicioMissao,
+  labelChamadoVinculadoMissao,
+  missaoPermiteConclusaoDireta,
+  statusEfetivoMissao,
+} from "@/lib/missoes";
+import { canConcluirMissao, canIniciarMissao } from "@/lib/permissions";
 import { formatUnidadeEndereco } from "@/lib/unidade-form";
 import type { AuthUser } from "@/lib/auth-session";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { coordsFromUnidade } from "@/components/unidades/unidade-detail-panel";
-import { MissaoMap } from "@/components/missoes/missao-map";
+import { ChamadoDetailDialog } from "@/components/chamados/chamado-detail-dialog";
+import { MissaoLocalizacaoRotaSection } from "@/components/missoes/missao-localizacao-rota-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +37,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
+import { formatDateTimeBR } from "@/lib/time";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
@@ -60,14 +70,7 @@ function DetalheCampo({
 }
 
 function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatDateTimeBR(iso);
 }
 
 export function MissaoDetailDialog({
@@ -78,6 +81,7 @@ export function MissaoDetailDialog({
   chamados,
   colaboradores,
   user,
+  unidades,
   onSuccess,
 }: {
   open: boolean;
@@ -87,9 +91,13 @@ export function MissaoDetailDialog({
   chamados: Chamado[];
   colaboradores: Colaborador[];
   user: AuthUser | null;
+  unidades?: Unidade[];
   onSuccess?: () => void | Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
+  const [iniciando, setIniciando] = useState(false);
+  const [chamadoOpen, setChamadoOpen] = useState(false);
+  const [chamadoDetalhe, setChamadoDetalhe] = useState<Chamado | null>(null);
   const [conclusaoForm, setConclusaoForm] = useState<MissaoConclusaoFormState>(
     () => emptyMissaoConclusaoForm()
   );
@@ -118,10 +126,10 @@ export function MissaoDetailDialog({
     return labelChamadoVinculadoMissao(missao.chamadoId, chamados);
   }, [missao, chamados]);
 
-  const chamadoVinculado = useMemo(() => {
-    if (!missao?.chamadoId) return null;
-    return chamados.find((ch) => ch.id === missao.chamadoId) ?? null;
-  }, [missao, chamados]);
+  const chamadoVinculado = useMemo(
+    () => chamadoVinculadoDaMissao(missao, chamados),
+    [missao, chamados]
+  );
 
   const inicioTexto = useMemo(() => {
     if (!missao) return "—";
@@ -140,8 +148,42 @@ export function MissaoDetailDialog({
     chamadoVinculado
   );
 
+  const exibirConcluirMissao =
+    podeConcluir && !!missao && missaoPermiteConclusaoDireta(missao, chamados);
+  const podeIniciar = canIniciarMissao(user?.id, missao);
+
+  const unidadesLista = useMemo(
+    () => unidades ?? (unidade ? [unidade] : []),
+    [unidades, unidade]
+  );
+
+  function abrirChamadoVinculado() {
+    if (!chamadoVinculado) return;
+    setChamadoDetalhe(chamadoVinculado);
+    onOpenChange(false);
+    setChamadoOpen(true);
+  }
+
   function patchConclusao(p: Partial<MissaoConclusaoFormState>) {
     setConclusaoForm((f) => ({ ...f, ...p }));
+  }
+
+  async function iniciarMissao() {
+    if (!missao) return;
+    setIniciando(true);
+    try {
+      await apiFetch<Missao>(`/api/v1/missoes/${missao.id}/iniciar`, {
+        method: "PUT",
+      });
+      onOpenChange(false);
+      await onSuccess?.();
+    } catch (e) {
+      window.alert(
+        e instanceof Error ? e.message : "Erro ao iniciar missão."
+      );
+    } finally {
+      setIniciando(false);
+    }
   }
 
   async function concluirMissao() {
@@ -168,17 +210,14 @@ export function MissaoDetailDialog({
     }
   }
 
-  if (!missao) return null;
-
-  const mapLabel = unidade
-    ? `${unidade.codigo} — ${unidade.nome}`
-    : "Unidade";
+  if (!missao && !chamadoOpen) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open && !!missao} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] w-full max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="pr-6">{missao.titulo}</DialogTitle>
+          <DialogTitle className="pr-6">{missao?.titulo}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-5">
@@ -245,17 +284,29 @@ export function MissaoDetailDialog({
             </>
           )}
 
-          {missao.status === "planejada" && statusEfetivo === "planejada" && (
+          {missao.status === "planejada" && (
             <>
               <Separator />
-              <div className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
-                Esta missão ainda não foi iniciada. A conclusão só fica
-                disponível após o início da missão.
+              <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Esta missão ainda não foi iniciada. A conclusão só fica
+                  disponível após o início da missão.
+                </p>
+                {podeIniciar && (
+                  <Button
+                    type="button"
+                    className="shrink-0 bg-green-600 text-white hover:bg-green-700"
+                    onClick={iniciarMissao}
+                    disabled={iniciando}
+                  >
+                    {iniciando ? "Iniciando…" : "Iniciar missão"}
+                  </Button>
+                )}
               </div>
             </>
           )}
 
-          {podeConcluir && (
+          {exibirConcluirMissao && (
             <>
               <Separator />
               <section className="space-y-4">
@@ -290,11 +341,10 @@ export function MissaoDetailDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="missao-conclusao-hora">Hora</Label>
-                    <Input
+                    <TimeInput
                       id="missao-conclusao-hora"
-                      type="time"
                       value={conclusaoForm.hora}
-                      onChange={(e) => patchConclusao({ hora: e.target.value })}
+                      onChange={(hora) => patchConclusao({ hora })}
                     />
                   </div>
                 </div>
@@ -318,34 +368,37 @@ export function MissaoDetailDialog({
 
           <Separator />
 
-          <section className="space-y-2">
-            <p className="text-sm font-semibold">Localização e rota</p>
-            {!position ? (
-              <p className="text-xs text-muted-foreground">
-                Coordenadas não cadastradas para esta unidade. O mapa exibe a
-                região central de referência.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Autorize o navegador a usar sua localização para traçar a rota
-                até a unidade.
-              </p>
-            )}
-            <MissaoMap destination={position} label={mapLabel} />
-          </section>
+          {unidade && <MissaoLocalizacaoRotaSection unidade={unidade} />}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-          {podeConcluir && (
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            {chamadoVinculado && (
+              <Button variant="secondary" onClick={abrirChamadoVinculado}>
+                <Ticket data-icon="inline-start" />
+                Ver chamado vinculado
+              </Button>
+            )}
+          </div>
+          {exibirConcluirMissao && (
             <Button onClick={concluirMissao} disabled={loading || !user?.nome}>
               {loading ? "Concluindo…" : "Concluir missão"}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <ChamadoDetailDialog
+        open={chamadoOpen}
+        onOpenChange={setChamadoOpen}
+        chamado={chamadoDetalhe}
+        unidades={unidadesLista}
+        onSuccess={onSuccess}
+      />
+    </>
   );
 }

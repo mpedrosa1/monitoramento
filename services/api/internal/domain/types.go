@@ -134,6 +134,8 @@ const (
 	TipoAcessoDesenvolvedor       TipoAcessoSistema = "desenvolvedor"
 )
 
+const ColaboradorFotoURLPadrao = "/avatar-placeholder.svg"
+
 type ColaboradorDependente struct {
 	Nome           string `json:"nome" bson:"nome"`
 	DataNascimento string `json:"dataNascimento,omitempty" bson:"dataNascimento,omitempty"`
@@ -153,6 +155,7 @@ type Colaborador struct {
 	Email               string               `json:"email,omitempty" bson:"email,omitempty"`
 	EstadoCivil         EstadoCivil          `json:"estadoCivil,omitempty" bson:"estadoCivil,omitempty"`
 	Conjuge             string               `json:"conjuge,omitempty" bson:"conjuge,omitempty"`
+	ConjugeCPF          string               `json:"conjugeCpf,omitempty" bson:"conjugeCpf,omitempty"`
 	Dependentes         []ColaboradorDependente `json:"dependentes,omitempty" bson:"dependentes,omitempty"`
 	Endereco            UnidadeEndereco      `json:"endereco,omitempty" bson:"endereco,omitempty"`
 	Cargo               string               `json:"cargo,omitempty" bson:"cargo,omitempty"`

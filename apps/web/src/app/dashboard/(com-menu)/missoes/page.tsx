@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
 import {
   emptyMissaoForm,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/missao-form";
 import { missaoStatusLabel, missaoStatusVariant } from "@/lib/labels";
 import { formatInicioMissao, labelChamadoVinculadoMissao, statusEfetivoMissao } from "@/lib/missoes";
+import { formatDateTimeBR } from "@/lib/time";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -24,6 +25,7 @@ import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -41,14 +43,7 @@ import {
 } from "@/components/ui/table";
 
 function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatDateTimeBR(iso);
 }
 
 export default function MissoesPage() {
@@ -71,6 +66,7 @@ export default function MissoesPage() {
   const [deleting, setDeleting] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<Missao | null>(null);
+  const [busca, setBusca] = useState("");
 
   const unidadePorId = useMemo(
     () => new Map(unidades.map((u) => [u.id, u])),
@@ -92,6 +88,25 @@ export default function MissoesPage() {
   const chamadoLabel = useMemo(() => {
     return (id?: string) => labelChamadoVinculadoMissao(id, chamados);
   }, [chamados]);
+
+  const filteredList = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return list;
+    return list.filter((m) => {
+      const chamadoVinculado = m.chamadoId
+        ? chamados.find((c) => c.id === m.chamadoId)
+        : null;
+      const status = statusEfetivoMissao(m, chamadoVinculado);
+      const statusTexto = missaoStatusLabel[status] ?? status;
+      return (
+        m.titulo.toLowerCase().includes(termo) ||
+        unidadeNome(m.unidadeId).toLowerCase().includes(termo) ||
+        colaboradorNomes(m.colaboradorIds).toLowerCase().includes(termo) ||
+        chamadoLabel(m.chamadoId).toLowerCase().includes(termo) ||
+        statusTexto.toLowerCase().includes(termo)
+      );
+    });
+  }, [list, busca, chamados, unidadeNome, colaboradorNomes, chamadoLabel]);
 
   const load = useCallback(async () => {
     const [mis, uns, ch, cols] = await Promise.all([
@@ -199,8 +214,18 @@ export default function MissoesPage() {
             : "Clique em uma missão para ver detalhes e localização no mapa."}
         </p>
 
-        {canManageMissoes && (
-          <div className="flex justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por título, unidade, colaborador ou chamado…"
+              className="pl-8"
+              aria-label="Buscar missões"
+            />
+          </div>
+          {canManageMissoes && (
             <EntityFormDialog
               title="Nova missão"
               triggerLabel="Adicionar missão"
@@ -215,8 +240,8 @@ export default function MissoesPage() {
                 colaboradores={colaboradores}
               />
             </EntityFormDialog>
-          </div>
-        )}
+          )}
+        </div>
 
         <Table>
           <TableHeader>
@@ -234,17 +259,19 @@ export default function MissoesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.length === 0 ? (
+            {filteredList.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={canManageMissoes ? 8 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
-                  Nenhuma missão registrada.
+                  {list.length === 0
+                    ? "Nenhuma missão registrada."
+                    : "Nenhuma missão encontrada para a busca."}
                 </TableCell>
               </TableRow>
             ) : (
-              list.map((m) => (
+              filteredList.map((m) => (
                 <TableRow
                   key={m.id}
                   className="cursor-pointer hover:bg-muted/40"
@@ -362,6 +389,7 @@ export default function MissoesPage() {
         chamados={chamados}
         colaboradores={colaboradores}
         user={user}
+        unidades={unidades}
         onSuccess={load}
       />
 

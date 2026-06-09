@@ -18,6 +18,8 @@ import { ultimosChamadosAbertosDaUnidade } from "@/lib/chamados";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { ColaboradoresMissaoPicker } from "@/components/chamados/colaboradores-missao-picker";
 import { EmailAutorizacaoPreview } from "@/components/chamados/email-autorizacao-preview";
+import { EmpresaParceiraMissaoFields } from "@/components/unidades/empresa-parceira-missao-fields";
+import { MissaoLocalizacaoRotaSection } from "@/components/missoes/missao-localizacao-rota-section";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,7 +30,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -193,6 +197,8 @@ export function PlanejarMissaoDialog({
             onChange={(colaboradorIds) => patchForm({ colaboradorIds })}
           />
 
+          <EmpresaParceiraMissaoFields form={form} onChange={patchForm} />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="planejar-missao-data">
@@ -209,11 +215,10 @@ export function PlanejarMissaoDialog({
               <Label htmlFor="planejar-missao-hora">
                 Previsão de chegada — hora
               </Label>
-              <Input
+              <TimeInput
                 id="planejar-missao-hora"
-                type="time"
                 value={form.hora}
-                onChange={(e) => patchForm({ hora: e.target.value })}
+                onChange={(hora) => patchForm({ hora })}
               />
             </div>
           </div>
@@ -224,6 +229,10 @@ export function PlanejarMissaoDialog({
               corpo={emailAutorizacao.corpo}
             />
           )}
+
+          <Separator />
+
+          <MissaoLocalizacaoRotaSection unidade={unidade} />
         </div>
 
         <DialogFooter>

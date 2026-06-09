@@ -1,3 +1,4 @@
+import { COLABORADOR_AVATAR_PADRAO } from "./colaborador-avatar";
 import {
   cpfDigits,
   formatCpfInput,
@@ -55,7 +56,6 @@ export type DependenteForm = {
   localId: string;
   nome: string;
   dataNascimento: string;
-  rg: string;
   cpf: string;
 };
 
@@ -69,6 +69,7 @@ export type ColaboradorFormState = {
   rgOrgaoEmissor: string;
   estadoCivil: EstadoCivil | "";
   conjuge: string;
+  conjugeCpf: string;
   dependentes: DependenteForm[];
   endereco: ColaboradorEndereco;
   cargo: string;
@@ -96,7 +97,6 @@ function emptyDependente(): DependenteForm {
     localId: novoDependenteLocalId(),
     nome: "",
     dataNascimento: "",
-    rg: "",
     cpf: "",
   };
 }
@@ -118,6 +118,7 @@ export function emptyColaboradorForm(): ColaboradorFormState {
     rgOrgaoEmissor: "",
     estadoCivil: "",
     conjuge: "",
+    conjugeCpf: "",
     dependentes: [],
     endereco: emptyEndereco(),
     cargo: "",
@@ -151,11 +152,11 @@ export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
     rgOrgaoEmissor: c.rgOrgaoEmissor ?? "",
     estadoCivil: c.estadoCivil ?? "",
     conjuge: c.conjuge ?? "",
+    conjugeCpf: c.conjugeCpf ?? "",
     dependentes: (c.dependentes ?? []).map((d) => ({
       localId: novoDependenteLocalId(),
       nome: d.nome ?? "",
       dataNascimento: d.dataNascimento ?? "",
-      rg: d.rg ?? "",
       cpf: d.cpf ?? "",
     })),
     endereco: c.endereco ? { ...c.endereco } : emptyEndereco(),
@@ -172,7 +173,6 @@ function dependenteParcial(d: DependenteForm): boolean {
   return Boolean(
     d.nome.trim() ||
       d.dataNascimento ||
-      d.rg.trim() ||
       d.cpf.trim()
   );
 }
@@ -255,6 +255,9 @@ export function validateColaboradorForm(
   if (form.estadoCivil === "casado" && !form.conjuge.trim()) {
     errors.conjuge = "Informe o nome do cônjuge.";
   }
+  if (form.estadoCivil === "casado" && !isCpfComplete(form.conjugeCpf)) {
+    errors.conjugeCpf = "Informe o CPF do cônjuge.";
+  }
 
   for (let i = 0; i < form.dependentes.length; i++) {
     const d = form.dependentes[i];
@@ -267,10 +270,6 @@ export function validateColaboradorForm(
     if (!d.dataNascimento) {
       errors[dependenteFieldKey(d.localId, "dataNascimento")] =
         `Informe a data de nascimento do dependente ${n}.`;
-    }
-    if (!isRgComplete(d.rg)) {
-      errors[dependenteFieldKey(d.localId, "rg")] =
-        `Informe o RG do dependente ${n}.`;
     }
     if (!isCpfComplete(d.cpf)) {
       errors[dependenteFieldKey(d.localId, "cpf")] =
@@ -306,9 +305,6 @@ export function validateColaboradorForm(
   if (!isEmailValido(form.emailCorporativo)) {
     errors.emailCorporativo = "Informe um e-mail corporativo válido.";
   }
-  if (salarioParaNumero(form.salario) <= 0) {
-    errors.salario = "Informe o salário.";
-  }
   if (!form.tipoAcesso) {
     errors.tipoAcesso = "Selecione o tipo de acesso ao sistema.";
   }
@@ -321,7 +317,6 @@ export function formToColaboradorBody(
   existing?: Colaborador
 ): Omit<Colaborador, "id" | "createdAt" | "updatedAt"> {
   const nome = form.nome.trim();
-  const fotoPadrao = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(nome)}`;
   return {
     nome,
     dataNascimento: form.dataNascimento,
@@ -332,12 +327,15 @@ export function formToColaboradorBody(
     email: form.email.trim().toLowerCase(),
     estadoCivil: form.estadoCivil as EstadoCivil,
     conjuge: form.estadoCivil === "casado" ? form.conjuge.trim() : undefined,
+    conjugeCpf:
+      form.estadoCivil === "casado"
+        ? formatCpfInput(cpfDigits(form.conjugeCpf))
+        : undefined,
     dependentes: form.dependentes
       .filter((d) => d.nome.trim())
       .map((d) => ({
         nome: d.nome.trim(),
         dataNascimento: d.dataNascimento,
-        rg: formatRgInput(rgDigits(d.rg)),
         cpf: formatCpfInput(cpfDigits(d.cpf)),
       })),
     endereco: {
@@ -355,9 +353,11 @@ export function formToColaboradorBody(
       telefoneDigits(form.telefoneCorporativo)
     ),
     emailCorporativo: form.emailCorporativo.trim().toLowerCase(),
-    salario: salarioParaNumero(form.salario),
+    salario: form.salario.trim()
+      ? salarioParaNumero(form.salario)
+      : (existing?.salario ?? 0),
     tipoAcesso: form.tipoAcesso as TipoAcessoSistema,
-    fotoUrl: existing?.fotoUrl || fotoPadrao,
+    fotoUrl: existing?.fotoUrl || COLABORADOR_AVATAR_PADRAO,
     status: existing?.status ?? ("escritorio" as ColaboradorStatus),
     unidadeId: existing?.unidadeId,
   };

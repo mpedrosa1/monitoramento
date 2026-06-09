@@ -16,16 +16,10 @@ import { chamadoStatusLabel, chamadoStatusVariant } from "@/lib/labels";
 import { formatNumeroExibicao } from "@/lib/chamado-email";
 import { isAtribuidoMissao } from "@/lib/permissions";
 import type { Chamado } from "@/lib/types";
+import { formatDateTimeBR } from "@/lib/time";
 
 function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatDateTimeBR(iso);
 }
 
 function chamadoLabel(c: Chamado): string {
@@ -38,12 +32,16 @@ export function ChamadosTable({
   onEdit,
   onDelete,
   deleting = false,
+  emptyMessage = "Nenhum chamado registrado.",
+  unidadeLabel,
 }: {
   chamados: Chamado[];
   onRowClick?: (chamado: Chamado) => void;
   onEdit?: (chamado: Chamado) => void;
   onDelete?: (chamado: Chamado) => void;
   deleting?: boolean;
+  emptyMessage?: string;
+  unidadeLabel?: (unidadeId: string) => string;
 }) {
   const { user } = useAuth();
   const showActions = Boolean(onEdit || onDelete);
@@ -52,7 +50,7 @@ export function ChamadosTable({
   if (chamados.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Nenhum chamado registrado.
+        {emptyMessage}
       </p>
     );
   }
@@ -62,6 +60,7 @@ export function ChamadosTable({
       <TableHeader>
         <TableRow>
           <TableHead>Chamado</TableHead>
+          {unidadeLabel && <TableHead>Unidade</TableHead>}
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Data</TableHead>
           {showActions && (
@@ -79,6 +78,11 @@ export function ChamadosTable({
             <TableCell className="font-medium">
               {c.numero ? formatNumeroExibicao(c.numero) : c.titulo}
             </TableCell>
+            {unidadeLabel && (
+              <TableCell className="max-w-[220px] truncate text-sm text-muted-foreground">
+                {unidadeLabel(c.unidadeId)}
+              </TableCell>
+            )}
             <TableCell>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge variant={chamadoStatusVariant[c.status]}>

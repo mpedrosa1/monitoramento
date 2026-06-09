@@ -6,12 +6,29 @@ import {
   hojeIso,
   type ChamadoAutorizacaoEmailInput,
 } from "./chamado-email";
+import {
+  emptyEmpresaParceiraColaborador,
+  resolveEmpresaParceiraLocalText,
+  type EmpresaParceiraColaboradorForm,
+  type EmpresaParceiraLocal,
+} from "./empresa-parceira-missao-form";
 import type { Chamado, Colaborador } from "./types";
+
+export type {
+  EmpresaParceiraColaboradorForm,
+  EmpresaParceiraLocal,
+} from "./empresa-parceira-missao-form";
 
 export type MissaoFormState = {
   colaboradorIds: string[];
   dataIso: string;
   hora: string;
+  temEmpresaParceira: boolean;
+  empresaParceiraNome: string;
+  empresaParceiraColaboradores: EmpresaParceiraColaboradorForm[];
+  empresaParceiraTrabalho: string;
+  empresaParceiraLocal: EmpresaParceiraLocal;
+  empresaParceiraLocalOutro: string;
 };
 
 export function emptyMissaoForm(
@@ -22,6 +39,12 @@ export function emptyMissaoForm(
     colaboradorIds: [],
     dataIso,
     hora,
+    temEmpresaParceira: false,
+    empresaParceiraNome: "",
+    empresaParceiraColaboradores: [],
+    empresaParceiraTrabalho: "",
+    empresaParceiraLocal: "",
+    empresaParceiraLocalOutro: "",
   };
 }
 
@@ -33,7 +56,7 @@ export function autorizacaoInputFromForm(
   const selected = colaboradores.filter((c) =>
     form.colaboradorIds.includes(c.id)
   );
-  return {
+  const input: ChamadoAutorizacaoEmailInput = {
     unidadeNome,
     colaboradores: selected.map((c) => ({
       nome: c.nome,
@@ -43,6 +66,33 @@ export function autorizacaoInputFromForm(
     dataIso: form.dataIso,
     hora: form.hora,
   };
+
+  if (form.temEmpresaParceira) {
+    const colaboradoresParceiros = form.empresaParceiraColaboradores
+      .filter(
+        (c) =>
+          c.nome.trim() &&
+          c.tipoDocumento &&
+          c.documento.trim()
+      )
+      .map((c) => ({
+        nome: c.nome.trim(),
+        tipoDocumento: c.tipoDocumento as "rg" | "cpf",
+        documento: c.documento.trim(),
+      }));
+
+    input.empresaParceira = {
+      nomeEmpresa: form.empresaParceiraNome.trim(),
+      trabalho: form.empresaParceiraTrabalho.trim(),
+      local: resolveEmpresaParceiraLocalText(
+        form.empresaParceiraLocal,
+        form.empresaParceiraLocalOutro
+      ),
+      colaboradores: colaboradoresParceiros,
+    };
+  }
+
+  return input;
 }
 
 export function validateMissaoForm(
@@ -63,6 +113,47 @@ export function validateMissaoForm(
       return `Cadastre RG e órgão emissor de ${c.nome} na página Colaboradores.`;
     }
   }
+
+  if (form.temEmpresaParceira) {
+    if (!form.empresaParceiraNome.trim()) {
+      return "Informe o nome da empresa parceira.";
+    }
+    if (!form.empresaParceiraTrabalho.trim()) {
+      return "Informe o trabalho a ser realizado pela empresa parceira.";
+    }
+    if (!form.empresaParceiraLocal) {
+      return "Selecione o local onde o serviço da empresa parceira será realizado.";
+    }
+    if (
+      form.empresaParceiraLocal === "outro" &&
+      !form.empresaParceiraLocalOutro.trim()
+    ) {
+      return "Informe o local onde o serviço da empresa parceira será realizado.";
+    }
+    const parceirosValidos = form.empresaParceiraColaboradores.filter(
+      (c) => c.nome.trim() && c.tipoDocumento && c.documento.trim()
+    );
+    if (parceirosValidos.length === 0) {
+      return "Informe ao menos um colaborador da empresa parceira com nome, tipo de documento (RG ou CPF) e número.";
+    }
+    for (let i = 0; i < form.empresaParceiraColaboradores.length; i++) {
+      const p = form.empresaParceiraColaboradores[i];
+      const parcial =
+        p.nome.trim() || p.tipoDocumento || p.documento.trim();
+      if (!parcial) continue;
+      const n = i + 1;
+      if (!p.nome.trim()) {
+        return `Informe o nome do colaborador ${n} da empresa parceira.`;
+      }
+      if (!p.tipoDocumento) {
+        return `Selecione RG ou CPF do colaborador ${n} da empresa parceira.`;
+      }
+      if (!p.documento.trim()) {
+        return `Informe o ${p.tipoDocumento === "cpf" ? "CPF" : "RG"} do colaborador ${n} da empresa parceira.`;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -95,6 +186,10 @@ export function tituloMissao(chamado: Chamado, unidadeNome: string): string {
     ? formatNumeroExibicao(chamado.numero)
     : "sem número";
   return `Chamado ${num} — ${unidadeNome}`;
+}
+
+export function novoEmpresaParceiraColaboradorVazio(): EmpresaParceiraColaboradorForm {
+  return emptyEmpresaParceiraColaborador();
 }
 
 export function missaoInicioFromForm(form: MissaoFormState): {

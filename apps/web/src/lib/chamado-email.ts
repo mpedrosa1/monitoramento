@@ -152,11 +152,25 @@ export type ColaboradorAutorizacao = {
   rgOrgaoEmissor: string;
 };
 
+export type ColaboradorParceiroAutorizacao = {
+  nome: string;
+  tipoDocumento: "rg" | "cpf";
+  documento: string;
+};
+
+export type EmpresaParceiraAutorizacao = {
+  nomeEmpresa: string;
+  trabalho: string;
+  local: string;
+  colaboradores: ColaboradorParceiroAutorizacao[];
+};
+
 export type ChamadoAutorizacaoEmailInput = {
   unidadeNome: string;
   colaboradores: ColaboradorAutorizacao[];
   dataIso: string;
   hora: string;
+  empresaParceira?: EmpresaParceiraAutorizacao;
 };
 
 export function buildEmailAutorizacaoAssunto(unidadeNome: string): string {
@@ -182,16 +196,40 @@ export function buildEmailAutorizacaoCorpo(
     .join("\n\n");
 
   const dataChegada = isoParaDataExtenso(input.dataIso);
+  const previsaoChegada = `Previsão de Chegada:\n${dataChegada}, ${input.hora}`;
 
-  return `Prezado Diretor,
+  let corpo = `Prezado Diretor,
 ${saudacao}
 
 ${fraseAcesso}
 
-${listaColaboradores}
+${listaColaboradores}`;
 
-Previsão de Chegada:
-${dataChegada}, ${input.hora}`;
+  if (input.empresaParceira) {
+    const ep = input.empresaParceira;
+    const pluralParceiro = ep.colaboradores.length > 1;
+    const colaboradorParceiro = pluralParceiro
+      ? "colaboradores"
+      : "colaborador";
+    const trabalho = ep.trabalho.trim().toLocaleLowerCase("pt-BR");
+    const local = ep.local.trim().toLocaleLowerCase("pt-BR");
+    const listaParceiros = ep.colaboradores
+      .map((c) => {
+        const rotulo = c.tipoDocumento === "cpf" ? "CPF" : "RG";
+        return `${c.nome.trim()}\n${rotulo}: ${c.documento.trim()}`;
+      })
+      .join("\n\n");
+
+    corpo += `
+
+Também solicitamos autorização de entrada para o ${colaboradorParceiro} da empresa ${ep.nomeEmpresa.trim()} para realizar ${trabalho} ${local}.
+
+${listaParceiros}`;
+  }
+
+  return `${corpo}
+
+${previsaoChegada}`;
 }
 
 export type ChamadoEncerramentoEmailInput = {

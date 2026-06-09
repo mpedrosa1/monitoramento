@@ -303,8 +303,8 @@ func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
 	if c.Status == "" {
 		c.Status = domain.ColaboradorEscritorio
 	}
-	if c.FotoURL == "" && c.Nome != "" {
-		c.FotoURL = "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.Nome
+	if c.FotoURL == "" {
+		c.FotoURL = domain.ColaboradorFotoURLPadrao
 	}
 	senhaInicial, err := auth.SenhaInicialFromDataNascimento(c.DataNascimento)
 	if err != nil {
@@ -543,6 +543,68 @@ func (a *API) ConcluirMissao(w http.ResponseWriter, r *http.Request, id string) 
 			col.Status = domain.ColaboradorEscritorio
 			_ = a.Store.UpdateColaborador(r.Context(), col)
 		}
+	}
+
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (a *API) IniciarMissao(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	existing, err := a.Store.GetMissao(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if existing.Status != domain.MissaoPlanejada {
+		writeError(w, http.StatusBadRequest, "somente missões planejadas podem ser iniciadas")
+		return
+	}
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "não autenticado")
+		return
+	}
+	cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
+	if err != nil {
+		writeError(w, http.StatusForbidden, "sem permissão para iniciar esta missão")
+		return
+	}
+	if !domain.CanIniciarMissao(cid, *existing) {
+		writeError(w, http.StatusForbidden, "somente colaboradores atribuídos à missão podem iniciá-la")
+		return
+	}
+
+	now := time.Now().UTC()
+	m := *existing
+	m.Status = domain.MissaoEmAndamento
+	m.DataInicio = now.Format("2006-01-02")
+	m.HoraInicio = now.Format("15:04")
+	m.UpdatedAt = now
+
+	if err := a.Store.UpdateMissao(r.Context(), &m); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, colID := range existing.ColaboradorIDs {
+		col, err := a.Store.GetColaborador(r.Context(), colID)
+		if err != nil {
+			continue
+		}
+		col.Status = domain.ColaboradorEmMissao
+		_ = a.Store.UpdateColaborador(r.Context(), col)
 	}
 
 	writeJSON(w, http.StatusOK, m)

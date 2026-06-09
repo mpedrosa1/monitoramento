@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
 import { formatNumeroExibicao } from "@/lib/chamado-email";
+import { chamadoStatusLabel } from "@/lib/labels";
 import type { Chamado, Unidade } from "@/lib/types";
 import { AbrirChamadoDialog } from "@/components/chamados/abrir-chamado-dialog";
 import { ChamadoDetailDialog } from "@/components/chamados/chamado-detail-dialog";
@@ -11,6 +13,7 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ChamadosTable } from "@/components/dashboard/chamados-table";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Input } from "@/components/ui/input";
 
 export default function ChamadosPage() {
   const { status: socketStatus } = useMonitoring();
@@ -22,6 +25,38 @@ export default function ChamadosPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<Chamado | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [busca, setBusca] = useState("");
+
+  const unidadePorId = useMemo(
+    () => new Map(unidades.map((u) => [u.id, u])),
+    [unidades]
+  );
+
+  const unidadeLabel = useCallback(
+    (id: string) => {
+      const u = unidadePorId.get(id);
+      return u ? `${u.codigo} — ${u.nome}` : "—";
+    },
+    [unidadePorId]
+  );
+
+  const filteredList = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return list;
+    return list.filter((c) => {
+      const unidade = unidadePorId.get(c.unidadeId);
+      const status = chamadoStatusLabel[c.status] ?? c.status;
+      const numero = c.numero ? formatNumeroExibicao(c.numero) : "";
+      return (
+        numero.toLowerCase().includes(termo) ||
+        c.titulo.toLowerCase().includes(termo) ||
+        (c.descricao ?? "").toLowerCase().includes(termo) ||
+        status.toLowerCase().includes(termo) ||
+        (unidade?.nome ?? "").toLowerCase().includes(termo) ||
+        (unidade?.codigo ?? "").toLowerCase().includes(termo)
+      );
+    });
+  }, [list, busca, unidadePorId]);
 
   const load = useCallback(async () => {
     const [ch, uns] = await Promise.all([
@@ -83,21 +118,37 @@ export default function ChamadosPage() {
     <>
       <DashboardHeader title="Chamados" socketStatus={socketStatus} />
       <div className="space-y-4 p-6">
-        {canManageData && (
-          <div className="flex justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por número, título, unidade ou status…"
+              className="pl-8"
+              aria-label="Buscar chamados"
+            />
+          </div>
+          {canManageData && (
             <AbrirChamadoDialog
               unidades={unidades}
               chamados={list}
               onSuccess={load}
             />
-          </div>
-        )}
+          )}
+        </div>
         <ChamadosTable
-          chamados={list}
+          chamados={filteredList}
           onRowClick={openDetail}
           onEdit={canManageData ? openEdit : undefined}
           onDelete={canManageData ? remove : undefined}
           deleting={deleting}
+          unidadeLabel={unidadeLabel}
+          emptyMessage={
+            list.length === 0
+              ? "Nenhum chamado registrado."
+              : "Nenhum chamado encontrado para a busca."
+          }
         />
       </div>
 

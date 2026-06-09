@@ -1,5 +1,5 @@
 import type { Chamado, Missao, MissaoStatus } from "./types";
-import { hojeIso, isoParaDataExtenso, formatNumeroExibicao } from "./chamado-email";
+import { isoParaDataExtenso, formatNumeroExibicao } from "./chamado-email";
 
 export function missoesDaUnidade(
   missoes: Missao[],
@@ -8,9 +8,32 @@ export function missoesDaUnidade(
   return missoes.filter((m) => m.unidadeId === unidadeId);
 }
 
+function chamadoIdEfetivo(chamadoId?: string): boolean {
+  const id = chamadoId?.trim();
+  if (!id) return false;
+  return id !== "000000000000000000000000";
+}
+
 function chamadoDaMissao(missao: Missao, chamados: Chamado[]): Chamado | null {
-  if (!missao.chamadoId) return null;
+  if (!chamadoIdEfetivo(missao.chamadoId)) return null;
   return chamados.find((c) => c.id === missao.chamadoId) ?? null;
+}
+
+/** Chamado resolvido na missão; null = preventiva ou vínculo inexistente. */
+export function chamadoVinculadoDaMissao(
+  missao: Missao | null | undefined,
+  chamados: Chamado[]
+): Chamado | null {
+  if (!missao) return null;
+  return chamadoDaMissao(missao, chamados);
+}
+
+/** Conclusão pelo modal da missão — quando não há chamado efetivamente vinculado. */
+export function missaoPermiteConclusaoDireta(
+  missao: Missao,
+  chamados: Chamado[]
+): boolean {
+  return chamadoDaMissao(missao, chamados) === null;
 }
 
 export function dataInicioMissao(
@@ -20,39 +43,22 @@ export function dataInicioMissao(
   return missao.dataInicio ?? chamado?.previsaoChegadaData;
 }
 
-/** Início antes do dia de hoje (comparação YYYY-MM-DD). */
-export function inicioMissaoAnteriorAHoje(
-  missao: Missao,
-  chamado?: Chamado | null,
-  hoje = hojeIso()
-): boolean {
-  const data = dataInicioMissao(missao, chamado);
-  if (!data) return false;
-  return data < hoje;
-}
-
 /**
- * Missão planejada com início no passado é exibida/tratada como em andamento.
+ * Status exibido da missão (igual ao gravado; início não depende mais da data prevista).
  */
 export function statusEfetivoMissao(
   missao: Missao,
-  chamado?: Chamado | null
+  _chamado?: Chamado | null
 ): MissaoStatus {
-  if (
-    missao.status === "planejada" &&
-    inicioMissaoAnteriorAHoje(missao, chamado)
-  ) {
-    return "em_andamento";
-  }
   return missao.status;
 }
 
-/** Missão já iniciada (em andamento real ou efetivo). */
+/** Missão já iniciada (status gravado em andamento). */
 export function missaoIniciada(
   missao: Missao,
-  chamado?: Chamado | null
+  _chamado?: Chamado | null
 ): boolean {
-  return statusEfetivoMissao(missao, chamado) === "em_andamento";
+  return missao.status === "em_andamento";
 }
 
 export function missoesPlanejadasDaUnidade(
@@ -82,7 +88,7 @@ export function labelChamadoVinculadoMissao(
   chamadoId: string | undefined,
   chamados: Chamado[]
 ): string {
-  if (!chamadoId) return "Preventiva";
+  if (!chamadoIdEfetivo(chamadoId)) return "Preventiva";
   const c = chamados.find((ch) => ch.id === chamadoId);
   if (!c) return "Preventiva";
   return c.numero ? formatNumeroExibicao(c.numero) : c.titulo;

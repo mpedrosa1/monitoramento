@@ -16,6 +16,7 @@ import {
 } from "@/lib/chamado-form";
 import type { Unidade } from "@/lib/types";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -198,20 +199,18 @@ export function ChamadoFormFields({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="ch-hora">Hora</Label>
-          <Input
+          <TimeInput
             id="ch-hora"
-            type="time"
             value={form.hora}
-            onChange={(e) => onPatch({ hora: e.target.value })}
+            onChange={(hora) => onPatch({ hora })}
           />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="ch-hora-teste">Hora do teste</Label>
-          <Input
+          <TimeInput
             id="ch-hora-teste"
-            type="time"
             value={form.horaTeste}
-            onChange={(e) => onPatch({ horaTeste: e.target.value })}
+            onChange={(horaTeste) => onPatch({ horaTeste })}
           />
         </div>
       </div>

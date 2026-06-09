@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
 import type { Equipamento, Unidade } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
@@ -22,6 +22,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { UnidadeFormFields } from "@/components/unidades/unidade-form-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ export default function UnidadesPage() {
   const [editForm, setEditForm] = useState<UnidadeFormState>(emptyUnidadeForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const metricMap = useMemo(() => buildMetricMap(metrics), [metrics]);
 
@@ -70,6 +72,20 @@ export default function UnidadesPage() {
   }, [catalogo]);
 
   const sortedList = useMemo(() => sortUnidadesByCodigo(list), [list]);
+
+  const filteredList = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return sortedList;
+    return sortedList.filter((u) => {
+      const endereco = formatUnidadeEndereco(u.endereco).toLowerCase();
+      return (
+        u.codigo.toLowerCase().includes(termo) ||
+        u.nome.toLowerCase().includes(termo) ||
+        endereco.includes(termo) ||
+        (u.ip ?? "").toLowerCase().includes(termo)
+      );
+    });
+  }, [sortedList, busca]);
 
   const load = useCallback(async () => {
     const [uns, eqs] = await Promise.all([
@@ -171,8 +187,18 @@ export default function UnidadesPage() {
             ? "Cadastre unidades com identificação, contatos, endereço, IP e equipamentos. Clique na linha para abrir os detalhes em uma nova aba; use o ícone de lápis para editar."
             : "Clique na linha para abrir os detalhes da unidade em uma nova aba."}
         </p>
-        {canManageData && (
-          <div className="flex justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por código, nome, cidade ou IP…"
+              className="pl-8"
+              aria-label="Buscar unidades"
+            />
+          </div>
+          {canManageData && (
             <EntityFormDialog
               title="Nova unidade"
               triggerLabel="Adicionar unidade"
@@ -186,8 +212,8 @@ export default function UnidadesPage() {
                 equipNome={equipNome}
               />
             </EntityFormDialog>
-          </div>
-        )}
+          )}
+        </div>
 
         <Table>
           <TableHeader>
@@ -205,17 +231,19 @@ export default function UnidadesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedList.length === 0 ? (
+            {filteredList.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={canManageData ? 8 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
-                  Nenhuma unidade cadastrada.
+                  {sortedList.length === 0
+                    ? "Nenhuma unidade cadastrada."
+                    : "Nenhuma unidade encontrada para a busca."}
                 </TableCell>
               </TableRow>
             ) : (
-              sortedList.map((u) => {
+              filteredList.map((u) => {
                 const hostOnline = unidadeHostOnline(u);
                 return (
                 <TableRow
@@ -226,9 +254,7 @@ export default function UnidadesPage() {
                   <TableCell className="font-mono text-xs">{u.codigo}</TableCell>
                   <TableCell className="font-medium">{u.nome}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {formatUnidadeEndereco(
-                      unidadeToForm(u).endereco
-                    )}
+                    {formatUnidadeEndereco(u.endereco)}
                   </TableCell>
                   <TableCell>{u.ip || "—"}</TableCell>
                   <TableCell>{u.intervaloS || 30}</TableCell>
@@ -277,7 +303,7 @@ export default function UnidadesPage() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Editar unidade

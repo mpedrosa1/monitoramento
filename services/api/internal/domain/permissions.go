@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -66,24 +64,20 @@ func DataInicioMissao(m Missao, chamado *Chamado) string {
 	return ""
 }
 
-func inicioMissaoAnteriorAHoje(m Missao, chamado *Chamado) bool {
-	data := DataInicioMissao(m, chamado)
-	if data == "" {
-		return false
-	}
-	hoje := time.Now().Format("2006-01-02")
-	return data < hoje
-}
-
-// StatusEfetivoMissao — planejada com início no passado equivale a em andamento.
-func StatusEfetivoMissao(m Missao, chamado *Chamado) MissaoStatus {
-	if m.Status == MissaoPlanejada && inicioMissaoAnteriorAHoje(m, chamado) {
-		return MissaoEmAndamento
-	}
+// StatusEfetivoMissao — igual ao status gravado (início não depende da data prevista).
+func StatusEfetivoMissao(m Missao, _ *Chamado) MissaoStatus {
 	return m.Status
 }
 
-// MissaoPodeSerConcluida — somente missão já iniciada (em andamento real ou efetivo).
+// CanIniciarMissao — colaborador atribuído pode iniciar missão planejada.
+func CanIniciarMissao(colaboradorID primitive.ObjectID, missao Missao) bool {
+	if missao.Status != MissaoPlanejada {
+		return false
+	}
+	return ColaboradorAtribuidoMissaoDireta(colaboradorID, missao)
+}
+
+// MissaoPodeSerConcluida — somente missão já iniciada.
 func MissaoPodeSerConcluida(m Missao, chamado *Chamado) bool {
 	return StatusEfetivoMissao(m, chamado) == MissaoEmAndamento
 }
@@ -104,17 +98,11 @@ func CanConcluirMissao(
 	return ColaboradorAtribuidoMissaoDireta(colaboradorID, missao)
 }
 
-// ContarMissoesEmAndamento — status gravado ou efetivo (planejada com início no passado).
+// ContarMissoesEmAndamento — missões com status em andamento.
 func ContarMissoesEmAndamento(missoes []Missao, chamadosPorID map[primitive.ObjectID]Chamado) int {
 	n := 0
 	for _, m := range missoes {
-		var ch *Chamado
-		if !m.ChamadoID.IsZero() {
-			if c, ok := chamadosPorID[m.ChamadoID]; ok {
-				ch = &c
-			}
-		}
-		if StatusEfetivoMissao(m, ch) == MissaoEmAndamento {
+		if m.Status == MissaoEmAndamento {
 			n++
 		}
 	}

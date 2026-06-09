@@ -129,6 +129,7 @@ export interface Colaborador {
   email?: string;
   estadoCivil?: EstadoCivil;
   conjuge?: string;
+  conjugeCpf?: string;
   dependentes?: ColaboradorDependente[];
   endereco?: ColaboradorEndereco;
   cargo?: string;
