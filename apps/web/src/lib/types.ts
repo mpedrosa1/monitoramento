@@ -22,15 +22,86 @@ export type SnmpTipoDado =
   | "tempo"
   | "gauge";
 
+/** Tipo SNMP (SMI) — Integer32, OctetString, etc. */
+export type SnmpTipoSelecao =
+  | "nao_selecionado"
+  | "integer32"
+  | "octet_string"
+  | "object_identifier"
+  | "ip_address"
+  | "counter32"
+  | "gauge32"
+  | "time_ticks"
+  | "opaque"
+  | "counter64";
+
+/** Mapeamento chave → exibição para pontos multi-estado. */
+export interface SnmpMultiEstadoItem {
+  _localId?: string;
+  /** Valor retornado pelo OID. */
+  chave: string;
+  /** Texto exibido no lugar da chave. */
+  exibicao: string;
+  /** Cor em hexadecimal (#RRGGBB). */
+  cor: string;
+}
+
+export type ModbusRegistro =
+  | "coil_status"
+  | "input_status"
+  | "holding_register"
+  | "input_register";
+
+export type ModbusTipoDado =
+  | "binary"
+  | "uint16"
+  | "int16"
+  | "bcd16"
+  | "uint32"
+  | "int32"
+  | "uint32_swapped"
+  | "int32_swapped"
+  | "float32"
+  | "float32_swapped"
+  | "float32_swapped_inverted"
+  | "bcd32"
+  | "uint64"
+  | "int64"
+  | "uint64_swapped"
+  | "int64_swapped"
+  | "float64"
+  | "float64_swapped"
+  | "string_fixed"
+  | "string_variable";
+
+/** Ponto de leitura Modbus (registrador por offset). */
+export interface ModbusPonto {
+  _localId?: string;
+  nome: string;
+  offset: number;
+  registro?: ModbusRegistro;
+  unidade?: string;
+  multiplicador?: number;
+  tipoDado?: ModbusTipoDado;
+  estadosMulti?: SnmpMultiEstadoItem[];
+  descricao?: string;
+  desabilitado?: boolean;
+}
+
 export interface SnmpPonto {
   /** Identificador local para React (não persistido). */
   _localId?: string;
   nome: string;
   oid: string;
+  /** Sufixo exibido após o valor (ex.: °C, %). */
   unidade?: string;
   /** Aplicado na exibição quando tipoDado é "numerico". */
   multiplicador?: number;
+  /** Tipo SNMP (SMI) do OID. */
+  tipoSnmp?: SnmpTipoSelecao;
   tipoDado?: SnmpTipoDado;
+  /** Mapeamentos quando tipoDado é "multi_estado". */
+  estadosMulti?: SnmpMultiEstadoItem[];
   descricao?: string;
   desabilitado?: boolean;
 }
@@ -39,10 +110,18 @@ export interface SnmpPonto {
 export type DispositivoTipo = TipoMonitoramento | "ping";
 
 export interface UnidadeEquipamento {
+  /** Identificador local para React (não persistido). */
+  _localId?: string;
   equipamentoId: string;
   porta: number;
   /** Nome de exibição nesta unidade (não altera o catálogo). */
   nomeLocal?: string;
+  /** Interface web acessível no IP da unidade. */
+  paginaWeb?: boolean;
+  portaWeb?: number;
+  /** Agrupa sensores montados na mesma máquina. */
+  maquinaId?: string;
+  maquinaNome?: string;
 }
 
 export interface UnidadeEndereco {
@@ -218,10 +297,13 @@ export interface Equipamento {
   nome: string;
   marca: string;
   tipoEquipamento: TipoEquipamento;
+  /** Tipo do sensor (quando tipoEquipamento é sensor). */
+  tipoSensor?: string;
   tipoMonitoramento: TipoMonitoramento;
   config?: {
     slaveId?: number;
     registradores?: number[];
+    pontosModbus?: ModbusPonto[];
     pontos?: SnmpPonto[];
     /** @deprecated use pontos */
     oids?: string[];
@@ -231,8 +313,12 @@ export interface Equipamento {
   updatedAt: string;
 }
 
-export function monitorTargetId(unidadeId: string, equipamentoId: string) {
-  return `${unidadeId}:${equipamentoId}`;
+export function monitorTargetId(
+  unidadeId: string,
+  equipamentoId: string,
+  porta: number
+) {
+  return `${unidadeId}:${equipamentoId}:${porta}`;
 }
 
 /** Alvo de ping ICMP do IP cadastrado na unidade. */

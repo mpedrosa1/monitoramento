@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import { FlaskConical, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
-import type { SnmpPonto } from "@/lib/types";
-import { SnmpPontoFormDialog } from "@/components/equipamentos/snmp-ponto-form-dialog";
-import { SnmpTestOidDialog } from "@/components/equipamentos/snmp-test-oid-dialog";
+import type { ModbusPonto } from "@/lib/types";
+import {
+  modbusRegistroComTipoDado,
+  modbusRegistroLabel,
+  modbusTipoDadoLabel,
+} from "@/lib/modbus-presets";
+import { ModbusPontoFormDialog } from "@/components/equipamentos/modbus-ponto-form-dialog";
+import { ModbusTestOffsetDialog } from "@/components/equipamentos/modbus-test-offset-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function reorderPontos(
-  pontos: SnmpPonto[],
+  pontos: ModbusPonto[],
   fromId: string,
   toId: string
-): SnmpPonto[] {
+): ModbusPonto[] {
   const fromIndex = pontos.findIndex((p) => p._localId === fromId);
   const toIndex = pontos.findIndex((p) => p._localId === toId);
   if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return pontos;
@@ -23,17 +28,17 @@ function reorderPontos(
   return next;
 }
 
-export function SnmpPontosEditor({
+export function ModbusPontosEditor({
   pontos,
   onChange,
 }: {
-  pontos: SnmpPonto[];
-  onChange: (pontos: SnmpPonto[]) => void;
+  pontos: ModbusPonto[];
+  onChange: (pontos: ModbusPonto[]) => void;
 }) {
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<SnmpPonto | null>(null);
+  const [editing, setEditing] = useState<ModbusPonto | null>(null);
   const [testOpen, setTestOpen] = useState(false);
-  const [testingPonto, setTestingPonto] = useState<SnmpPonto | null>(null);
+  const [testingPonto, setTestingPonto] = useState<ModbusPonto | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -42,12 +47,12 @@ export function SnmpPontosEditor({
     setFormOpen(true);
   }
 
-  function openEdit(ponto: SnmpPonto) {
+  function openEdit(ponto: ModbusPonto) {
     setEditing(ponto);
     setFormOpen(true);
   }
 
-  function openTest(ponto: SnmpPonto) {
+  function openTest(ponto: ModbusPonto) {
     setTestingPonto(ponto);
     setTestOpen(true);
   }
@@ -56,7 +61,7 @@ export function SnmpPontosEditor({
     onChange(pontos.filter((p) => p._localId !== localId));
   }
 
-  function savePonto(ponto: SnmpPonto) {
+  function savePonto(ponto: ModbusPonto) {
     const id = ponto._localId;
     if (!id) return;
     const exists = pontos.some((p) => p._localId === id);
@@ -92,9 +97,9 @@ export function SnmpPontosEditor({
     <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">Pontos de dados SNMP</p>
+          <p className="text-sm font-medium">Pontos de dados Modbus</p>
           <p className="text-xs text-muted-foreground">
-            Adicione OIDs pelo formulário; arraste para definir a ordem de
+            Adicione offsets pelo formulário; arraste para definir a ordem de
             exibição e coleta.
           </p>
         </div>
@@ -111,7 +116,7 @@ export function SnmpPontosEditor({
       {pontos.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
           Nenhum ponto configurado. Use &quot;Adicionar ponto&quot; para incluir
-          OIDs.
+          offsets.
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
@@ -167,7 +172,13 @@ export function SnmpPontosEditor({
                     )}
                   </p>
                   <p className="truncate font-mono text-xs text-muted-foreground">
-                    {ponto.oid}
+                    Offset {ponto.offset}
+                    {` · ${modbusRegistroLabel[ponto.registro ?? "holding_register"]}`}
+                    {modbusRegistroComTipoDado(
+                      ponto.registro ?? "holding_register"
+                    ) && ponto.tipoDado
+                      ? ` · ${modbusTipoDadoLabel[ponto.tipoDado]}`
+                      : ""}
                   </p>
                 </div>
 
@@ -177,8 +188,8 @@ export function SnmpPontosEditor({
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => openTest(ponto)}
-                    aria-label={`Testar OID ${ponto.nome || ponto.oid}`}
-                    title="Testar OID"
+                    aria-label={`Testar offset ${ponto.nome || ponto.offset}`}
+                    title="Testar offset"
                   >
                     <FlaskConical className="h-3.5 w-3.5" />
                   </Button>
@@ -187,7 +198,7 @@ export function SnmpPontosEditor({
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => openEdit(ponto)}
-                    aria-label={`Editar ${ponto.nome || ponto.oid}`}
+                    aria-label={`Editar ${ponto.nome || `offset ${ponto.offset}`}`}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -196,7 +207,7 @@ export function SnmpPontosEditor({
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => removePonto(localId)}
-                    aria-label={`Remover ${ponto.nome || ponto.oid}`}
+                    aria-label={`Remover ${ponto.nome || `offset ${ponto.offset}`}`}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
@@ -207,14 +218,14 @@ export function SnmpPontosEditor({
         </ul>
       )}
 
-      <SnmpPontoFormDialog
+      <ModbusPontoFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
         initial={editing}
         onSave={savePonto}
       />
 
-      <SnmpTestOidDialog
+      <ModbusTestOffsetDialog
         open={testOpen}
         onOpenChange={setTestOpen}
         ponto={testingPonto}

@@ -1,7 +1,13 @@
 "use client";
 
 import { tipoEquipamentoLabel, tipoMonitoramentoLabel } from "@/lib/labels";
-import type { SnmpPonto, TipoEquipamento, TipoMonitoramento } from "@/lib/types";
+import type {
+  ModbusPonto,
+  SnmpPonto,
+  TipoEquipamento,
+  TipoMonitoramento,
+} from "@/lib/types";
+import { ModbusPontosEditor } from "@/components/equipamentos/modbus-pontos-editor";
 import { SnmpPontosEditor } from "@/components/equipamentos/snmp-pontos-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,24 +39,30 @@ export function EquipamentoFormFields({
   onModeloChange,
   tipoEquipamento,
   onTipoEquipamentoChange,
+  tipoSensor,
+  onTipoSensorChange,
   tipoMonitoramento,
   onTipoMonitoramentoChange,
   pontos,
   onPontosChange,
+  pontosModbus,
+  onPontosModbusChange,
   onMonitoramentoChange,
 }: {
-  /** Marca do equipamento (campo `marca` na API). */
   marca: string;
   onMarcaChange: (v: string) => void;
-  /** Modelo do equipamento (campo `nome` na API). */
   modelo: string;
   onModeloChange: (v: string) => void;
   tipoEquipamento: TipoEquipamento;
   onTipoEquipamentoChange: (v: TipoEquipamento) => void;
+  tipoSensor: string;
+  onTipoSensorChange: (v: string | undefined) => void;
   tipoMonitoramento: TipoMonitoramento;
   onTipoMonitoramentoChange: (v: TipoMonitoramento) => void;
   pontos: SnmpPonto[];
   onPontosChange: (p: SnmpPonto[]) => void;
+  pontosModbus: ModbusPonto[];
+  onPontosModbusChange: (p: ModbusPonto[]) => void;
   onMonitoramentoChange?: (tipo: TipoMonitoramento) => void;
 }) {
   return (
@@ -79,9 +91,13 @@ export function EquipamentoFormFields({
           <Select
             items={tipoEquipamentoItems}
             value={tipoEquipamento}
-            onValueChange={(v) => onTipoEquipamentoChange(v as TipoEquipamento)}
+            onValueChange={(v) => {
+              const t = v as TipoEquipamento;
+              onTipoEquipamentoChange(t);
+              if (t !== "sensor") onTipoSensorChange(undefined);
+            }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -104,7 +120,7 @@ export function EquipamentoFormFields({
               onMonitoramentoChange?.(t);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -117,8 +133,26 @@ export function EquipamentoFormFields({
           </Select>
         </div>
       </div>
+      {tipoEquipamento === "sensor" && (
+        <div className="grid gap-2">
+          <Label>Tipo de sensor</Label>
+          <Input
+            value={tipoSensor}
+            onChange={(e) =>
+              onTipoSensorChange(e.target.value || undefined)
+            }
+            placeholder="Ex.: Temperatura, Pressão, Luminosidade"
+          />
+        </div>
+      )}
       {tipoMonitoramento === "snmp" && (
         <SnmpPontosEditor pontos={pontos} onChange={onPontosChange} />
+      )}
+      {tipoMonitoramento === "modbus" && (
+        <ModbusPontosEditor
+          pontos={pontosModbus}
+          onChange={onPontosModbusChange}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -36,8 +37,8 @@ func MonitorTargetEqual(a, b MonitorTarget) bool {
 		reflect.DeepEqual(a.Config, b.Config)
 }
 
-func MonitorTargetID(unidadeID, equipamentoID primitive.ObjectID) string {
-	return unidadeID.Hex() + ":" + equipamentoID.Hex()
+func MonitorTargetID(unidadeID, equipamentoID primitive.ObjectID, porta int) string {
+	return unidadeID.Hex() + ":" + equipamentoID.Hex() + ":" + strconv.Itoa(porta)
 }
 
 // MonitorUnidadeHostTargetID identifica o ping ICMP do IP cadastrado na unidade.

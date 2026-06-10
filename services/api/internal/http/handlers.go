@@ -12,6 +12,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
+	"github.com/mmrtec/monitoramento/api/internal/modbus"
 	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -711,6 +712,54 @@ func (a *API) TestSnmpOID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, testSnmpOidOutput{Online: online, Valor: val})
+}
+
+type testModbusOffsetInput struct {
+	Host      string `json:"host"`
+	Port      int    `json:"port"`
+	SlaveID   int    `json:"slaveId"`
+	Registro  string `json:"registro"`
+	Offset    int    `json:"offset"`
+	TipoDado  string `json:"tipoDado"`
+}
+
+type testModbusOffsetOutput struct {
+	Online bool   `json:"online"`
+	Valor  any    `json:"valor,omitempty"`
+	Erro   string `json:"erro,omitempty"`
+}
+
+func (a *API) TestModbusOffset(w http.ResponseWriter, r *http.Request) {
+	var in testModbusOffsetInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	port := uint16(in.Port)
+	if port == 0 {
+		port = 502
+	}
+	if in.Offset < 0 || in.Offset > 65535 {
+		writeError(w, http.StatusBadRequest, "offset inválido")
+		return
+	}
+	slaveID := byte(in.SlaveID)
+	if slaveID == 0 {
+		slaveID = 1
+	}
+	online, val, errMsg := modbus.TestOffset(
+		in.Host,
+		port,
+		slaveID,
+		in.Registro,
+		uint16(in.Offset),
+		in.TipoDado,
+	)
+	if errMsg != "" {
+		writeJSON(w, http.StatusOK, testModbusOffsetOutput{Online: online, Erro: errMsg})
+		return
+	}
+	writeJSON(w, http.StatusOK, testModbusOffsetOutput{Online: online, Valor: val})
 }
 
 func (a *API) DeleteEquipamento(w http.ResponseWriter, r *http.Request, id string) {

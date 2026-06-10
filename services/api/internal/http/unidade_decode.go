@@ -15,6 +15,10 @@ type unidadeEquipamentoIn struct {
 	EquipamentoID string `json:"equipamentoId"`
 	Porta         int    `json:"porta"`
 	NomeLocal     string `json:"nomeLocal,omitempty"`
+	PaginaWeb     bool   `json:"paginaWeb,omitempty"`
+	PortaWeb      int    `json:"portaWeb,omitempty"`
+	MaquinaID     string `json:"maquinaId,omitempty"`
+	MaquinaNome   string `json:"maquinaNome,omitempty"`
 }
 
 type unidadeBodyIn struct {
@@ -92,6 +96,8 @@ func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipa
 		return []domain.UnidadeEquipamento{}, nil
 	}
 	out := make([]domain.UnidadeEquipamento, 0, len(in))
+	portasAvulsas := make(map[int]struct{})
+	portasMaquinas := make(map[string]int)
 	for i, eq := range in {
 		hex := strings.TrimSpace(eq.EquipamentoID)
 		if hex == "" {
@@ -101,10 +107,39 @@ func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipa
 		if err != nil {
 			return nil, fmt.Errorf("equipamentoId inválido no item %d", i+1)
 		}
+		maquinaID := strings.TrimSpace(eq.MaquinaID)
+		if maquinaID != "" {
+			if portaMaquina, ok := portasMaquinas[maquinaID]; ok && portaMaquina != eq.Porta {
+				return nil, fmt.Errorf("porta inconsistente na máquina (item %d)", i+1)
+			}
+			if _, ocupada := portasAvulsas[eq.Porta]; ocupada {
+				return nil, fmt.Errorf("porta %d já está em uso na unidade (item %d)", eq.Porta, i+1)
+			}
+			for id, porta := range portasMaquinas {
+				if id != maquinaID && porta == eq.Porta {
+					return nil, fmt.Errorf("porta %d já está em uso por outra máquina (item %d)", eq.Porta, i+1)
+				}
+			}
+			portasMaquinas[maquinaID] = eq.Porta
+		} else {
+			if _, dup := portasAvulsas[eq.Porta]; dup {
+				return nil, fmt.Errorf("porta %d duplicada na unidade (item %d)", eq.Porta, i+1)
+			}
+			for _, porta := range portasMaquinas {
+				if porta == eq.Porta {
+					return nil, fmt.Errorf("porta %d já está em uso por uma máquina (item %d)", eq.Porta, i+1)
+				}
+			}
+			portasAvulsas[eq.Porta] = struct{}{}
+		}
 		out = append(out, domain.UnidadeEquipamento{
 			EquipamentoID: oid,
 			Porta:         eq.Porta,
 			NomeLocal:     strings.TrimSpace(eq.NomeLocal),
+			PaginaWeb:     eq.PaginaWeb,
+			PortaWeb:      eq.PortaWeb,
+			MaquinaID:     strings.TrimSpace(eq.MaquinaID),
+			MaquinaNome:   strings.TrimSpace(eq.MaquinaNome),
 		})
 	}
 	return out, nil

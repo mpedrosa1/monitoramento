@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch, asArray } from "@/lib/api";
 import {
   findSnmpPontoByKey,
-  formatSnmpMetricValue,
+  resolveSnmpMetricDisplay,
 } from "@/lib/snmp-display";
 import type { DeviceMetric, Equipamento } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -63,10 +63,20 @@ export function MetricasWidget({ metrics }: { metrics: DeviceMetric[] }) {
                 <ul className="mt-2 space-y-0.5 border-t border-border/60 pt-2">
                   {valorEntries.map(([key, raw]) => {
                     const ponto = findSnmpPontoByKey(pontos, key);
+                    const display = resolveSnmpMetricDisplay(raw, ponto);
                     return (
                       <li key={key}>
                         <span className="text-foreground/90">{key}:</span>{" "}
-                        {formatSnmpMetricValue(raw, ponto)}
+                        <span
+                          className="font-medium"
+                          style={
+                            display.color
+                              ? { color: display.color }
+                              : undefined
+                          }
+                        >
+                          {display.text}
+                        </span>
                       </li>
                     );
                   })}

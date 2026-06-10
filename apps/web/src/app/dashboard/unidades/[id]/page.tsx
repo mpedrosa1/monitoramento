@@ -13,6 +13,7 @@ import {
   coordsFromUnidade,
 } from "@/components/unidades/unidade-detail-panel";
 import { UnidadeDetailMap } from "@/components/unidades/unidade-detail-map";
+import { UnidadeChamadosSection } from "@/components/unidades/unidade-chamados-section";
 
 export default function UnidadeDetailPage() {
   const params = useParams();
@@ -77,8 +78,9 @@ export default function UnidadeDetailPage() {
                 hostOnline={hostOnline}
               />
             </div>
-            <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
+            <div className="min-w-0 space-y-6 lg:sticky lg:top-4 lg:self-start">
               <UnidadeDetailMap position={position} label={unidade.nome} />
+              <UnidadeChamadosSection unidade={unidade} />
             </div>
           </div>
         )}

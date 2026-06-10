@@ -1,35 +1,16 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
-import { Map as MapIcon, Phone, Satellite } from "lucide-react";
+import type { ReactNode } from "react";
+import { Map as MapIcon, Network, Phone, Satellite } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatCoord } from "@/lib/geocode";
 import type { DeviceMetric, Equipamento, Unidade } from "@/lib/types";
-import { monitorTargetId, monitorUnidadeHostTargetId } from "@/lib/types";
+import { monitorUnidadeHostTargetId } from "@/lib/types";
 import type { UnidadeEndereco } from "@/lib/types";
-import {
-  labelEquipamentoCatalogo,
-  nomeEquipamentoVinculo,
-  unidadeToForm,
-} from "@/lib/unidade-form";
-import { UnidadeChamadosSection } from "@/components/unidades/unidade-chamados-section";
+import { unidadeToForm } from "@/lib/unidade-form";
+import { UnidadeEquipamentosGrid, contarEquipamentosUnidade } from "@/components/unidades/unidade-equipamentos-grid";
 import { UnidadeMissoesSection } from "@/components/unidades/unidade-missoes-section";
-
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="grid gap-1 sm:grid-cols-[140px_1fr]">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <div className="text-sm">{value}</div>
-    </div>
-  );
-}
 
 function SatelliteStatusIcon({ inactive }: { inactive: boolean }) {
   return (
@@ -150,10 +131,6 @@ export function UnidadeDetailPanel({
   hostOnline: boolean;
 }) {
   const form = unidadeToForm(unidade);
-  const equipById = useMemo(
-    () => new Map(catalogo.map((eq) => [eq.id, eq])),
-    [catalogo]
-  );
 
   const enderecoTooltip = formatEnderecoTooltip(
     form.endereco,
@@ -199,6 +176,17 @@ export function UnidadeDetailPanel({
               }
             />
           ) : null}
+          <InfoTag
+            label="Rede"
+            detail={unidade.ip?.trim() || "IP não cadastrado"}
+            icon={
+              <Network
+                className="h-3.5 w-3.5 shrink-0"
+                strokeWidth={2}
+                aria-hidden
+              />
+            }
+          />
         </div>
       </div>
 
@@ -209,65 +197,15 @@ export function UnidadeDetailPanel({
       <Separator />
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold">Identificação e rede</h3>
-        <DetailRow label="IP" value={unidade.ip?.trim() || "—"} />
-        <DetailRow
-          label="Intervalo coleta"
-          value={`${unidade.intervaloS || 30} s`}
-        />
-        <DetailRow
-          label="Alerta offline"
-          value={`${unidade.alertaOfflineS ?? 60} s`}
-        />
-      </section>
-
-      <Separator />
-
-      <section className="space-y-3">
         <h3 className="text-sm font-semibold">
-          Equipamentos ({unidade.equipamentos?.length ?? 0})
+          Equipamentos ({contarEquipamentosUnidade(unidade)})
         </h3>
-        {unidade.equipamentos?.length ? (
-          <ul className="space-y-3">
-            {unidade.equipamentos.map((link) => {
-              const eq = equipById.get(link.equipamentoId);
-              const tid = monitorTargetId(unidade.id, link.equipamentoId);
-              const m = metricMap.get(tid);
-              return (
-                <li
-                  key={link.equipamentoId}
-                  className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
-                >
-                  <p className="font-medium">
-                    {nomeEquipamentoVinculo(link, eq)}
-                  </p>
-                  {eq && (
-                    <p className="text-xs text-muted-foreground">
-                      {labelEquipamentoCatalogo(eq)} · porta {link.porta}
-                    </p>
-                  )}
-                  {m && (
-                    <Badge
-                      className="mt-2"
-                      variant={m.online ? "default" : "destructive"}
-                    >
-                      {m.online ? "Online" : "Offline"}
-                    </Badge>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Nenhum equipamento vinculado.
-          </p>
-        )}
+        <UnidadeEquipamentosGrid
+          unidade={unidade}
+          catalogo={catalogo}
+          metricMap={metricMap}
+        />
       </section>
-
-      <Separator />
-
-      <UnidadeChamadosSection unidade={unidade} />
     </div>
   );
 }

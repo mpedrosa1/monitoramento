@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { snmpTipoDadoLabel } from "@/lib/labels";
-import { SNMP_TIPOS_DADO, newSnmpPonto } from "@/lib/snmp-presets";
-import type { SnmpPonto, SnmpTipoDado } from "@/lib/types";
+import { snmpTipoDadoLabel, snmpTipoSelecaoLabel } from "@/lib/labels";
+import {
+  SNMP_TIPOS_DADO,
+  SNMP_TIPOS_SELECAO,
+  newSnmpPonto,
+} from "@/lib/snmp-presets";
+import type { SnmpPonto, SnmpTipoDado, SnmpTipoSelecao } from "@/lib/types";
+import { SnmpMultiEstadoEditor } from "@/components/equipamentos/snmp-multi-estado-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const tipoSelecaoItems = SNMP_TIPOS_SELECAO.map((t) => ({
+  value: t,
+  label: snmpTipoSelecaoLabel[t],
+}));
 
 const tipoDadoItems = SNMP_TIPOS_DADO.map((t) => ({
   value: t,
@@ -74,6 +84,7 @@ export function SnmpPontoFormDialog({
   }, [open, initial]);
 
   const isNumerico = (draft.tipoDado ?? "numerico") === "numerico";
+  const isMultiEstado = draft.tipoDado === "multi_estado";
 
   function patch(partial: Partial<SnmpPonto>) {
     setDraft((d) => ({ ...d, ...partial }));
@@ -89,13 +100,14 @@ export function SnmpPontoFormDialog({
       oid,
       nome: draft.nome.trim() || oid,
       multiplicador: isNumerico ? (multParsed ?? 1) : undefined,
+      estadosMulti: isMultiEstado ? draft.estadosMulti ?? [] : undefined,
     });
     onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="z-[60] sm:max-w-md" showCloseButton>
+      <DialogContent className="z-[60] max-h-[92vh] overflow-y-auto sm:max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar ponto SNMP" : "Novo ponto SNMP"}</DialogTitle>
         </DialogHeader>
@@ -130,6 +142,10 @@ export function SnmpPontoFormDialog({
                     multiplicador:
                       tipoDado === "numerico"
                         ? (draft.multiplicador ?? 1)
+                        : undefined,
+                    estadosMulti:
+                      tipoDado === "multi_estado"
+                        ? (draft.estadosMulti ?? [])
                         : undefined,
                   });
                   if (tipoDado === "numerico") {
@@ -170,12 +186,37 @@ export function SnmpPontoFormDialog({
             ) : (
               <div className="hidden sm:block" aria-hidden />
             )}
+            {isMultiEstado && (
+              <SnmpMultiEstadoEditor
+                estados={draft.estadosMulti ?? []}
+                onChange={(estadosMulti) => patch({ estadosMulti })}
+              />
+            )}
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label>Unidade de engenharia</Label>
+              <Label>Selecionar tipo</Label>
+              <Select
+                items={tipoSelecaoItems}
+                value={draft.tipoSnmp ?? "nao_selecionado"}
+                onValueChange={(v) => patch({ tipoSnmp: v as SnmpTipoSelecao })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[100]">
+                  {SNMP_TIPOS_SELECAO.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {snmpTipoSelecaoLabel[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5 sm:col-span-2">
+              <Label>Sufixo</Label>
               <Input
                 value={draft.unidade ?? ""}
                 onChange={(e) => patch({ unidade: e.target.value })}
-                placeholder="°C, V, %…"
+                placeholder="Ex.: °C, %, V"
               />
             </div>
             <div className="grid gap-1.5 sm:col-span-2">

@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import {
+  isModbusTipoDadoNumerico,
+  modbusPontoParaDisplayTipo,
+  modbusRegistroComEstados,
+  modbusRegistroComTipoDado,
+  modbusRegistroLabel,
+  modbusTipoDadoLabel,
+} from "@/lib/modbus-presets";
 import { resolveSnmpMetricDisplay } from "@/lib/snmp-display";
-import type { SnmpPonto } from "@/lib/types";
+import type { ModbusPonto, SnmpPonto } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,26 +23,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface TestSnmpOidResponse {
+interface TestModbusOffsetResponse {
   online: boolean;
   valor?: unknown;
   erro?: string;
 }
 
-export function SnmpTestOidDialog({
+function pontoModbusParaDisplay(ponto: ModbusPonto): SnmpPonto {
+  return {
+    nome: ponto.nome,
+    oid: String(ponto.offset),
+    tipoDado: modbusPontoParaDisplayTipo(ponto),
+    unidade: ponto.unidade,
+    multiplicador: ponto.multiplicador,
+    estadosMulti: ponto.estadosMulti,
+  };
+}
+
+export function ModbusTestOffsetDialog({
   open,
   onOpenChange,
   ponto,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ponto: SnmpPonto | null;
+  ponto: ModbusPonto | null;
 }) {
-  const oid = ponto?.oid ?? "";
+  const offset = ponto?.offset ?? 0;
+  const registro = ponto?.registro ?? "holding_register";
   const pontoNome = ponto?.nome;
   const [host, setHost] = useState("");
-  const [port, setPort] = useState("161");
-  const [community, setCommunity] = useState("public");
+  const [port, setPort] = useState("502");
+  const [slaveId, setSlaveId] = useState("1");
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<{
     text: string;
@@ -47,7 +67,7 @@ export function SnmpTestOidDialog({
       setResultado(null);
       setErro(null);
     }
-  }, [open, oid, ponto?._localId]);
+  }, [open, offset, ponto?._localId]);
 
   async function testar() {
     const hostTrim = host.trim();
@@ -62,20 +82,28 @@ export function SnmpTestOidDialog({
       setResultado(null);
       return;
     }
+    const slaveNum = Number.parseInt(slaveId, 10);
+    if (Number.isNaN(slaveNum) || slaveNum < 0 || slaveNum > 255) {
+      setErro("Slave ID inválido (0–255).");
+      setResultado(null);
+      return;
+    }
 
     setLoading(true);
     setErro(null);
     setResultado(null);
     try {
-      const res = await apiFetch<TestSnmpOidResponse>(
-        "/api/v1/equipamentos/snmp/test-oid",
+      const res = await apiFetch<TestModbusOffsetResponse>(
+        "/api/v1/equipamentos/modbus/test-offset",
         {
           method: "POST",
           body: JSON.stringify({
             host: hostTrim,
             port: portNum,
-            community: community.trim() || "public",
-            oid: oid.trim(),
+            slaveId: slaveNum,
+            registro,
+            offset,
+            tipoDado: ponto?.tipoDado,
           }),
         }
       );
@@ -83,9 +111,14 @@ export function SnmpTestOidDialog({
         setErro(res.erro);
         return;
       }
-      setResultado(resolveSnmpMetricDisplay(res.valor, ponto));
+      setResultado(
+        resolveSnmpMetricDisplay(
+          res.valor,
+          ponto ? pontoModbusParaDisplay(ponto) : null
+        )
+      );
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao testar OID.");
+      setErro(e instanceof Error ? e.message : "Falha ao testar offset.");
     } finally {
       setLoading(false);
     }
@@ -95,45 +128,50 @@ export function SnmpTestOidDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="z-[60] sm:max-w-md" showCloseButton>
         <DialogHeader>
-          <DialogTitle>Testar OID</DialogTitle>
+          <DialogTitle>Testar offset</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3 py-1">
           <p className="text-xs text-muted-foreground">
             {pontoNome?.trim()
               ? `Ponto: ${pontoNome.trim()} — `
               : ""}
-            Informe o host e a community para consultar o OID no agente SNMP.
-            A community do catálogo é definida na unidade.
+            Informe o host e o Slave ID para ler o offset no dispositivo Modbus.
+            A conexão da unidade é definida na unidade.
           </p>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
-            {oid}
+            Offset {offset} · {modbusRegistroLabel[registro]}
+            {modbusRegistroComTipoDado(registro) && ponto?.tipoDado
+              ? ` · ${modbusTipoDadoLabel[ponto.tipoDado]}`
+              : modbusRegistroComEstados(registro)
+                ? " · Binary"
+                : ""}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="snmp-test-host">Host (IP)</Label>
+              <Label htmlFor="modbus-test-host">Host (IP)</Label>
               <Input
-                id="snmp-test-host"
+                id="modbus-test-host"
                 value={host}
                 onChange={(e) => setHost(e.target.value)}
                 placeholder="192.168.1.10"
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="snmp-test-port">Porta</Label>
+              <Label htmlFor="modbus-test-port">Porta</Label>
               <Input
-                id="snmp-test-port"
+                id="modbus-test-port"
                 value={port}
                 onChange={(e) => setPort(e.target.value)}
-                placeholder="161"
+                placeholder="502"
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="snmp-test-community">Community (teste)</Label>
+              <Label htmlFor="modbus-test-slave">Slave ID</Label>
               <Input
-                id="snmp-test-community"
-                value={community}
-                onChange={(e) => setCommunity(e.target.value)}
-                placeholder="public"
+                id="modbus-test-slave"
+                value={slaveId}
+                onChange={(e) => setSlaveId(e.target.value)}
+                placeholder="1"
               />
             </div>
           </div>
@@ -146,7 +184,8 @@ export function SnmpTestOidDialog({
             <div className="rounded-md border border-border bg-card px-3 py-2">
               <p className="text-xs font-medium text-muted-foreground">
                 Valor lido
-                {ponto?.tipoDado === "numerico" &&
+                {ponto &&
+                  isModbusTipoDadoNumerico(ponto.tipoDado) &&
                   ponto.multiplicador != null &&
                   ponto.multiplicador !== 1 && (
                     <span className="font-normal">
@@ -174,7 +213,7 @@ export function SnmpTestOidDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-          <Button onClick={testar} disabled={loading || !oid.trim()}>
+          <Button onClick={testar} disabled={loading}>
             {loading ? "Testando…" : "Executar teste"}
           </Button>
         </DialogFooter>

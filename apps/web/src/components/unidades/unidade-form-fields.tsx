@@ -2,18 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import {
-  tipoEquipamentoLabel,
-  tipoMonitoramentoLabel,
-} from "@/lib/labels";
 import type { DeviceMetric, Equipamento, UnidadeEquipamento } from "@/lib/types";
 import { monitorTargetId } from "@/lib/types";
 import {
+  agruparEquipamentosUnidade,
   BR_ESTADOS,
-  defaultPortaForEquipamento,
+  detalheVinculoEquipamento,
   labelEquipamentoCatalogo,
   nomeEquipamentoVinculo,
+  nomeMaquinaVinculo,
+  portaEquipamentoEmUso,
   sanitizeUnidadeCodigo,
+  vinculoEquipamentoKey,
   type UnidadeFormState,
 } from "@/lib/unidade-form";
 import {
@@ -40,6 +40,7 @@ import {
   CoordenadasMapDialog,
   SelecionarCoordenadasButton,
 } from "@/components/unidades/coordenadas-map-dialog";
+import { UnidadeNovoEquipamentoDialog } from "@/components/unidades/unidade-novo-equipamento-dialog";
 
 export function UnidadeFormFields({
   form,
@@ -56,31 +57,24 @@ export function UnidadeFormFields({
   metricMap?: Map<string, DeviceMetric>;
   unidadeMongoId?: string;
 }) {
-  const [newEquipId, setNewEquipId] = useState(catalogo[0]?.id ?? "");
-  const [newPorta, setNewPorta] = useState(
-    defaultPortaForEquipamento(catalogo[0])
-  );
-  const [newNomeLocal, setNewNomeLocal] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepErro, setCepErro] = useState<string | null>(null);
+  const [mapaCoordsOpen, setMapaCoordsOpen] = useState(false);
+  const [novoEquipOpen, setNovoEquipOpen] = useState(false);
 
-  const selectedEquip = catalogo.find((e) => e.id === newEquipId);
+  const paginaWebItems = useMemo(
+    () => [
+      { value: "nao", label: "Não" },
+      { value: "sim", label: "Sim" },
+    ],
+    []
+  );
 
   const estadoItems = useMemo(
     () => BR_ESTADOS.map((uf) => ({ value: uf, label: uf })),
     []
   );
 
-  const equipamentoItems = useMemo(
-    () =>
-      catalogo.map((e) => ({
-        value: e.id,
-        label: labelEquipamentoCatalogo(e),
-      })),
-    [catalogo]
-  );
-
-  const [cepLoading, setCepLoading] = useState(false);
-  const [cepErro, setCepErro] = useState<string | null>(null);
-  const [mapaCoordsOpen, setMapaCoordsOpen] = useState(false);
   const ultimoCepBuscado = useRef("");
   const cepCarregadoRef = useRef(cepDigits(form.endereco.cep));
   const enderecoRef = useRef(form.endereco);
@@ -146,41 +140,48 @@ export function UnidadeFormFields({
     return () => clearTimeout(timer);
   }, [form.endereco.cep, onChange]);
 
-  function addEquipamento() {
-    if (!newEquipId) return;
-    if (form.equipamentos.some((l) => l.equipamentoId === newEquipId)) return;
-    const nomeLocal = newNomeLocal.trim();
+  function updateVinculo(
+    localId: string,
+    patch: Partial<UnidadeEquipamento>
+  ) {
     onChange({
-      equipamentos: [
-        ...form.equipamentos,
-        {
-          equipamentoId: newEquipId,
-          porta: Number.parseInt(newPorta, 10) || 0,
-          ...(nomeLocal ? { nomeLocal } : {}),
-        },
-      ],
+      equipamentos: form.equipamentos.map((l, i) =>
+        vinculoEquipamentoKey(l, i) === localId ? { ...l, ...patch } : l
+      ),
     });
-    setNewNomeLocal("");
   }
 
-  function updateVinculo(
-    equipamentoId: string,
+  function removeEquipamento(localId: string) {
+    onChange({
+      equipamentos: form.equipamentos.filter(
+        (l, i) => vinculoEquipamentoKey(l, i) !== localId
+      ),
+    });
+  }
+
+  function removeMaquina(maquinaId: string) {
+    onChange({
+      equipamentos: form.equipamentos.filter(
+        (l) => l.maquinaId?.trim() !== maquinaId
+      ),
+    });
+  }
+
+  function updateMaquinaGrupo(
+    maquinaId: string,
     patch: Partial<UnidadeEquipamento>
   ) {
     onChange({
       equipamentos: form.equipamentos.map((l) =>
-        l.equipamentoId === equipamentoId ? { ...l, ...patch } : l
+        l.maquinaId?.trim() === maquinaId ? { ...l, ...patch } : l
       ),
     });
   }
 
-  function removeEquipamento(equipamentoId: string) {
-    onChange({
-      equipamentos: form.equipamentos.filter(
-        (l) => l.equipamentoId !== equipamentoId
-      ),
-    });
-  }
+  const equipamentosAgrupados = useMemo(
+    () => agruparEquipamentosUnidade(form.equipamentos),
+    [form.equipamentos]
+  );
 
   const nomeEquipCatalogo =
     equipNome ?? ((id: string) => catalogo.find((e) => e.id === id)?.nome ?? id);
@@ -391,17 +392,171 @@ export function UnidadeFormFields({
               </p>
             ) : (
               <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-                {form.equipamentos.map((link) => {
+                {equipamentosAgrupados.map((grupo) => {
+                  if (grupo.tipo === "maquina") {
+                    const linkRef = grupo.links[0];
+                    const maquinaNome = nomeMaquinaVinculo(linkRef);
+                    return (
+                      <li
+                        key={grupo.maquinaId}
+                        className="space-y-2 px-3 py-2.5 text-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{maquinaNome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Máquina · porta {linkRef.porta} ·{" "}
+                              {grupo.links.length} sensor
+                              {grupo.links.length === 1 ? "" : "es"}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => removeMaquina(grupo.maquinaId)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                        <ul className="space-y-1.5 rounded-md border border-border bg-muted/20 px-2 py-2">
+                          {grupo.links.map((link) => {
+                            const eq = catalogo.find(
+                              (e) => e.id === link.equipamentoId
+                            );
+                            const localId = link._localId ?? link.equipamentoId;
+                            const targetId =
+                              unidadeMongoId && metricMap
+                                ? monitorTargetId(
+                                    unidadeMongoId,
+                                    link.equipamentoId,
+                                    link.porta
+                                  )
+                                : "";
+                            const m = targetId
+                              ? metricMap?.get(targetId)
+                              : undefined;
+                            return (
+                              <li
+                                key={localId}
+                                className="flex items-center justify-between gap-2 text-xs"
+                              >
+                                <span className="min-w-0 truncate text-muted-foreground">
+                                  {eq
+                                    ? labelEquipamentoCatalogo(eq)
+                                    : link.equipamentoId}
+                                </span>
+                                {m && (
+                                  <Badge
+                                    variant={m.online ? "default" : "destructive"}
+                                    className="shrink-0 text-[10px]"
+                                  >
+                                    {m.online ? "Online" : "Offline"}
+                                  </Badge>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs">Porta</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={linkRef.porta}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const parsed = Number.parseInt(raw, 10);
+                              if (raw !== "" && !Number.isFinite(parsed)) return;
+                              if (
+                                Number.isFinite(parsed) &&
+                                parsed >= 0 &&
+                                portaEquipamentoEmUso(form.equipamentos, parsed, {
+                                  maquinaId: grupo.maquinaId,
+                                })
+                              ) {
+                                return;
+                              }
+                              updateMaquinaGrupo(grupo.maquinaId, {
+                                porta: Number.isFinite(parsed)
+                                  ? parsed
+                                  : linkRef.porta,
+                              });
+                            }}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs">Possui página web?</Label>
+                            <Select
+                              items={paginaWebItems}
+                              value={linkRef.paginaWeb ? "sim" : "nao"}
+                              onValueChange={(v) => {
+                                const sim = v === "sim";
+                                updateMaquinaGrupo(grupo.maquinaId, {
+                                  paginaWeb: sim,
+                                  portaWeb: sim
+                                    ? linkRef.portaWeb ?? 80
+                                    : undefined,
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="nao">Não</SelectItem>
+                                <SelectItem value="sim">Sim</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {linkRef.paginaWeb ? (
+                            <div className="grid gap-1.5">
+                              <Label className="text-xs">Porta web</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={65535}
+                                value={linkRef.portaWeb ?? ""}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  updateMaquinaGrupo(grupo.maquinaId, {
+                                    portaWeb:
+                                      raw === ""
+                                        ? undefined
+                                        : Number.parseInt(raw, 10) ||
+                                          undefined,
+                                  });
+                                }}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                          ) : (
+                            <div className="hidden sm:block" aria-hidden />
+                          )}
+                        </div>
+                      </li>
+                    );
+                  }
+
+                  const link = grupo.link;
+                  const index = grupo.index;
                   const eq = catalogo.find((e) => e.id === link.equipamentoId);
+                  const localId = vinculoEquipamentoKey(link, index);
                   const targetId =
                     unidadeMongoId && metricMap
-                      ? monitorTargetId(unidadeMongoId, link.equipamentoId)
+                      ? monitorTargetId(
+                          unidadeMongoId,
+                          link.equipamentoId,
+                          link.porta
+                        )
                       : "";
                   const m = targetId ? metricMap?.get(targetId) : undefined;
                   const catalogoNome = nomeEquipCatalogo(link.equipamentoId);
                   return (
                     <li
-                      key={link.equipamentoId}
+                      key={localId}
                       className="space-y-2 px-3 py-2.5 text-sm"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -410,11 +565,7 @@ export function UnidadeFormFields({
                             {nomeEquipamentoVinculo(link, eq)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Catálogo: {catalogoNome}
-                            {eq
-                              ? ` · ${tipoEquipamentoLabel[eq.tipoEquipamento]} · ${tipoMonitoramentoLabel[eq.tipoMonitoramento]}`
-                              : ""}
-                            {" · "}Porta {link.porta}
+                            Catálogo: {detalheVinculoEquipamento(link, eq)}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
@@ -429,9 +580,7 @@ export function UnidadeFormFields({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() =>
-                              removeEquipamento(link.equipamentoId)
-                            }
+                            onClick={() => removeEquipamento(localId)}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
@@ -444,7 +593,7 @@ export function UnidadeFormFields({
                         <Input
                           value={link.nomeLocal ?? ""}
                           onChange={(e) =>
-                            updateVinculo(link.equipamentoId, {
+                            updateVinculo(localId, {
                               nomeLocal: e.target.value,
                             })
                           }
@@ -452,70 +601,78 @@ export function UnidadeFormFields({
                           className="h-8 text-xs"
                         />
                       </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs">Possui página web?</Label>
+                          <Select
+                            items={paginaWebItems}
+                            value={link.paginaWeb ? "sim" : "nao"}
+                            onValueChange={(v) => {
+                              const sim = v === "sim";
+                              updateVinculo(localId, {
+                                paginaWeb: sim,
+                                portaWeb: sim ? link.portaWeb ?? 80 : undefined,
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nao">Não</SelectItem>
+                              <SelectItem value="sim">Sim</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {link.paginaWeb ? (
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs">Porta web</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={65535}
+                              value={link.portaWeb ?? ""}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                updateVinculo(localId, {
+                                  portaWeb:
+                                    raw === ""
+                                      ? undefined
+                                      : Number.parseInt(raw, 10) || undefined,
+                                });
+                              }}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="hidden sm:block" aria-hidden />
+                        )}
+                      </div>
                     </li>
                   );
                 })}
               </ul>
             )}
-            <div className="grid gap-2 rounded-lg border border-dashed border-border p-3">
-              <div className="grid gap-2">
-                <Label className="text-xs">Equipamento do catálogo</Label>
-                <Select
-                  items={equipamentoItems}
-                  value={newEquipId || null}
-                  onValueChange={(v) => {
-                    const id = v ?? "";
-                    setNewEquipId(id);
-                    const eq = catalogo.find((e) => e.id === id);
-                    setNewPorta(defaultPortaForEquipamento(eq));
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um equipamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalogo.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {labelEquipamentoCatalogo(e)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label className="text-xs">
-                  Nome nesta unidade (opcional)
-                </Label>
-                <Input
-                  value={newNomeLocal}
-                  onChange={(e) => setNewNomeLocal(e.target.value)}
-                  placeholder={
-                    selectedEquip
-                      ? `Ex.: ${selectedEquip.nome} — bloco A`
-                      : "Apelido local sem alterar o catálogo"
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label className="text-xs">Porta</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={newPorta}
-                  onChange={(e) => setNewPorta(e.target.value)}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={addEquipamento}
-                disabled={!newEquipId}
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Vincular equipamento
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setNovoEquipOpen(true)}
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Novo equipamento
+            </Button>
+            <UnidadeNovoEquipamentoDialog
+              open={novoEquipOpen}
+              onOpenChange={setNovoEquipOpen}
+              catalogo={catalogo}
+              equipamentos={form.equipamentos}
+              onAdd={(vinculos) =>
+                onChange({
+                  equipamentos: [...form.equipamentos, ...vinculos],
+                })
+              }
+            />
           </>
         )}
       </div>

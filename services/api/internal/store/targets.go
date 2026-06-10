@@ -52,7 +52,7 @@ func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, 
 				tipoMon = domain.DispositivoModbus
 			}
 			targets = append(targets, domain.MonitorTarget{
-				TargetID:      domain.MonitorTargetID(u.ID, eq.ID),
+				TargetID:      domain.MonitorTargetID(u.ID, eq.ID, link.Porta),
 				EquipamentoID: eq.ID,
 				UnidadeID:     u.ID,
 				Nome:          eq.Nome,

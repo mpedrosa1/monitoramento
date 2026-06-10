@@ -1,3 +1,4 @@
+import { labelTipoSensor } from "./equipamento-sensor";
 import {
   tipoEquipamentoLabel,
   tipoMonitoramentoLabel,
@@ -84,6 +85,40 @@ export function sortUnidadesByCodigo(list: Unidade[]): Unidade[] {
   return [...list].sort((a, b) => compareUnidadeCodigo(a.codigo, b.codigo));
 }
 
+export type UnidadeConnectivityStatus = "sem_ip" | "online" | "offline";
+
+export function unidadeConnectivityStatus(
+  u: Unidade,
+  hostOnline: boolean
+): UnidadeConnectivityStatus {
+  if (!u.ip?.trim()) return "sem_ip";
+  return hostOnline ? "online" : "offline";
+}
+
+export function unidadeConnectivityLabel(
+  status: UnidadeConnectivityStatus
+): string {
+  switch (status) {
+    case "sem_ip":
+      return "Sem IP";
+    case "online":
+      return "Online";
+    case "offline":
+      return "Offline";
+  }
+}
+
+/** Offline (com IP) primeiro; demais unidades por ID crescente. */
+export function sortUnidadesForPainel(
+  list: Unidade[],
+  isHostOffline: (u: Unidade) => boolean
+): Unidade[] {
+  const sorted = sortUnidadesByCodigo(list);
+  const offline = sorted.filter(isHostOffline);
+  const rest = sorted.filter((u) => !isHostOffline(u));
+  return [...offline, ...rest];
+}
+
 function normalizeEndereco(raw: unknown): UnidadeEndereco {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const o = raw as Record<string, unknown>;
@@ -120,7 +155,9 @@ export function unidadeToForm(u: Unidade): UnidadeFormState {
     latitude: u.latitude != null ? String(u.latitude) : "",
     longitude: u.longitude != null ? String(u.longitude) : "",
     ip: u.ip ?? "",
-    equipamentos: Array.isArray(u.equipamentos) ? [...u.equipamentos] : [],
+    equipamentos: normalizeEquipamentosVinculos(
+      Array.isArray(u.equipamentos) ? u.equipamentos : []
+    ),
     intervaloS: String(u.intervaloS || 30),
     alertaOfflineS: String(u.alertaOfflineS || 60),
   };
@@ -132,10 +169,165 @@ function filterNonEmpty(items: string[]): string[] {
 
 const OBJECT_ID_HEX = /^[a-f\d]{24}$/i;
 
+export function newEquipamentoVinculo(
+  partial: Pick<UnidadeEquipamento, "equipamentoId" | "porta"> &
+    Partial<UnidadeEquipamento>
+): UnidadeEquipamento {
+  return {
+    ...partial,
+    _localId: partial._localId?.trim() || crypto.randomUUID(),
+  };
+}
+
+export function newMaquinaGrupoId(): string {
+  return crypto.randomUUID();
+}
+
+export function isVinculoMaquina(link: UnidadeEquipamento): boolean {
+  return !!link.maquinaId?.trim();
+}
+
+/** Agrupa vínculos de máquina (sensores) para exibição na lista. */
+export function agruparEquipamentosUnidade(links: UnidadeEquipamento[]): Array<
+  | { tipo: "item"; link: UnidadeEquipamento; index: number }
+  | { tipo: "maquina"; maquinaId: string; links: UnidadeEquipamento[]; indices: number[] }
+> {
+  const maquinasVistas = new Set<string>();
+  const out: Array<
+    | { tipo: "item"; link: UnidadeEquipamento; index: number }
+    | { tipo: "maquina"; maquinaId: string; links: UnidadeEquipamento[]; indices: number[] }
+  > = [];
+
+  links.forEach((link, index) => {
+    const maquinaId = link.maquinaId?.trim();
+    if (!maquinaId) {
+      out.push({ tipo: "item", link, index });
+      return;
+    }
+    if (maquinasVistas.has(maquinaId)) return;
+    maquinasVistas.add(maquinaId);
+    const indices: number[] = [];
+    const grupo: UnidadeEquipamento[] = [];
+    links.forEach((l, i) => {
+      if (l.maquinaId?.trim() === maquinaId) {
+        indices.push(i);
+        grupo.push(l);
+      }
+    });
+    out.push({ tipo: "maquina", maquinaId, links: grupo, indices });
+  });
+
+  return out;
+}
+
+export function normalizeEquipamentosVinculos(
+  links: UnidadeEquipamento[]
+): UnidadeEquipamento[] {
+  return links.map((l) => ({
+    ...l,
+    _localId: l._localId?.trim() || crypto.randomUUID(),
+  }));
+}
+
+export function vinculoEquipamentoKey(
+  link: UnidadeEquipamento,
+  index: number
+): string {
+  return link._localId?.trim() || `${link.equipamentoId}:${link.porta}:${index}`;
+}
+
+/** Porta já usada por outro vínculo ou máquina na mesma unidade. */
+export function portaEquipamentoEmUso(
+  links: UnidadeEquipamento[],
+  porta: number,
+  exceto?: { localId?: string; maquinaId?: string }
+): boolean {
+  return links.some((l) => {
+    if (l.porta !== porta) return false;
+    if (exceto?.maquinaId && l.maquinaId?.trim() === exceto.maquinaId) {
+      return false;
+    }
+    if (
+      exceto?.localId &&
+      !l.maquinaId?.trim() &&
+      l._localId === exceto.localId
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function sanitizeEquipamentos(
   links: UnidadeEquipamento[]
 ): UnidadeEquipamento[] {
-  return links.filter((l) => OBJECT_ID_HEX.test(l.equipamentoId.trim()));
+  const portasAvulsas = new Set<number>();
+  const portasMaquinas = new Map<string, number>();
+  const out: UnidadeEquipamento[] = [];
+
+  for (const l of links) {
+    if (!OBJECT_ID_HEX.test(l.equipamentoId.trim())) continue;
+
+    const maquinaId = l.maquinaId?.trim();
+    if (maquinaId) {
+      const portaMaquina = portasMaquinas.get(maquinaId);
+      if (portaMaquina != null && portaMaquina !== l.porta) continue;
+      if (portasAvulsas.has(l.porta)) continue;
+      portasMaquinas.set(maquinaId, l.porta);
+    } else if (portasAvulsas.has(l.porta)) {
+      continue;
+    } else if ([...portasMaquinas.values()].includes(l.porta)) {
+      continue;
+    } else {
+      portasAvulsas.add(l.porta);
+    }
+
+    const { _localId: _, ...rest } = l;
+    const base = { ...rest };
+    if (!base.paginaWeb) {
+      const { paginaWeb: _p, portaWeb: _w, ...semWeb } = base;
+      out.push(semWeb);
+      continue;
+    }
+    out.push(base);
+  }
+  return out;
+}
+
+/** Linha de detalhe do vínculo equipamento ↔ unidade. */
+export function detalheVinculoEquipamento(
+  link: UnidadeEquipamento,
+  eq?: Equipamento
+): string {
+  const partes: string[] = [];
+  if (eq) {
+    partes.push(labelEquipamentoCatalogo(eq));
+  }
+  partes.push(`porta ${link.porta}`);
+  if (link.paginaWeb && link.portaWeb) {
+    partes.push(`web :${link.portaWeb}`);
+  }
+  return partes.join(" · ");
+}
+
+/** URL HTTP(S) da interface web do equipamento na unidade. */
+export function urlPaginaWebEquipamento(
+  ip: string | undefined,
+  link: UnidadeEquipamento
+): string | null {
+  if (!link.paginaWeb || !link.portaWeb) return null;
+  const host = ip?.trim();
+  if (!host) return null;
+
+  const port = link.portaWeb;
+  const protocol = port === 443 ? "https" : "http";
+  const omitPort =
+    (protocol === "http" && port === 80) ||
+    (protocol === "https" && port === 443);
+
+  return omitPort
+    ? `${protocol}://${host}`
+    : `${protocol}://${host}:${port}`;
 }
 
 export function formToUnidadeBody(
@@ -201,7 +393,11 @@ export function rotuloEquipamento(eq: Equipamento): string {
 }
 
 export function labelEquipamentoCatalogo(eq: Equipamento): string {
-  return `${rotuloEquipamento(eq)} (${tipoEquipamentoLabel[eq.tipoEquipamento]} · ${tipoMonitoramentoLabel[eq.tipoMonitoramento]})`;
+  const tipo =
+    eq.tipoEquipamento === "sensor" && eq.tipoSensor
+      ? `${tipoEquipamentoLabel.sensor} · ${labelTipoSensor(eq.tipoSensor)}`
+      : tipoEquipamentoLabel[eq.tipoEquipamento];
+  return `${rotuloEquipamento(eq)} (${tipo} · ${tipoMonitoramentoLabel[eq.tipoMonitoramento]})`;
 }
 
 /** Nome exibido do vínculo equipamento ↔ unidade. */
@@ -211,5 +407,15 @@ export function nomeEquipamentoVinculo(
 ): string {
   const local = link.nomeLocal?.trim();
   if (local) return local;
+  if (link.maquinaNome?.trim() && link.maquinaId && eq?.tipoEquipamento === "sensor") {
+    return `${link.maquinaNome.trim()} · ${rotuloEquipamento(eq)}`;
+  }
+  if (link.maquinaNome?.trim() && link.maquinaId) {
+    return link.maquinaNome.trim();
+  }
   return eq ? rotuloEquipamento(eq) : link.equipamentoId;
+}
+
+export function nomeMaquinaVinculo(link: UnidadeEquipamento): string {
+  return link.maquinaNome?.trim() || "Máquina";
 }

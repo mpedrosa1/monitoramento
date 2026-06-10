@@ -3,6 +3,7 @@ import type {
   ColaboradorStatus,
   MissaoStatus,
   SnmpTipoDado,
+  SnmpTipoSelecao,
   TipoEquipamento,
   TipoMonitoramento,
 } from "./types";
@@ -66,6 +67,19 @@ export const tipoEquipamentoLabel: Record<TipoEquipamento, string> = {
 export const tipoMonitoramentoLabel: Record<TipoMonitoramento, string> = {
   modbus: "Modbus",
   snmp: "SNMP",
+};
+
+export const snmpTipoSelecaoLabel: Record<SnmpTipoSelecao, string> = {
+  nao_selecionado: "Não selecionado",
+  integer32: "Inteiro 32",
+  octet_string: "String de octetos",
+  object_identifier: "Identificador de objeto",
+  ip_address: "Endereço IP",
+  counter32: "Contador 32",
+  gauge32: "Gauge 32",
+  time_ticks: "Ticks de tempo",
+  opaque: "Opaco",
+  counter64: "Contador 64",
 };
 
 export const snmpTipoDadoLabel: Record<SnmpTipoDado, string> = {

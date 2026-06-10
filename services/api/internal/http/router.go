@@ -175,6 +175,8 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.With(RequireManageData).Post("/snmp/test-oid", api.TestSnmpOID)
 
+				r.With(RequireManageData).Post("/modbus/test-offset", api.TestModbusOffset)
+
 				r.With(RequireManageData).Post("/", api.CreateEquipamento)
 
 				r.Route("/{id}", func(r chi.Router) {

@@ -48,6 +48,13 @@ type UnidadeEquipamento struct {
 	Porta         int                `json:"porta" bson:"porta"`
 	// NomeLocal apelido nesta unidade (não altera o nome no catálogo).
 	NomeLocal string `json:"nomeLocal,omitempty" bson:"nomeLocal,omitempty"`
+	// PaginaWeb indica interface HTTP acessível no IP da unidade.
+	PaginaWeb bool `json:"paginaWeb,omitempty" bson:"paginaWeb,omitempty"`
+	PortaWeb  int  `json:"portaWeb,omitempty" bson:"portaWeb,omitempty"`
+	// MaquinaID agrupa sensores da mesma máquina na unidade.
+	MaquinaID string `json:"maquinaId,omitempty" bson:"maquinaId,omitempty"`
+	// MaquinaNome nome da máquina montada na unidade.
+	MaquinaNome string `json:"maquinaNome,omitempty" bson:"maquinaNome,omitempty"`
 }
 
 // UnidadeEndereco endereço estruturado da unidade prisional.
@@ -227,23 +234,46 @@ type Missao struct {
 	UpdatedAt      time.Time            `json:"updatedAt" bson:"updatedAt"`
 }
 
+// ModbusPonto representa um ponto de leitura Modbus por offset.
+type ModbusPonto struct {
+	Nome          string                `json:"nome" bson:"nome"`
+	Offset        uint16                `json:"offset" bson:"offset"`
+	Registro      string                `json:"registro,omitempty" bson:"registro,omitempty"`
+	Unidade       string                `json:"unidade,omitempty" bson:"unidade,omitempty"`
+	Multiplicador float64               `json:"multiplicador,omitempty" bson:"multiplicador,omitempty"`
+	TipoDado      string                `json:"tipoDado,omitempty" bson:"tipoDado,omitempty"`
+	EstadosMulti  []SnmpMultiEstadoItem `json:"estadosMulti,omitempty" bson:"estadosMulti,omitempty"`
+	Descricao     string                `json:"descricao,omitempty" bson:"descricao,omitempty"`
+	Desabilitado  bool                  `json:"desabilitado,omitempty" bson:"desabilitado,omitempty"`
+}
+
 type DispositivoConfig struct {
-	SlaveID       byte        `json:"slaveId,omitempty" bson:"slaveId,omitempty"`
-	Registradores []uint16    `json:"registradores,omitempty" bson:"registradores,omitempty"`
-	Pontos        []SnmpPonto `json:"pontos,omitempty" bson:"pontos,omitempty"`
-	OIDs          []string    `json:"oids,omitempty" bson:"oids,omitempty"` // legado
-	Community     string      `json:"community,omitempty" bson:"community,omitempty"`
+	SlaveID       byte          `json:"slaveId,omitempty" bson:"slaveId,omitempty"`
+	Registradores []uint16      `json:"registradores,omitempty" bson:"registradores,omitempty"`
+	PontosModbus  []ModbusPonto `json:"pontosModbus,omitempty" bson:"pontosModbus,omitempty"`
+	Pontos        []SnmpPonto   `json:"pontos,omitempty" bson:"pontos,omitempty"`
+	OIDs          []string      `json:"oids,omitempty" bson:"oids,omitempty"` // legado
+	Community     string        `json:"community,omitempty" bson:"community,omitempty"`
+}
+
+// SnmpMultiEstadoItem mapeia valor OID → rótulo e cor de exibição.
+type SnmpMultiEstadoItem struct {
+	Chave    string `json:"chave" bson:"chave"`
+	Exibicao string `json:"exibicao" bson:"exibicao"`
+	Cor      string `json:"cor" bson:"cor"`
 }
 
 // SnmpPonto representa um ponto de dados SNMP (estilo data point SCADA).
 type SnmpPonto struct {
-	Nome         string `json:"nome" bson:"nome"`
-	OID          string `json:"oid" bson:"oid"`
-	Unidade       string  `json:"unidade,omitempty" bson:"unidade,omitempty"`
-	Multiplicador float64 `json:"multiplicador,omitempty" bson:"multiplicador,omitempty"`
-	TipoDado      string  `json:"tipoDado,omitempty" bson:"tipoDado,omitempty"`
-	Descricao    string `json:"descricao,omitempty" bson:"descricao,omitempty"`
-	Desabilitado bool   `json:"desabilitado,omitempty" bson:"desabilitado,omitempty"`
+	Nome          string                `json:"nome" bson:"nome"`
+	OID           string                `json:"oid" bson:"oid"`
+	Unidade       string                `json:"unidade,omitempty" bson:"unidade,omitempty"`
+	Multiplicador float64               `json:"multiplicador,omitempty" bson:"multiplicador,omitempty"`
+	TipoSnmp      string                `json:"tipoSnmp,omitempty" bson:"tipoSnmp,omitempty"`
+	TipoDado      string                `json:"tipoDado,omitempty" bson:"tipoDado,omitempty"`
+	EstadosMulti  []SnmpMultiEstadoItem `json:"estadosMulti,omitempty" bson:"estadosMulti,omitempty"`
+	Descricao     string                `json:"descricao" bson:"descricao,omitempty"`
+	Desabilitado  bool                  `json:"desabilitado,omitempty" bson:"desabilitado,omitempty"`
 }
 
 // Equipamento é o catálogo global (sem IP; vinculado à unidade via Unidade.Equipamentos).
@@ -252,6 +282,7 @@ type Equipamento struct {
 	Nome              string             `json:"nome" bson:"nome"`
 	Marca             string             `json:"marca" bson:"marca"`
 	TipoEquipamento   TipoEquipamento    `json:"tipoEquipamento" bson:"tipoEquipamento"`
+	TipoSensor        string             `json:"tipoSensor,omitempty" bson:"tipoSensor,omitempty"`
 	TipoMonitoramento DispositivoTipo    `json:"tipoMonitoramento" bson:"tipoMonitoramento"`
 	Config            DispositivoConfig  `json:"config" bson:"config"`
 	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
