@@ -15,6 +15,8 @@ type Config struct {
 	CollectorEnabled  bool
 	PingIntervalSec   int
 	ModbusIntervalSec int
+	ModbusTimeoutMs   int
+	ModbusReadDelayMs int
 	SNMPIntervalSec   int
 	JWTSecret         string
 	JWTExpiry         time.Duration
@@ -33,6 +35,8 @@ func Load() Config {
 		CollectorEnabled:  getEnvBool("COLLECTOR_ENABLED", true),
 		PingIntervalSec:   getEnvInt("PING_INTERVAL_SEC", 5),
 		ModbusIntervalSec: getEnvInt("MODBUS_INTERVAL_SEC", 10),
+		ModbusTimeoutMs:   getEnvInt("MODBUS_TIMEOUT_MS", 8000),
+		ModbusReadDelayMs: getEnvInt("MODBUS_READ_DELAY_MS", 50),
 		SNMPIntervalSec:   getEnvInt("SNMP_INTERVAL_SEC", 30),
 		JWTSecret:         getEnv("JWT_SECRET", "dev-mmrtec-altere-em-producao"),
 		JWTExpiry:         time.Duration(hours) * time.Hour,

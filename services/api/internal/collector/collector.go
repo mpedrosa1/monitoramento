@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -17,9 +18,49 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/ws"
 )
 
-type targetWorker struct {
+type collectWorker struct {
 	cancel context.CancelFunc
-	target domain.MonitorTarget
+	single *domain.MonitorTarget
+	modbus []domain.MonitorTarget
+}
+
+func (w collectWorker) isModbusGroup() bool {
+	return len(w.modbus) > 0
+}
+
+func collectWorkerEqual(a, b collectWorker) bool {
+	if a.isModbusGroup() != b.isModbusGroup() {
+		return false
+	}
+	if a.isModbusGroup() {
+		return domain.ModbusTargetGroupEqual(a.modbus, b.modbus)
+	}
+	return domain.MonitorTargetEqual(*a.single, *b.single)
+}
+
+func buildCollectWorkers(targets []domain.MonitorTarget) map[string]collectWorker {
+	modbusGroups := make(map[string][]domain.MonitorTarget)
+	out := make(map[string]collectWorker, len(targets))
+
+	for _, t := range targets {
+		switch t.Tipo {
+		case domain.DispositivoModbus:
+			key := domain.MonitorModbusEndpointKey(t)
+			modbusGroups[key] = append(modbusGroups[key], t)
+		default:
+			tt := t
+			out[t.TargetID] = collectWorker{single: &tt}
+		}
+	}
+
+	for endpointKey, group := range modbusGroups {
+		sort.Slice(group, func(i, j int) bool {
+			return group[i].TargetID < group[j].TargetID
+		})
+		out["modbus:"+endpointKey] = collectWorker{modbus: group}
+	}
+
+	return out
 }
 
 type Collector struct {
@@ -30,7 +71,7 @@ type Collector struct {
 	parentCtx context.Context
 	cancel    context.CancelFunc
 	mu        sync.Mutex
-	active    map[string]targetWorker
+	active    map[string]collectWorker
 	wg        sync.WaitGroup
 }
 
@@ -40,17 +81,26 @@ func New(cfg config.Config, st store.Store, state *cache.StateCache, hub *ws.Hub
 		store:  st,
 		cache:  state,
 		hub:    hub,
-		active: make(map[string]targetWorker),
+		active: make(map[string]collectWorker),
 	}
 }
 
 func (c *Collector) Start(ctx context.Context) {
+	modbus.Configure(
+		time.Duration(c.cfg.ModbusTimeoutMs)*time.Millisecond,
+		time.Duration(c.cfg.ModbusReadDelayMs)*time.Millisecond,
+	)
 	if !c.cfg.CollectorEnabled {
 		log.Println("collector: desabilitado (COLLECTOR_ENABLED=false)")
 		return
 	}
-	log.Printf("collector: ativo — ping=%ds modbus=%ds snmp=%ds",
-		c.cfg.PingIntervalSec, c.cfg.ModbusIntervalSec, c.cfg.SNMPIntervalSec)
+	log.Printf("collector: ativo — ping=%ds modbus=%ds (timeout=%dms delay=%dms) snmp=%ds",
+		c.cfg.PingIntervalSec,
+		c.cfg.ModbusIntervalSec,
+		c.cfg.ModbusTimeoutMs,
+		c.cfg.ModbusReadDelayMs,
+		c.cfg.SNMPIntervalSec,
+	)
 	c.parentCtx, c.cancel = context.WithCancel(ctx)
 	c.RefreshTargets()
 }
@@ -66,10 +116,7 @@ func (c *Collector) RefreshTargets() {
 		return
 	}
 
-	want := make(map[string]domain.MonitorTarget, len(targets))
-	for _, t := range targets {
-		want[t.TargetID] = t
-	}
+	want := buildCollectWorkers(targets)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -85,7 +132,7 @@ func (c *Collector) RefreshTargets() {
 			delete(c.active, id)
 			continue
 		}
-		if !domain.MonitorTargetEqual(w.target, cur) {
+		if !collectWorkerEqual(w, cur) {
 			w.cancel()
 			delete(c.active, id)
 			changed[id] = true
@@ -93,7 +140,7 @@ func (c *Collector) RefreshTargets() {
 		}
 	}
 
-	for id, t := range want {
+	for id, w := range want {
 		if _, ok := c.active[id]; ok {
 			continue
 		}
@@ -101,18 +148,23 @@ func (c *Collector) RefreshTargets() {
 			started++
 		}
 		tctx, cancel := context.WithCancel(c.parentCtx)
-		c.active[id] = targetWorker{cancel: cancel, target: t}
+		w.cancel = cancel
+		c.active[id] = w
 		c.wg.Add(1)
-		go c.monitorTarget(tctx, t)
+		if w.isModbusGroup() {
+			go c.monitorModbusEndpoint(tctx, w.modbus)
+		} else {
+			go c.monitorTarget(tctx, *w.single)
+		}
 	}
 
 	var pingHosts int
-	for _, t := range want {
+	for _, t := range targets {
 		if t.Tipo == domain.DispositivoPing {
 			pingHosts++
 		}
 	}
-	log.Printf("collector: %d alvos ativos (+%d novos, %d reiniciados, %d ping ICMP)",
+	log.Printf("collector: %d workers ativos (+%d novos, %d reiniciados, %d ping ICMP)",
 		len(c.active), started, restarted, pingHosts)
 }
 
@@ -124,24 +176,14 @@ func (c *Collector) Stop() {
 	for _, w := range c.active {
 		w.cancel()
 	}
-	c.active = make(map[string]targetWorker)
+	c.active = make(map[string]collectWorker)
 	c.mu.Unlock()
 	c.wg.Wait()
 }
 
 func (c *Collector) monitorTarget(ctx context.Context, t domain.MonitorTarget) {
 	defer c.wg.Done()
-	interval := time.Duration(t.IntervaloS) * time.Second
-	if interval <= 0 {
-		switch t.Tipo {
-		case domain.DispositivoPing:
-			interval = time.Duration(c.cfg.PingIntervalSec) * time.Second
-		case domain.DispositivoModbus:
-			interval = time.Duration(c.cfg.ModbusIntervalSec) * time.Second
-		default:
-			interval = time.Duration(c.cfg.SNMPIntervalSec) * time.Second
-		}
-	}
+	interval := c.targetInterval(t)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -161,34 +203,41 @@ func (c *Collector) monitorTarget(ctx context.Context, t domain.MonitorTarget) {
 			online, lat := ping.Probe(ctx, t.Host)
 			metric = ping.MetricFromTarget(t, online, lat)
 			logPingResult(t, online, lat)
-		case domain.DispositivoModbus:
-			online, vals := modbus.Probe(ctx, t)
-			metric = modbus.MetricFromTarget(t, online, vals)
 		case domain.DispositivoSNMP:
 			online, vals := snmp.Probe(t)
 			metric = snmp.MetricFromTarget(t, online, vals)
 		default:
 			return
 		}
-		prev, had := c.cache.Get(metric.TargetID)
-		c.cache.Set(metric)
-		c.hub.BroadcastUpdate(metric)
+		c.publishMetric(ctx, t, metric)
+	}
 
-		if had && prev.Online && !metric.Online {
-			msg := "equipamento offline: " + t.Nome
-			if t.Tipo == domain.DispositivoPing && t.Porta == 0 {
-				msg = "unidade offline: " + t.Nome
-			}
-			_ = c.store.CreateEvento(ctx, &domain.EventoMonitoramento{
-				DispositivoID: t.EquipamentoID,
-				Tipo:          string(t.Tipo),
-				Severidade:    "alta",
-				Mensagem:      msg,
-				Dados: map[string]any{
-					"host":  t.Host,
-					"porta": t.Porta,
-				},
-			})
+	run()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
+}
+
+func (c *Collector) monitorModbusEndpoint(ctx context.Context, targets []domain.MonitorTarget) {
+	defer c.wg.Done()
+	if len(targets) == 0 {
+		return
+	}
+
+	interval := c.targetInterval(targets[0])
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	run := func() {
+		results := modbus.ProbeEndpoint(ctx, targets)
+		for _, r := range results {
+			metric := modbus.MetricFromTarget(r.Target, r.Online, r.Valores)
+			c.publishMetric(ctx, r.Target, metric)
 		}
 	}
 
@@ -200,6 +249,44 @@ func (c *Collector) monitorTarget(ctx context.Context, t domain.MonitorTarget) {
 		case <-ticker.C:
 			run()
 		}
+	}
+}
+
+func (c *Collector) targetInterval(t domain.MonitorTarget) time.Duration {
+	interval := time.Duration(t.IntervaloS) * time.Second
+	if interval <= 0 {
+		switch t.Tipo {
+		case domain.DispositivoPing:
+			interval = time.Duration(c.cfg.PingIntervalSec) * time.Second
+		case domain.DispositivoModbus:
+			interval = time.Duration(c.cfg.ModbusIntervalSec) * time.Second
+		default:
+			interval = time.Duration(c.cfg.SNMPIntervalSec) * time.Second
+		}
+	}
+	return interval
+}
+
+func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, metric domain.DeviceMetric) {
+	prev, had := c.cache.Get(metric.TargetID)
+	c.cache.Set(metric)
+	c.hub.BroadcastUpdate(metric)
+
+	if had && prev.Online && !metric.Online {
+		msg := "equipamento offline: " + t.Nome
+		if t.Tipo == domain.DispositivoPing && t.Porta == 0 {
+			msg = "unidade offline: " + t.Nome
+		}
+		_ = c.store.CreateEvento(ctx, &domain.EventoMonitoramento{
+			DispositivoID: t.EquipamentoID,
+			Tipo:          string(t.Tipo),
+			Severidade:    "alta",
+			Mensagem:      msg,
+			Dados: map[string]any{
+				"host":  t.Host,
+				"porta": t.Porta,
+			},
+		})
 	}
 }
 

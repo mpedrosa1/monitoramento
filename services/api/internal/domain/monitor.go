@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -44,4 +45,33 @@ func MonitorTargetID(unidadeID, equipamentoID primitive.ObjectID, porta int) str
 // MonitorUnidadeHostTargetID identifica o ping ICMP do IP cadastrado na unidade.
 func MonitorUnidadeHostTargetID(unidadeID primitive.ObjectID) string {
 	return unidadeID.Hex() + ":host"
+}
+
+// MonitorModbusEndpointKey agrupa alvos que compartilham o mesmo gateway Modbus TCP.
+func MonitorModbusEndpointKey(t MonitorTarget) string {
+	port := t.Porta
+	if port <= 0 {
+		port = 502
+	}
+	slave := t.Config.SlaveID
+	if slave == 0 {
+		slave = 1
+	}
+	return fmt.Sprintf("%s:%s:%d:%d", t.UnidadeID.Hex(), strings.TrimSpace(t.Host), port, slave)
+}
+
+// ModbusTargetGroupEqual compara grupos de alvos Modbus no mesmo endpoint.
+func ModbusTargetGroupEqual(a, b []MonitorTarget) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].TargetID != b[i].TargetID {
+			return false
+		}
+		if !MonitorTargetEqual(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
 }

@@ -6,79 +6,93 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goburrow/modbus"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 )
 
+var (
+	requestTimeout = 8 * time.Second
+	readDelay      = 50 * time.Millisecond
+	endpointLocks  sync.Map
+)
+
+// Configure ajusta timeout e intervalo entre leituras Modbus.
+func Configure(timeout time.Duration, delay time.Duration) {
+	if timeout > 0 {
+		requestTimeout = timeout
+	}
+	if delay >= 0 {
+		readDelay = delay
+	}
+}
+
+type TargetProbeResult struct {
+	Target  domain.MonitorTarget
+	Online  bool
+	Valores map[string]any
+}
+
 func Probe(ctx context.Context, t domain.MonitorTarget) (online bool, valores map[string]any) {
-	port := t.Porta
+	res := ProbeEndpoint(ctx, []domain.MonitorTarget{t})
+	if len(res) == 0 {
+		return false, map[string]any{"erro": "alvo modbus inválido"}
+	}
+	return res[0].Online, res[0].Valores
+}
+
+// ProbeEndpoint lê todos os alvos de um mesmo gateway Modbus em uma única sessão TCP.
+func ProbeEndpoint(ctx context.Context, targets []domain.MonitorTarget) []TargetProbeResult {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	ref := targets[0]
+	port := ref.Porta
 	if port == 0 {
 		port = 502
 	}
-	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", t.Host, port))
-	handler.Timeout = 3 * time.Second
-	handler.SlaveId = t.Config.SlaveID
-	if handler.SlaveId == 0 {
-		handler.SlaveId = 1
+	slave := ref.Config.SlaveID
+	if slave == 0 {
+		slave = 1
 	}
 
+	results := make([]TargetProbeResult, len(targets))
+	for i, t := range targets {
+		results[i] = TargetProbeResult{
+			Target:  t,
+			Valores: map[string]any{},
+		}
+	}
+
+	unlock := lockEndpoint(ref.Host, uint16(port), slave)
+	defer unlock()
+
+	handler := newHandler(ref.Host, uint16(port), slave)
 	if err := handler.Connect(); err != nil {
-		return false, map[string]any{"erro": err.Error()}
+		errMsg := err.Error()
+		for i := range results {
+			results[i].Online = false
+			results[i].Valores = map[string]any{"erro": errMsg}
+		}
+		return results
 	}
 	defer handler.Close()
 
 	client := modbus.NewClient(handler)
-	valores = make(map[string]any)
-
-	pontos := t.Config.PontosModbus
-	if len(pontos) > 0 {
-		for _, p := range pontos {
-			if p.Desabilitado {
-				continue
-			}
-			select {
-			case <-ctx.Done():
-				return false, valores
-			default:
-			}
-			key := modbusPontoKey(p)
-			val, err := readModbusPoint(client, p)
-			if err != nil {
-				msg := err.Error()
-				valores[key] = msg
-				valores[fmt.Sprintf("reg_%d", p.Offset)] = msg
-				continue
-			}
-			valores[key] = val
-			valores[fmt.Sprintf("reg_%d", p.Offset)] = val
-		}
-		return true, valores
-	}
-
-	regs := t.Config.Registradores
-	if len(regs) == 0 {
-		regs = []uint16{0}
-	}
-
-	for _, reg := range regs {
+	for i, t := range targets {
 		select {
 		case <-ctx.Done():
-			return false, valores
+			return results
 		default:
 		}
-		results, err := client.ReadHoldingRegisters(reg, 1)
-		if err != nil {
-			valores[fmt.Sprintf("reg_%d", reg)] = err.Error()
-			continue
-		}
-		if len(results) >= 2 {
-			val := uint16(results[0])<<8 | uint16(results[1])
-			valores[fmt.Sprintf("reg_%d", reg)] = val
-		}
+		results[i].Valores = readTargetPontos(ctx, client, t)
+		results[i].Online = true
 	}
-	return true, valores
+
+	return results
 }
 
 func MetricFromTarget(t domain.MonitorTarget, online bool, valores map[string]any) domain.DeviceMetric {
@@ -94,6 +108,80 @@ func MetricFromTarget(t domain.MonitorTarget, online bool, valores map[string]an
 		UpdatedAt:     time.Now().UTC(),
 		DispositivoID: t.TargetID,
 	}
+}
+
+func lockEndpoint(host string, port uint16, slave byte) func() {
+	key := fmt.Sprintf("%s:%d:%d", strings.TrimSpace(host), port, slave)
+	v, _ := endpointLocks.LoadOrStore(key, &sync.Mutex{})
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
+
+func newHandler(host string, port uint16, slave byte) *modbus.TCPClientHandler {
+	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", strings.TrimSpace(host), port))
+	handler.Timeout = requestTimeout
+	handler.SlaveId = slave
+	return handler
+}
+
+func readTargetPontos(ctx context.Context, client modbus.Client, t domain.MonitorTarget) map[string]any {
+	valores := make(map[string]any)
+
+	pontos := t.Config.PontosModbus
+	if len(pontos) > 0 {
+		for _, p := range pontos {
+			if p.Desabilitado {
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return valores
+			default:
+			}
+			key := modbusPontoKey(p)
+			val, err := readModbusPoint(client, p)
+			if err != nil {
+				msg := err.Error()
+				valores[key] = msg
+				valores[fmt.Sprintf("reg_%d", p.Offset)] = msg
+			} else {
+				valores[key] = val
+				valores[fmt.Sprintf("reg_%d", p.Offset)] = val
+			}
+			sleepReadDelay()
+		}
+		return valores
+	}
+
+	regs := t.Config.Registradores
+	if len(regs) == 0 {
+		regs = []uint16{0}
+	}
+
+	for _, reg := range regs {
+		select {
+		case <-ctx.Done():
+			return valores
+		default:
+		}
+		results, err := client.ReadHoldingRegisters(reg, 1)
+		if err != nil {
+			valores[fmt.Sprintf("reg_%d", reg)] = err.Error()
+		} else if len(results) >= 2 {
+			val := uint16(results[0])<<8 | uint16(results[1])
+			valores[fmt.Sprintf("reg_%d", reg)] = val
+		}
+		sleepReadDelay()
+	}
+	return valores
+}
+
+func sleepReadDelay() {
+	if readDelay <= 0 {
+		return
+	}
+	time.Sleep(readDelay)
 }
 
 func modbusPontoKey(p domain.ModbusPonto) string {
@@ -289,10 +377,10 @@ func TestOffset(host string, port uint16, slaveID byte, registro string, offset 
 		registro = "holding_register"
 	}
 
-	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", strings.TrimSpace(host), port))
-	handler.Timeout = 5 * time.Second
-	handler.SlaveId = slaveID
+	unlock := lockEndpoint(host, port, slaveID)
+	defer unlock()
 
+	handler := newHandler(host, port, slaveID)
 	if err := handler.Connect(); err != nil {
 		return false, nil, err.Error()
 	}
