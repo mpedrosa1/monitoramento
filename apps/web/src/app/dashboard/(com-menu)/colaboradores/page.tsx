@@ -118,7 +118,7 @@ export default function ColaboradoresPage() {
             Nenhum colaborador encontrado para a busca.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-6 justify-items-center">
             {filteredList.map((c) => (
               <ColaboradorCard
                 key={c.id}

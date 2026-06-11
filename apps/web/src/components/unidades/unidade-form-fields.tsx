@@ -1,21 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
-import type { DeviceMetric, Equipamento, UnidadeEquipamento } from "@/lib/types";
-import { monitorTargetId } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 import {
-  agruparEquipamentosUnidade,
   BR_ESTADOS,
-  detalheVinculoEquipamento,
-  labelEquipamentoCatalogo,
-  nomeEquipamentoVinculo,
-  nomeMaquinaVinculo,
-  portaEquipamentoEmUso,
   sanitizeUnidadeCodigo,
-  vinculoEquipamentoKey,
+  unidadeCoordenadasPreenchidas,
   type UnidadeFormState,
 } from "@/lib/unidade-form";
+import { areaResumo, verticesToLatLng } from "@/lib/unidade-area";
 import {
   buscarEnderecoPorCep,
   cepDigits,
@@ -23,7 +16,6 @@ import {
   isCepComplete,
   mergeEnderecoViaCep,
 } from "@/lib/viacep";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,34 +32,26 @@ import {
   CoordenadasMapDialog,
   SelecionarCoordenadasButton,
 } from "@/components/unidades/coordenadas-map-dialog";
-import { UnidadeNovoEquipamentoDialog } from "@/components/unidades/unidade-novo-equipamento-dialog";
+import {
+  SelecionarAreaButton,
+  UnidadeAreaMapDialog,
+} from "@/components/unidades/unidade-area-map-dialog";
 
 export function UnidadeFormFields({
   form,
   onChange,
-  catalogo,
-  equipNome,
-  metricMap,
-  unidadeMongoId,
 }: {
   form: UnidadeFormState;
   onChange: (patch: Partial<UnidadeFormState>) => void;
-  catalogo: Equipamento[];
-  equipNome?: (id: string) => string;
-  metricMap?: Map<string, DeviceMetric>;
-  unidadeMongoId?: string;
 }) {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepErro, setCepErro] = useState<string | null>(null);
   const [mapaCoordsOpen, setMapaCoordsOpen] = useState(false);
-  const [novoEquipOpen, setNovoEquipOpen] = useState(false);
-
-  const paginaWebItems = useMemo(
-    () => [
-      { value: "nao", label: "Não" },
-      { value: "sim", label: "Sim" },
-    ],
-    []
+  const [mapaAreaOpen, setMapaAreaOpen] = useState(false);
+  const coordsPreenchidas = unidadeCoordenadasPreenchidas(form);
+  const areaResumoTexto = useMemo(
+    () => areaResumo(verticesToLatLng(form.areaVertices)),
+    [form.areaVertices]
   );
 
   const estadoItems = useMemo(
@@ -84,10 +68,27 @@ export function UnidadeFormFields({
     const digits = cepDigits(form.endereco.cep);
     cepCarregadoRef.current = digits;
     ultimoCepBuscado.current = digits;
-  }, [unidadeMongoId]);
+  }, []);
 
   function patchEndereco(field: keyof UnidadeFormState["endereco"], value: string) {
     onChange({ endereco: { ...form.endereco, [field]: value } });
+  }
+
+  function patchCoordenadas(patch: Partial<Pick<UnidadeFormState, "latitude" | "longitude">>) {
+    const next = {
+      latitude: patch.latitude ?? form.latitude,
+      longitude: patch.longitude ?? form.longitude,
+    };
+    const validas = unidadeCoordenadasPreenchidas(next);
+    onChange({
+      ...patch,
+      ...(validas
+        ? {}
+        : {
+            areaM2: "",
+            areaVertices: [],
+          }),
+    });
   }
 
   function handleCepInput(raw: string) {
@@ -139,52 +140,6 @@ export function UnidadeFormFields({
 
     return () => clearTimeout(timer);
   }, [form.endereco.cep, onChange]);
-
-  function updateVinculo(
-    localId: string,
-    patch: Partial<UnidadeEquipamento>
-  ) {
-    onChange({
-      equipamentos: form.equipamentos.map((l, i) =>
-        vinculoEquipamentoKey(l, i) === localId ? { ...l, ...patch } : l
-      ),
-    });
-  }
-
-  function removeEquipamento(localId: string) {
-    onChange({
-      equipamentos: form.equipamentos.filter(
-        (l, i) => vinculoEquipamentoKey(l, i) !== localId
-      ),
-    });
-  }
-
-  function removeMaquina(maquinaId: string) {
-    onChange({
-      equipamentos: form.equipamentos.filter(
-        (l) => l.maquinaId?.trim() !== maquinaId
-      ),
-    });
-  }
-
-  function updateMaquinaGrupo(
-    maquinaId: string,
-    patch: Partial<UnidadeEquipamento>
-  ) {
-    onChange({
-      equipamentos: form.equipamentos.map((l) =>
-        l.maquinaId?.trim() === maquinaId ? { ...l, ...patch } : l
-      ),
-    });
-  }
-
-  const equipamentosAgrupados = useMemo(
-    () => agruparEquipamentosUnidade(form.equipamentos),
-    [form.equipamentos]
-  );
-
-  const nomeEquipCatalogo =
-    equipNome ?? ((id: string) => catalogo.find((e) => e.id === id)?.nome ?? id);
 
   return (
     <div className="grid gap-4 py-2">
@@ -339,7 +294,7 @@ export function UnidadeFormFields({
           <Input
             id="latitude"
             value={form.latitude}
-            onChange={(e) => onChange({ latitude: e.target.value })}
+            onChange={(e) => patchCoordenadas({ latitude: e.target.value })}
             placeholder="-23.550520"
           />
         </div>
@@ -348,13 +303,29 @@ export function UnidadeFormFields({
           <Input
             id="longitude"
             value={form.longitude}
-            onChange={(e) => onChange({ longitude: e.target.value })}
+            onChange={(e) => patchCoordenadas({ longitude: e.target.value })}
             placeholder="-46.633308"
           />
         </div>
         <div className="sm:col-span-2">
           <SelecionarCoordenadasButton onClick={() => setMapaCoordsOpen(true)} />
         </div>
+        {coordsPreenchidas ? (
+          <>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="unidade-area">Área da unidade</Label>
+              <Input
+                id="unidade-area"
+                readOnly
+                value={areaResumoTexto}
+                className="bg-muted/40"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <SelecionarAreaButton onClick={() => setMapaAreaOpen(true)} />
+            </div>
+          </>
+        ) : null}
       </div>
 
       <CoordenadasMapDialog
@@ -364,9 +335,25 @@ export function UnidadeFormFields({
         latitude={form.latitude}
         longitude={form.longitude}
         onConfirm={(latitude, longitude) =>
-          onChange({ latitude, longitude })
+          patchCoordenadas({ latitude, longitude })
         }
       />
+
+      {coordsPreenchidas ? (
+        <UnidadeAreaMapDialog
+          open={mapaAreaOpen}
+          onOpenChange={setMapaAreaOpen}
+          latitude={form.latitude}
+          longitude={form.longitude}
+          areaVertices={form.areaVertices}
+          onConfirm={(areaVertices, areaM2) =>
+            onChange({
+              areaVertices,
+              areaM2: String(areaM2),
+            })
+          }
+        />
+      ) : null}
 
       <div className="grid gap-2">
         <Label htmlFor="ip">Endereço IP</Label>
@@ -378,304 +365,10 @@ export function UnidadeFormFields({
         />
       </div>
 
-      <div className="space-y-3 rounded-lg border border-border bg-muted/15 p-3">
-        <p className="text-sm font-medium">Equipamentos</p>
-        {catalogo.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum equipamento no catálogo. Cadastre em Equipamentos primeiro.
-          </p>
-        ) : (
-          <>
-            {form.equipamentos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum equipamento vinculado.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-                {equipamentosAgrupados.map((grupo) => {
-                  if (grupo.tipo === "maquina") {
-                    const linkRef = grupo.links[0];
-                    const maquinaNome = nomeMaquinaVinculo(linkRef);
-                    return (
-                      <li
-                        key={grupo.maquinaId}
-                        className="space-y-2 px-3 py-2.5 text-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">{maquinaNome}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Máquina · porta {linkRef.porta} ·{" "}
-                              {grupo.links.length} sensor
-                              {grupo.links.length === 1 ? "" : "es"}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => removeMaquina(grupo.maquinaId)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                        <ul className="space-y-1.5 rounded-md border border-border bg-muted/20 px-2 py-2">
-                          {grupo.links.map((link) => {
-                            const eq = catalogo.find(
-                              (e) => e.id === link.equipamentoId
-                            );
-                            const localId = link._localId ?? link.equipamentoId;
-                            const targetId =
-                              unidadeMongoId && metricMap
-                                ? monitorTargetId(
-                                    unidadeMongoId,
-                                    link.equipamentoId,
-                                    link.porta
-                                  )
-                                : "";
-                            const m = targetId
-                              ? metricMap?.get(targetId)
-                              : undefined;
-                            return (
-                              <li
-                                key={localId}
-                                className="flex items-center justify-between gap-2 text-xs"
-                              >
-                                <span className="min-w-0 truncate text-muted-foreground">
-                                  {eq
-                                    ? labelEquipamentoCatalogo(eq)
-                                    : link.equipamentoId}
-                                </span>
-                                {m && (
-                                  <Badge
-                                    variant={m.online ? "default" : "destructive"}
-                                    className="shrink-0 text-[10px]"
-                                  >
-                                    {m.online ? "Online" : "Offline"}
-                                  </Badge>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs">Porta</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={linkRef.porta}
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              const parsed = Number.parseInt(raw, 10);
-                              if (raw !== "" && !Number.isFinite(parsed)) return;
-                              if (
-                                Number.isFinite(parsed) &&
-                                parsed >= 0 &&
-                                portaEquipamentoEmUso(form.equipamentos, parsed, {
-                                  maquinaId: grupo.maquinaId,
-                                })
-                              ) {
-                                return;
-                              }
-                              updateMaquinaGrupo(grupo.maquinaId, {
-                                porta: Number.isFinite(parsed)
-                                  ? parsed
-                                  : linkRef.porta,
-                              });
-                            }}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div className="grid gap-1.5">
-                            <Label className="text-xs">Possui página web?</Label>
-                            <Select
-                              items={paginaWebItems}
-                              value={linkRef.paginaWeb ? "sim" : "nao"}
-                              onValueChange={(v) => {
-                                const sim = v === "sim";
-                                updateMaquinaGrupo(grupo.maquinaId, {
-                                  paginaWeb: sim,
-                                  portaWeb: sim
-                                    ? linkRef.portaWeb ?? 80
-                                    : undefined,
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="nao">Não</SelectItem>
-                                <SelectItem value="sim">Sim</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {linkRef.paginaWeb ? (
-                            <div className="grid gap-1.5">
-                              <Label className="text-xs">Porta web</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={65535}
-                                value={linkRef.portaWeb ?? ""}
-                                onChange={(e) => {
-                                  const raw = e.target.value;
-                                  updateMaquinaGrupo(grupo.maquinaId, {
-                                    portaWeb:
-                                      raw === ""
-                                        ? undefined
-                                        : Number.parseInt(raw, 10) ||
-                                          undefined,
-                                  });
-                                }}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                          ) : (
-                            <div className="hidden sm:block" aria-hidden />
-                          )}
-                        </div>
-                      </li>
-                    );
-                  }
-
-                  const link = grupo.link;
-                  const index = grupo.index;
-                  const eq = catalogo.find((e) => e.id === link.equipamentoId);
-                  const localId = vinculoEquipamentoKey(link, index);
-                  const targetId =
-                    unidadeMongoId && metricMap
-                      ? monitorTargetId(
-                          unidadeMongoId,
-                          link.equipamentoId,
-                          link.porta
-                        )
-                      : "";
-                  const m = targetId ? metricMap?.get(targetId) : undefined;
-                  const catalogoNome = nomeEquipCatalogo(link.equipamentoId);
-                  return (
-                    <li
-                      key={localId}
-                      className="space-y-2 px-3 py-2.5 text-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">
-                            {nomeEquipamentoVinculo(link, eq)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Catálogo: {detalheVinculoEquipamento(link, eq)}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {m && (
-                            <Badge
-                              variant={m.online ? "default" : "destructive"}
-                            >
-                              {m.online ? "Online" : "Offline"}
-                            </Badge>
-                          )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => removeEquipamento(localId)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid gap-1.5">
-                        <Label className="text-xs">
-                          Nome nesta unidade (opcional)
-                        </Label>
-                        <Input
-                          value={link.nomeLocal ?? ""}
-                          onChange={(e) =>
-                            updateVinculo(localId, {
-                              nomeLocal: e.target.value,
-                            })
-                          }
-                          placeholder={catalogoNome}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs">Possui página web?</Label>
-                          <Select
-                            items={paginaWebItems}
-                            value={link.paginaWeb ? "sim" : "nao"}
-                            onValueChange={(v) => {
-                              const sim = v === "sim";
-                              updateVinculo(localId, {
-                                paginaWeb: sim,
-                                portaWeb: sim ? link.portaWeb ?? 80 : undefined,
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="nao">Não</SelectItem>
-                              <SelectItem value="sim">Sim</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {link.paginaWeb ? (
-                          <div className="grid gap-1.5">
-                            <Label className="text-xs">Porta web</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={65535}
-                              value={link.portaWeb ?? ""}
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                updateVinculo(localId, {
-                                  portaWeb:
-                                    raw === ""
-                                      ? undefined
-                                      : Number.parseInt(raw, 10) || undefined,
-                                });
-                              }}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        ) : (
-                          <div className="hidden sm:block" aria-hidden />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setNovoEquipOpen(true)}
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Novo equipamento
-            </Button>
-            <UnidadeNovoEquipamentoDialog
-              open={novoEquipOpen}
-              onOpenChange={setNovoEquipOpen}
-              catalogo={catalogo}
-              equipamentos={form.equipamentos}
-              onAdd={(vinculos) =>
-                onChange({
-                  equipamentos: [...form.equipamentos, ...vinculos],
-                })
-              }
-            />
-          </>
-        )}
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Equipamentos são vinculados na aba de detalhes da unidade (clique na
+        linha da tabela).
+      </p>
 
       <Separator />
 

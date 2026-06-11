@@ -20,6 +20,10 @@
 # production
 /build
 
+# fotos de colaboradores (mantém a pasta)
+/pics/*
+!/pics/.gitkeep
+
 # misc
 .DS_Store
 *.pem

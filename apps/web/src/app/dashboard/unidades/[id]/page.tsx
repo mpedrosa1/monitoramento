@@ -5,8 +5,13 @@ import { useParams } from "next/navigation";
 import { apiFetch, asArray } from "@/lib/api";
 import type { Equipamento, Unidade } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
+import {
+  unidadeAreaM2Exibicao,
+  unidadeTemAreaDefinida,
+} from "@/lib/unidade-area";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   UnidadeDetailPanel,
   buildMetricMap,
@@ -19,6 +24,7 @@ export default function UnidadeDetailPage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
   const { status, metrics } = useMonitoring();
+  const { canManageEquipamentosUnidade } = usePermissions();
   const [unidade, setUnidade] = useState<Unidade | null>(null);
   const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +82,21 @@ export default function UnidadeDetailPage() {
                 catalogo={catalogo}
                 metricMap={metricMap}
                 hostOnline={hostOnline}
+                canManage={canManageEquipamentosUnidade}
+                onUnidadeUpdated={setUnidade}
               />
             </div>
             <div className="min-w-0 space-y-6 lg:sticky lg:top-4 lg:self-start">
-              <UnidadeDetailMap position={position} label={unidade.nome} />
+              <UnidadeDetailMap
+                position={position}
+                label={unidade.nome}
+                areaVertices={unidade.areaVertices}
+                areaM2={
+                  unidadeTemAreaDefinida(unidade)
+                    ? unidadeAreaM2Exibicao(unidade)
+                    : undefined
+                }
+              />
               <UnidadeChamadosSection unidade={unidade} />
             </div>
           </div>

@@ -1,14 +1,27 @@
 import { missaoIniciada } from "@/lib/missoes";
 import type { Chamado, Missao, TipoAcessoSistema } from "@/lib/types";
 
-/** Somente administradores — CRUD na página Missões. */
-export function canManageMissoes(
+function isAdministrador(
   tipoAcesso: TipoAcessoSistema | undefined | null
 ): boolean {
   return (
     tipoAcesso === "admin_com_financeiro" ||
     tipoAcesso === "admin_sem_financeiro"
   );
+}
+
+/** Somente administradores — CRUD na página Missões. */
+export function canManageMissoes(
+  tipoAcesso: TipoAcessoSistema | undefined | null
+): boolean {
+  return isAdministrador(tipoAcesso);
+}
+
+/** Administradores e desenvolvedores — vincular e editar equipamentos na unidade. */
+export function canManageEquipamentosUnidade(
+  tipoAcesso: TipoAcessoSistema | undefined | null
+): boolean {
+  return isAdministrador(tipoAcesso) || tipoAcesso === "desenvolvedor";
 }
 
 /** Administradores e desenvolvedores — podem gerenciar cadastros. */

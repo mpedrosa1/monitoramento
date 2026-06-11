@@ -122,6 +122,8 @@ export interface UnidadeEquipamento {
   /** Agrupa sensores montados na mesma máquina. */
   maquinaId?: string;
   maquinaNome?: string;
+  /** Endereço Modbus do sensor no gateway (somente em máquinas). */
+  slaveId?: number;
 }
 
 export interface UnidadeEndereco {
@@ -132,6 +134,11 @@ export interface UnidadeEndereco {
   bairro: string;
   cidade: string;
   estado: string;
+}
+
+export interface UnidadeAreaVertice {
+  latitude: number;
+  longitude: number;
 }
 
 export interface AntenaProxima {
@@ -159,6 +166,10 @@ export interface Unidade {
   endereco: UnidadeEndereco;
   latitude?: number;
   longitude?: number;
+  /** Área do perímetro em m² (polígono geodésico). */
+  areaM2?: number;
+  /** Vértices do polígono da área da unidade. */
+  areaVertices?: UnidadeAreaVertice[];
   ip: string;
   equipamentos: UnidadeEquipamento[];
   intervaloS: number;

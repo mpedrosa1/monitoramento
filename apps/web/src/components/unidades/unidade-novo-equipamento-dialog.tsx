@@ -8,6 +8,7 @@ import {
   labelEquipamentoCatalogo,
   newEquipamentoVinculo,
   newMaquinaGrupoId,
+  parseSlaveIdInput,
   portaEquipamentoEmUso,
 } from "@/lib/unidade-form";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ type ModoNovoEquipamento = "nobreak" | "maquina";
 interface SensorMaquinaDraft {
   _localId: string;
   equipamentoId: string;
+  slaveId: string;
 }
 
 const modoItems = [
@@ -54,6 +56,7 @@ function newSensorDraft(catalogo: Equipamento[]): SensorMaquinaDraft {
   return {
     _localId: crypto.randomUUID(),
     equipamentoId: first?.id ?? "",
+    slaveId: "1",
   };
 }
 
@@ -227,6 +230,10 @@ export function UnidadeNovoEquipamentoDialog({
         setErro("Selecione todos os sensores.");
         return;
       }
+      if (parseSlaveIdInput(s.slaveId) == null) {
+        setErro("Informe um Slave ID válido (0–255) para cada sensor.");
+        return;
+      }
     }
 
     let portaWebVal: number | undefined;
@@ -250,6 +257,7 @@ export function UnidadeNovoEquipamentoDialog({
           porta,
           maquinaId,
           maquinaNome: nome,
+          slaveId: parseSlaveIdInput(s.slaveId) ?? 1,
           ...(maquinaPaginaWeb && portaWebVal != null
             ? { paginaWeb: true, portaWeb: portaWebVal }
             : {}),
@@ -298,6 +306,9 @@ export function UnidadeNovoEquipamentoDialog({
     (!Number.isFinite(maquinaPortaWebNum) ||
       maquinaPortaWebNum < 1 ||
       maquinaPortaWebNum > 65535);
+  const sensoresSlaveInvalidos = sensores.some(
+    (s) => parseSlaveIdInput(s.slaveId) == null
+  );
 
   const catalogoVazioMsg =
     modo === "nobreak"
@@ -504,35 +515,52 @@ export function UnidadeNovoEquipamentoDialog({
                   {sensores.map((sensor, index) => (
                     <li
                       key={sensor._localId}
-                      className="grid gap-2 rounded-md border border-border bg-card p-2 sm:grid-cols-[1fr_auto]"
+                      className="grid gap-2 rounded-md border border-border bg-card p-2"
                     >
-                      <div className="grid gap-1.5">
-                        <Label className="text-xs">
-                          Sensor {index + 1}
-                        </Label>
-                        <Select
-                          items={equipamentoSensorItems}
-                          value={sensor.equipamentoId || null}
-                          onValueChange={(v) => {
-                            patchSensor(sensor._localId, {
-                              equipamentoId: v ?? "",
-                            });
-                            setErro(null);
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-full text-xs">
-                            <SelectValue placeholder="Selecione o sensor" />
-                          </SelectTrigger>
-                          <SelectContent className="z-[100]">
-                            {catalogoSensor.map((e) => (
-                              <SelectItem key={e.id} value={e.id}>
-                                {labelEquipamentoCatalogo(e)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-end justify-end">
+                      <div className="grid gap-2 sm:grid-cols-[1fr_5.5rem_auto] sm:items-end">
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs">
+                            Sensor {index + 1}
+                          </Label>
+                          <Select
+                            items={equipamentoSensorItems}
+                            value={sensor.equipamentoId || null}
+                            onValueChange={(v) => {
+                              patchSensor(sensor._localId, {
+                                equipamentoId: v ?? "",
+                              });
+                              setErro(null);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-full text-xs">
+                              <SelectValue placeholder="Selecione o sensor" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[100]">
+                              {catalogoSensor.map((e) => (
+                                <SelectItem key={e.id} value={e.id}>
+                                  {labelEquipamentoCatalogo(e)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs">Slave ID</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={255}
+                            value={sensor.slaveId}
+                            onChange={(e) => {
+                              patchSensor(sensor._localId, {
+                                slaveId: e.target.value,
+                              });
+                              setErro(null);
+                            }}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="flex items-end justify-end">
                         <Button
                           type="button"
                           variant="ghost"
@@ -543,6 +571,7 @@ export function UnidadeNovoEquipamentoDialog({
                         >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -623,6 +652,7 @@ export function UnidadeNovoEquipamentoDialog({
                           portaWebNobreakInvalida
                         : !maquinaNome.trim() ||
                           sensores.length === 0 ||
+                          sensoresSlaveInvalidos ||
                           maquinaPortaInvalida ||
                           maquinaPortaDuplicada ||
                           maquinaPortaWebInvalida

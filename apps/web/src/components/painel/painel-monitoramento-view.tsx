@@ -19,7 +19,8 @@ import {
 import { PainelMapaOfflineSound } from "@/components/painel/painel-mapa-offline-sound";
 import { PainelUnidadesMap } from "@/components/painel/painel-unidades-map";
 import { buildMetricMap } from "@/components/unidades/unidade-detail-panel";
-import { UnidadeEquipamentosGrid } from "@/components/unidades/unidade-equipamentos-grid";
+import { UnidadeEquipamentosSection } from "@/components/unidades/unidade-equipamentos-section";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Badge } from "@/components/ui/badge";
 
 function unidadeHostOnline(
@@ -53,6 +54,7 @@ function statusBadgeClass(
 
 export function PainelMonitoramentoView() {
   const { status, metrics } = useMonitoring();
+  const { canManageEquipamentosUnidade } = usePermissions();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,15 +187,17 @@ export function PainelMonitoramentoView() {
                     <h2 className="text-lg font-semibold tracking-tight">
                       {selected.nome}
                     </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {selected.equipamentos?.length ?? 0} equipamento
-                      {(selected.equipamentos?.length ?? 0) === 1 ? "" : "s"}
-                    </p>
                   </div>
-                  <UnidadeEquipamentosGrid
+                  <UnidadeEquipamentosSection
                     unidade={selected}
                     catalogo={catalogo}
                     metricMap={metricMap}
+                    canManage={canManageEquipamentosUnidade}
+                    onUnidadeUpdated={(updated) => {
+                      setUnidades((prev) =>
+                        prev.map((u) => (u.id === updated.id ? updated : u))
+                      );
+                    }}
                   />
                 </div>
               ) : null}

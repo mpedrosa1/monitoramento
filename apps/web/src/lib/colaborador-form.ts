@@ -60,6 +60,7 @@ export type DependenteForm = {
 };
 
 export type ColaboradorFormState = {
+  fotoUrl: string;
   nome: string;
   dataNascimento: string;
   telefoneContato: string;
@@ -109,6 +110,7 @@ export function novoDependenteLocalId(): string {
 
 export function emptyColaboradorForm(): ColaboradorFormState {
   return {
+    fotoUrl: COLABORADOR_AVATAR_PADRAO,
     nome: "",
     dataNascimento: "",
     telefoneContato: "",
@@ -143,6 +145,7 @@ export function senhaInicialFromDataNascimento(dataNascimento: string): string {
 export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
   if (!c) return emptyColaboradorForm();
   return {
+    fotoUrl: c.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO,
     nome: c.nome ?? "",
     dataNascimento: c.dataNascimento ?? "",
     telefoneContato: c.telefoneContato ?? "",
@@ -357,7 +360,7 @@ export function formToColaboradorBody(
       ? salarioParaNumero(form.salario)
       : (existing?.salario ?? 0),
     tipoAcesso: form.tipoAcesso as TipoAcessoSistema,
-    fotoUrl: existing?.fotoUrl || COLABORADOR_AVATAR_PADRAO,
+    fotoUrl: form.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO,
     status: existing?.status ?? ("escritorio" as ColaboradorStatus),
     unidadeId: existing?.unidadeId,
   };

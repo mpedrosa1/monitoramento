@@ -8,8 +8,13 @@ import { formatCoord } from "@/lib/geocode";
 import type { DeviceMetric, Equipamento, Unidade } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
 import type { UnidadeEndereco } from "@/lib/types";
+import {
+  formatAreaM2,
+  unidadeAreaM2Exibicao,
+  unidadeTemAreaDefinida,
+} from "@/lib/unidade-area";
 import { unidadeToForm } from "@/lib/unidade-form";
-import { UnidadeEquipamentosGrid, contarEquipamentosUnidade } from "@/components/unidades/unidade-equipamentos-grid";
+import { UnidadeEquipamentosSection } from "@/components/unidades/unidade-equipamentos-section";
 import { UnidadeMissoesSection } from "@/components/unidades/unidade-missoes-section";
 
 function SatelliteStatusIcon({ inactive }: { inactive: boolean }) {
@@ -76,7 +81,8 @@ function InfoTag({
 function formatEnderecoTooltip(
   e: UnidadeEndereco,
   latitude?: number | null,
-  longitude?: number | null
+  longitude?: number | null,
+  areaM2?: number | null
 ): string {
   const lines = [
     e.logradouro && e.numero
@@ -94,6 +100,9 @@ function formatEnderecoTooltip(
     longitude != null && longitude !== 0 ? formatCoord(longitude) : null;
   if (lat) lines.push(`Latitude: ${lat}`);
   if (lng) lines.push(`Longitude: ${lng}`);
+  if (areaM2 != null && areaM2 > 0) {
+    lines.push(`Área: ${formatAreaM2(areaM2)} m²`);
+  }
 
   return lines.join("\n");
 }
@@ -124,18 +133,26 @@ export function UnidadeDetailPanel({
   catalogo,
   metricMap,
   hostOnline,
+  canManage,
+  onUnidadeUpdated,
 }: {
   unidade: Unidade;
   catalogo: Equipamento[];
   metricMap: Map<string, DeviceMetric>;
   hostOnline: boolean;
+  canManage: boolean;
+  onUnidadeUpdated: (unidade: Unidade) => void;
 }) {
   const form = unidadeToForm(unidade);
 
+  const areaM2 = unidadeTemAreaDefinida(unidade)
+    ? unidadeAreaM2Exibicao(unidade)
+    : null;
   const enderecoTooltip = formatEnderecoTooltip(
     form.endereco,
     unidade.latitude,
-    unidade.longitude
+    unidade.longitude,
+    areaM2
   );
   const contatoTooltip = formatContatoTooltip(form);
 
@@ -196,16 +213,13 @@ export function UnidadeDetailPanel({
 
       <Separator />
 
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold">
-          Equipamentos ({contarEquipamentosUnidade(unidade)})
-        </h3>
-        <UnidadeEquipamentosGrid
-          unidade={unidade}
-          catalogo={catalogo}
-          metricMap={metricMap}
-        />
-      </section>
+      <UnidadeEquipamentosSection
+        unidade={unidade}
+        catalogo={catalogo}
+        metricMap={metricMap}
+        canManage={canManage}
+        onUnidadeUpdated={onUnidadeUpdated}
+      />
     </div>
   );
 }

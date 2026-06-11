@@ -32,6 +32,7 @@ import {
   ColaboradorFormErrorsBanner,
   ColaboradorFormLegend,
 } from "@/components/colaboradores/colaborador-form-ui";
+import { ColaboradorFotoUpload } from "@/components/colaboradores/colaborador-foto-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -153,6 +154,11 @@ export function ColaboradorFormFields({
 
       <section className="grid gap-4">
         <h3 className="text-sm font-semibold">Dados pessoais</h3>
+        <ColaboradorFotoUpload
+          nome={form.nome}
+          fotoUrl={form.fotoUrl}
+          onChange={(fotoUrl) => onChange({ fotoUrl })}
+        />
         <ColaboradorField
           fieldKey="nome"
           label="Nome"

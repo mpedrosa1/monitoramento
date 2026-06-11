@@ -51,6 +51,16 @@ func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, 
 			if tipoMon == "" {
 				tipoMon = domain.DispositivoModbus
 			}
+			cfg := eq.Config
+			if strings.TrimSpace(link.MaquinaID) != "" {
+				slave := link.SlaveID
+				if slave <= 0 {
+					slave = 1
+				}
+				cfg.SlaveID = byte(slave)
+			} else if cfg.SlaveID == 0 {
+				cfg.SlaveID = 1
+			}
 			targets = append(targets, domain.MonitorTarget{
 				TargetID:      domain.MonitorTargetID(u.ID, eq.ID, link.Porta),
 				EquipamentoID: eq.ID,
@@ -60,7 +70,7 @@ func ListMonitorTargets(ctx context.Context, st Store) ([]domain.MonitorTarget, 
 				Host:          host,
 				Porta:         link.Porta,
 				IntervaloS:    intervalo,
-				Config:        eq.Config,
+				Config:        cfg,
 			})
 		}
 	}

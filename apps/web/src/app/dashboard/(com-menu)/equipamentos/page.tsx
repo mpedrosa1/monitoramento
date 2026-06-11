@@ -76,7 +76,6 @@ function buildConfig(
   }
   const modbus = serializeModbusPontos(pontosModbus);
   return {
-    slaveId: 1,
     pontosModbus: modbus.pontosModbus,
     registradores: modbus.registradores.length
       ? modbus.registradores

@@ -19,6 +19,12 @@ type unidadeEquipamentoIn struct {
 	PortaWeb      int    `json:"portaWeb,omitempty"`
 	MaquinaID     string `json:"maquinaId,omitempty"`
 	MaquinaNome   string `json:"maquinaNome,omitempty"`
+	SlaveID       int    `json:"slaveId,omitempty"`
+}
+
+type unidadeAreaVerticeIn struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type unidadeBodyIn struct {
@@ -30,6 +36,8 @@ type unidadeBodyIn struct {
 	Endereco     json.RawMessage        `json:"endereco"`
 	Latitude     *float64               `json:"latitude"`
 	Longitude    *float64               `json:"longitude"`
+	AreaM2       *float64               `json:"areaM2"`
+	AreaVertices []unidadeAreaVerticeIn `json:"areaVertices"`
 	IP           string                 `json:"ip"`
 	Equipamentos []unidadeEquipamentoIn `json:"equipamentos"`
 	IntervaloS     json.RawMessage `json:"intervaloS"`
@@ -39,7 +47,7 @@ type unidadeBodyIn struct {
 func decodeUnidadeBody(r io.Reader) (domain.Unidade, error) {
 	var in unidadeBodyIn
 	if err := json.NewDecoder(r).Decode(&in); err != nil {
-		return domain.Unidade{}, fmt.Errorf("json inválido: %w", err)
+		return domain.Unidade{}, fmt.Errorf("json inv?lido: %w", err)
 	}
 
 	endereco, err := parseUnidadeEnderecoJSON(in.Endereco)
@@ -70,8 +78,21 @@ func decodeUnidadeBody(r io.Reader) (domain.Unidade, error) {
 	if in.Longitude != nil {
 		u.Longitude = *in.Longitude
 	}
+	if in.AreaM2 != nil && *in.AreaM2 > 0 {
+		u.AreaM2 = *in.AreaM2
+	}
+	if len(in.AreaVertices) >= 3 {
+		vertices := make([]domain.UnidadeAreaVertice, 0, len(in.AreaVertices))
+		for _, v := range in.AreaVertices {
+			vertices = append(vertices, domain.UnidadeAreaVertice{
+				Latitude:  v.Latitude,
+				Longitude: v.Longitude,
+			})
+		}
+		u.AreaVertices = vertices
+	}
 	if u.Codigo == "" {
-		return domain.Unidade{}, fmt.Errorf("codigo (ID) deve conter apenas números")
+		return domain.Unidade{}, fmt.Errorf("codigo (ID) deve conter apenas n?meros")
 	}
 	return u, nil
 }
@@ -88,7 +109,7 @@ func parseUnidadeEnderecoJSON(raw json.RawMessage) (domain.UnidadeEndereco, erro
 	if err := json.Unmarshal(raw, &s); err == nil {
 		return domain.UnidadeEndereco{Logradouro: strings.TrimSpace(s)}, nil
 	}
-	return domain.UnidadeEndereco{}, fmt.Errorf("endereco inválido")
+	return domain.UnidadeEndereco{}, fmt.Errorf("endereco inv?lido")
 }
 
 func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipamento, error) {
@@ -105,19 +126,19 @@ func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipa
 		}
 		oid, err := primitive.ObjectIDFromHex(hex)
 		if err != nil {
-			return nil, fmt.Errorf("equipamentoId inválido no item %d", i+1)
+			return nil, fmt.Errorf("equipamentoId inv?lido no item %d", i+1)
 		}
 		maquinaID := strings.TrimSpace(eq.MaquinaID)
 		if maquinaID != "" {
 			if portaMaquina, ok := portasMaquinas[maquinaID]; ok && portaMaquina != eq.Porta {
-				return nil, fmt.Errorf("porta inconsistente na máquina (item %d)", i+1)
+				return nil, fmt.Errorf("porta inconsistente na m?quina (item %d)", i+1)
 			}
 			if _, ocupada := portasAvulsas[eq.Porta]; ocupada {
-				return nil, fmt.Errorf("porta %d já está em uso na unidade (item %d)", eq.Porta, i+1)
+				return nil, fmt.Errorf("porta %d j? est? em uso na unidade (item %d)", eq.Porta, i+1)
 			}
 			for id, porta := range portasMaquinas {
 				if id != maquinaID && porta == eq.Porta {
-					return nil, fmt.Errorf("porta %d já está em uso por outra máquina (item %d)", eq.Porta, i+1)
+					return nil, fmt.Errorf("porta %d j? est? em uso por outra m?quina (item %d)", eq.Porta, i+1)
 				}
 			}
 			portasMaquinas[maquinaID] = eq.Porta
@@ -127,10 +148,18 @@ func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipa
 			}
 			for _, porta := range portasMaquinas {
 				if porta == eq.Porta {
-					return nil, fmt.Errorf("porta %d já está em uso por uma máquina (item %d)", eq.Porta, i+1)
+					return nil, fmt.Errorf("porta %d j? est? em uso por uma m?quina (item %d)", eq.Porta, i+1)
 				}
 			}
 			portasAvulsas[eq.Porta] = struct{}{}
+		}
+		slaveID := eq.SlaveID
+		if maquinaID != "" {
+			if slaveID < 0 || slaveID > 255 {
+				return nil, fmt.Errorf("slaveId inv?lido no item %d (use 0?255)", i+1)
+			}
+		} else {
+			slaveID = 0
 		}
 		out = append(out, domain.UnidadeEquipamento{
 			EquipamentoID: oid,
@@ -138,8 +167,9 @@ func parseUnidadeEquipamentos(in []unidadeEquipamentoIn) ([]domain.UnidadeEquipa
 			NomeLocal:     strings.TrimSpace(eq.NomeLocal),
 			PaginaWeb:     eq.PaginaWeb,
 			PortaWeb:      eq.PortaWeb,
-			MaquinaID:     strings.TrimSpace(eq.MaquinaID),
+			MaquinaID:     maquinaID,
 			MaquinaNome:   strings.TrimSpace(eq.MaquinaNome),
+			SlaveID:       slaveID,
 		})
 	}
 	return out, nil

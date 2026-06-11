@@ -3,9 +3,11 @@ import {
   tipoEquipamentoLabel,
   tipoMonitoramentoLabel,
 } from "./labels";
+import { parseCoordPair } from "./geocode";
 import type {
   Equipamento,
   Unidade,
+  UnidadeAreaVertice,
   UnidadeEndereco,
   UnidadeEquipamento,
 } from "./types";
@@ -37,6 +39,8 @@ export type UnidadeFormState = {
   endereco: UnidadeEndereco;
   latitude: string;
   longitude: string;
+  areaM2: string;
+  areaVertices: UnidadeAreaVertice[];
   ip: string;
   equipamentos: UnidadeEquipamento[];
   intervaloS: string;
@@ -53,6 +57,8 @@ export function emptyUnidadeForm(): UnidadeFormState {
     endereco: emptyUnidadeEndereco(),
     latitude: "",
     longitude: "",
+    areaM2: "",
+    areaVertices: [],
     ip: "",
     equipamentos: [],
     intervaloS: "30",
@@ -154,6 +160,8 @@ export function unidadeToForm(u: Unidade): UnidadeFormState {
     endereco: normalizeEndereco(u.endereco),
     latitude: u.latitude != null ? String(u.latitude) : "",
     longitude: u.longitude != null ? String(u.longitude) : "",
+    areaM2: u.areaM2 != null && u.areaM2 > 0 ? String(u.areaM2) : "",
+    areaVertices: Array.isArray(u.areaVertices) ? [...u.areaVertices] : [],
     ip: u.ip ?? "",
     equipamentos: normalizeEquipamentosVinculos(
       Array.isArray(u.equipamentos) ? u.equipamentos : []
@@ -181,6 +189,14 @@ export function newEquipamentoVinculo(
 
 export function newMaquinaGrupoId(): string {
   return crypto.randomUUID();
+}
+
+export function parseSlaveIdInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n) || n < 0 || n > 255) return null;
+  return n;
 }
 
 export function isVinculoMaquina(link: UnidadeEquipamento): boolean {
@@ -283,7 +299,14 @@ function sanitizeEquipamentos(
     }
 
     const { _localId: _, ...rest } = l;
-    const base = { ...rest };
+    let base = { ...rest };
+    if (!maquinaId) {
+      const { slaveId: _s, ...semSlave } = base;
+      base = semSlave;
+    } else if (base.slaveId == null || base.slaveId <= 0) {
+      const { slaveId: _s, ...semSlave } = base;
+      base = semSlave;
+    }
     if (!base.paginaWeb) {
       const { paginaWeb: _p, portaWeb: _w, ...semWeb } = base;
       out.push(semWeb);
@@ -330,6 +353,32 @@ export function urlPaginaWebEquipamento(
     : `${protocol}://${host}:${port}`;
 }
 
+export function unidadeCoordenadasPreenchidas(
+  form: Pick<UnidadeFormState, "latitude" | "longitude">
+): boolean {
+  return parseCoordPair(form.latitude, form.longitude) != null;
+}
+
+function sanitizeAreaVertices(form: UnidadeFormState): UnidadeAreaVertice[] {
+  if (!unidadeCoordenadasPreenchidas(form)) return [];
+  return form.areaVertices.filter(
+    (v) =>
+      Number.isFinite(v.latitude) &&
+      Number.isFinite(v.longitude) &&
+      v.latitude >= -90 &&
+      v.latitude <= 90 &&
+      v.longitude >= -180 &&
+      v.longitude <= 180
+  );
+}
+
+function sanitizeAreaM2(form: UnidadeFormState): number {
+  const vertices = sanitizeAreaVertices(form);
+  if (vertices.length < 3) return 0;
+  const parsed = Number.parseFloat(form.areaM2.replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export function formToUnidadeBody(
   form: UnidadeFormState,
   existing?: Unidade
@@ -353,6 +402,8 @@ export function formToUnidadeBody(
     },
     latitude: Number.isFinite(lat) ? lat : 0,
     longitude: Number.isFinite(lng) ? lng : 0,
+    areaM2: sanitizeAreaM2(form),
+    areaVertices: sanitizeAreaVertices(form),
     ip: form.ip.trim(),
     equipamentos: sanitizeEquipamentos(form.equipamentos),
     intervaloS: Number.parseInt(form.intervaloS, 10) || 30,
@@ -392,6 +443,24 @@ export function rotuloEquipamento(eq: Equipamento): string {
   return marca || modelo || "—";
 }
 
+/** Rótulo do sensor na unidade: tipo de sensor cadastrado (não marca/modelo). */
+export function rotuloTipoSensorEquipamento(eq: Equipamento): string {
+  if (eq.tipoEquipamento === "sensor") {
+    const tipo = labelTipoSensor(eq.tipoSensor);
+    if (tipo !== "—") return tipo;
+  }
+  return rotuloEquipamento(eq);
+}
+
+export function nomeSensorMaquina(
+  link: UnidadeEquipamento,
+  eq?: Equipamento
+): string {
+  const local = link.nomeLocal?.trim();
+  if (local) return local;
+  return eq ? rotuloTipoSensorEquipamento(eq) : link.equipamentoId;
+}
+
 export function labelEquipamentoCatalogo(eq: Equipamento): string {
   const tipo =
     eq.tipoEquipamento === "sensor" && eq.tipoSensor
@@ -408,7 +477,7 @@ export function nomeEquipamentoVinculo(
   const local = link.nomeLocal?.trim();
   if (local) return local;
   if (link.maquinaNome?.trim() && link.maquinaId && eq?.tipoEquipamento === "sensor") {
-    return `${link.maquinaNome.trim()} · ${rotuloEquipamento(eq)}`;
+    return `${link.maquinaNome.trim()} · ${rotuloTipoSensorEquipamento(eq)}`;
   }
   if (link.maquinaNome?.trim() && link.maquinaId) {
     return link.maquinaNome.trim();

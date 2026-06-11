@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import type { LatLng } from "@/lib/geocode";
+import type { UnidadeAreaVertice } from "@/lib/types";
 
 const MapInner = dynamic(() => import("@/components/unidades/unidade-detail-map-inner"), {
   ssr: false,
@@ -16,13 +17,22 @@ const MapInner = dynamic(() => import("@/components/unidades/unidade-detail-map-
 export function UnidadeDetailMap({
   position,
   label,
+  areaVertices,
+  areaM2,
 }: {
   position: LatLng | null;
   label: string;
+  areaVertices?: UnidadeAreaVertice[];
+  areaM2?: number;
 }) {
   return (
     <div className="h-full min-h-[min(70vh,520px)] w-full">
-      <MapInner position={position} label={label} />
+      <MapInner
+        position={position}
+        label={label}
+        areaVertices={areaVertices}
+        areaM2={areaM2}
+      />
     </div>
   );
 }

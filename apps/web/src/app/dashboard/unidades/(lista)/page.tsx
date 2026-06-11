@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
-import type { Equipamento, Unidade } from "@/lib/types";
+import type { Unidade } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
+import { formatUnidadeAreaExibicao } from "@/lib/unidade-area";
 import {
   emptyUnidadeForm,
   formToUnidadeBody,
@@ -48,7 +49,6 @@ export default function UnidadesPage() {
   const { status, metrics } = useMonitoring();
   const { canManageData } = usePermissions();
   const [list, setList] = useState<Unidade[]>([]);
-  const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
   const [createForm, setCreateForm] = useState<UnidadeFormState>(emptyUnidadeForm);
 
   const [editOpen, setEditOpen] = useState(false);
@@ -66,11 +66,6 @@ export default function UnidadesPage() {
     return m?.online ?? false;
   }
 
-  const equipNome = useMemo(() => {
-    const map = new Map(catalogo.map((e) => [e.id, e.nome]));
-    return (id: string) => map.get(id) ?? id;
-  }, [catalogo]);
-
   const sortedList = useMemo(() => sortUnidadesByCodigo(list), [list]);
 
   const filteredList = useMemo(() => {
@@ -78,22 +73,20 @@ export default function UnidadesPage() {
     if (!termo) return sortedList;
     return sortedList.filter((u) => {
       const endereco = formatUnidadeEndereco(u.endereco).toLowerCase();
+      const area = formatUnidadeAreaExibicao(u).toLowerCase();
       return (
         u.codigo.toLowerCase().includes(termo) ||
         u.nome.toLowerCase().includes(termo) ||
         endereco.includes(termo) ||
+        area.includes(termo) ||
         (u.ip ?? "").toLowerCase().includes(termo)
       );
     });
   }, [sortedList, busca]);
 
   const load = useCallback(async () => {
-    const [uns, eqs] = await Promise.all([
-      apiFetch<Unidade[] | null>("/api/v1/unidades"),
-      apiFetch<Equipamento[] | null>("/api/v1/equipamentos"),
-    ]);
+    const uns = await apiFetch<Unidade[] | null>("/api/v1/unidades");
     setList(asArray(uns));
-    setCatalogo(asArray(eqs));
   }, []);
 
   useEffect(() => {
@@ -184,7 +177,7 @@ export default function UnidadesPage() {
       <div className="space-y-4 p-6">
         <p className="text-sm text-muted-foreground">
           {canManageData
-            ? "Cadastre unidades com identificação, contatos, endereço, IP e equipamentos. Clique na linha para abrir os detalhes em uma nova aba; use o ícone de lápis para editar."
+            ? "Cadastre unidades com identificação, contatos, endereço e IP. Clique na linha para abrir os detalhes e vincular equipamentos; use o ícone de lápis para editar."
             : "Clique na linha para abrir os detalhes da unidade em uma nova aba."}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -205,12 +198,7 @@ export default function UnidadesPage() {
               onSubmit={create}
               contentClassName="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
             >
-              <UnidadeFormFields
-                form={createForm}
-                onChange={patchCreate}
-                catalogo={catalogo}
-                equipNome={equipNome}
-              />
+              <UnidadeFormFields form={createForm} onChange={patchCreate} />
             </EntityFormDialog>
           )}
         </div>
@@ -220,7 +208,7 @@ export default function UnidadesPage() {
             <TableRow>
               <TableHead>ID</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Cidade</TableHead>
+              <TableHead>Área</TableHead>
               <TableHead>IP</TableHead>
               <TableHead>Intervalo (s)</TableHead>
               <TableHead>Equip.</TableHead>
@@ -253,8 +241,8 @@ export default function UnidadesPage() {
                 >
                   <TableCell className="font-mono text-xs">{u.codigo}</TableCell>
                   <TableCell className="font-medium">{u.nome}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {formatUnidadeEndereco(u.endereco)}
+                  <TableCell className="text-sm text-muted-foreground tabular-nums">
+                    {formatUnidadeAreaExibicao(u)}
                   </TableCell>
                   <TableCell>{u.ip || "—"}</TableCell>
                   <TableCell>{u.intervaloS || 30}</TableCell>
@@ -310,14 +298,7 @@ export default function UnidadesPage() {
               {editing ? ` — ${editing.nome}` : ""}
             </DialogTitle>
           </DialogHeader>
-          <UnidadeFormFields
-            form={editForm}
-            onChange={patchEdit}
-            catalogo={catalogo}
-            equipNome={equipNome}
-            metricMap={metricMap}
-            unidadeMongoId={editing?.id}
-          />
+          <UnidadeFormFields form={editForm} onChange={patchEdit} />
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
             <Button
               type="button"

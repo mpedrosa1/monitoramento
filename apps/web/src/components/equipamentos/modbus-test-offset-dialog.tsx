@@ -44,10 +44,12 @@ export function ModbusTestOffsetDialog({
   open,
   onOpenChange,
   ponto,
+  defaultSlaveId = 1,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ponto: ModbusPonto | null;
+  defaultSlaveId?: number;
 }) {
   const offset = ponto?.offset ?? 0;
   const registro = ponto?.registro ?? "holding_register";
@@ -66,8 +68,9 @@ export function ModbusTestOffsetDialog({
     if (open) {
       setResultado(null);
       setErro(null);
+      setSlaveId(String(defaultSlaveId));
     }
-  }, [open, offset, ponto?._localId]);
+  }, [open, offset, ponto?._localId, defaultSlaveId]);
 
   async function testar() {
     const hostTrim = host.trim();

@@ -55,6 +55,8 @@ type UnidadeEquipamento struct {
 	MaquinaID string `json:"maquinaId,omitempty" bson:"maquinaId,omitempty"`
 	// MaquinaNome nome da máquina montada na unidade.
 	MaquinaNome string `json:"maquinaNome,omitempty" bson:"maquinaNome,omitempty"`
+	// SlaveID endereço Modbus do sensor no gateway (máquinas).
+	SlaveID int `json:"slaveId,omitempty" bson:"slaveId,omitempty"`
 }
 
 // UnidadeEndereco endereço estruturado da unidade prisional.
@@ -94,6 +96,11 @@ const (
 	TipoEquipamentoSensor  TipoEquipamento = "sensor"
 )
 
+type UnidadeAreaVertice struct {
+	Latitude  float64 `json:"latitude" bson:"latitude"`
+	Longitude float64 `json:"longitude" bson:"longitude"`
+}
+
 type Unidade struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Codigo       string               `json:"codigo" bson:"codigo"` // ID institucional
@@ -104,6 +111,8 @@ type Unidade struct {
 	Endereco     UnidadeEndereco      `json:"endereco" bson:"endereco"`
 	Latitude     float64              `json:"latitude" bson:"latitude"`
 	Longitude    float64              `json:"longitude" bson:"longitude"`
+	AreaM2       float64              `json:"areaM2,omitempty" bson:"areaM2,omitempty"`
+	AreaVertices []UnidadeAreaVertice `json:"areaVertices,omitempty" bson:"areaVertices,omitempty"`
 	IP           string               `json:"ip" bson:"ip"`
 	Equipamentos []UnidadeEquipamento `json:"equipamentos" bson:"equipamentos"`
 	IntervaloS   int                  `json:"intervaloS" bson:"intervaloS"`

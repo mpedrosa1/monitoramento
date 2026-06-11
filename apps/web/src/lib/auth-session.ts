@@ -53,6 +53,13 @@ export function loadAuthSession(): AuthSession | null {
       clearAuthSession();
       return null;
     }
+    if (!session.user.tipoAcesso) {
+      const tipo = jwtTipoAcesso(session.token);
+      if (tipo) {
+        session.user.tipoAcesso = tipo;
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      }
+    }
     return session;
   } catch {
     clearAuthSession();
@@ -64,14 +71,43 @@ export function getAuthToken(): string | null {
   return loadAuthSession()?.token ?? null;
 }
 
-export function jwtExpiresAtMs(token: string): number | null {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split(".")[1];
     if (!payload) return null;
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const data = JSON.parse(json) as { exp?: number };
-    return data.exp ? data.exp * 1000 : null;
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;
   }
+}
+
+export function jwtExpiresAtMs(token: string): number | null {
+  const data = decodeJwtPayload(token);
+  const exp = data?.exp;
+  return typeof exp === "number" ? exp * 1000 : null;
+}
+
+/** Tipo de acesso no JWT (fallback quando a sessão local não tem o campo). */
+export function jwtTipoAcesso(token: string): TipoAcessoSistema | null {
+  const data = decodeJwtPayload(token);
+  const tipo = data?.tipoAcesso;
+  if (
+    tipo === "usuario" ||
+    tipo === "admin_com_financeiro" ||
+    tipo === "admin_sem_financeiro" ||
+    tipo === "desenvolvedor"
+  ) {
+    return tipo;
+  }
+  return null;
+}
+
+export function resolveAuthUserTipoAcesso(
+  user: AuthUser | null | undefined
+): TipoAcessoSistema | undefined {
+  if (user?.tipoAcesso) return user.tipoAcesso;
+  const token = getAuthToken();
+  if (!token) return undefined;
+  return jwtTipoAcesso(token) ?? undefined;
 }

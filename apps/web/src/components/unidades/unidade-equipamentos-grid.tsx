@@ -11,7 +11,7 @@ import {
   detalheVinculoEquipamento,
   nomeEquipamentoVinculo,
   nomeMaquinaVinculo,
-  rotuloEquipamento,
+  nomeSensorMaquina,
   urlPaginaWebEquipamento,
 } from "@/lib/unidade-form";
 import { UnidadeEquipamentoLeituras } from "@/components/unidades/unidade-equipamento-leituras";
@@ -28,12 +28,6 @@ function EquipamentoStatusDot({ online }: { online: boolean }) {
       title={online ? "Online" : "Offline"}
     />
   );
-}
-
-function nomeSensorMaquina(link: UnidadeEquipamento, eq?: Equipamento): string {
-  const local = link.nomeLocal?.trim();
-  if (local) return local;
-  return eq ? rotuloEquipamento(eq) : link.equipamentoId;
 }
 
 function EquipamentoAvulsoCard({

@@ -7,13 +7,12 @@ import { apiFetch, asArray } from "@/lib/api";
 import type { DashboardSummary } from "@/lib/types";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ChamadosTable } from "@/components/dashboard/chamados-table";
-import { ColaboradorCard } from "@/components/dashboard/colaborador-card";
-import { MetricasWidget } from "@/components/dashboard/metricas-widget";
+import { ColaboradorListItem } from "@/components/dashboard/colaborador-list-item";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DashboardHomePage() {
-  const { status: socketStatus, metrics } = useMonitoring();
+  const { status: socketStatus } = useMonitoring();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +32,6 @@ export default function DashboardHomePage() {
     return () => clearInterval(id);
   }, [load]);
 
-  const displayMetrics =
-    metrics.length > 0 ? metrics : asArray(summary?.metricas);
-
   return (
     <>
       <DashboardHeader title="Painel operacional" socketStatus={socketStatus} />
@@ -46,55 +42,60 @@ export default function DashboardHomePage() {
           </p>
         )}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="md:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Missões em andamento
-              </CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">
-                {summary?.missoesEmAndamento ?? "—"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_minmax(240px,300px)] lg:items-start">
+          <div className="space-y-6 min-w-0">
+            <Card className="max-w-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Missões em andamento
+                </CardTitle>
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold">
+                  {summary?.missoesEmAndamento ?? "—"}
+                </p>
+              </CardContent>
+            </Card>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Últimos chamados</CardTitle>
+            <Card>
+              <CardHeader>
+                <CardTitle>Últimos chamados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChamadosTable chamados={asArray(summary?.ultimosChamados)} />
+                <Link
+                  href="/dashboard/chamados"
+                  className="mt-4 inline-block text-sm font-medium text-foreground underline-offset-4 hover:text-ring hover:underline"
+                >
+                  Ver todos os chamados
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="lg:sticky lg:top-4">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Colaboradores</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ChamadosTable chamados={asArray(summary?.ultimosChamados)} />
+            <CardContent className="space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto pr-1">
+              {asArray(summary?.colaboradores).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum colaborador cadastrado.
+                </p>
+              ) : (
+                asArray(summary?.colaboradores).map((c) => (
+                  <ColaboradorListItem key={c.id} colaborador={c} />
+                ))
+              )}
               <Link
-                href="/dashboard/chamados"
-                className="mt-4 inline-block text-sm font-medium text-foreground underline-offset-4 hover:text-ring hover:underline"
+                href="/dashboard/colaboradores"
+                className="mt-2 inline-block text-sm font-medium text-foreground underline-offset-4 hover:text-ring hover:underline"
               >
-                Ver todos os chamados
+                Ver todos
               </Link>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Monitoramento em tempo real</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MetricasWidget metrics={displayMetrics} />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Colaboradores</h2>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {asArray(summary?.colaboradores).map((c) => (
-              <ColaboradorCard key={c.id} colaborador={c} />
-            ))}
-          </div>
         </div>
       </div>
     </>

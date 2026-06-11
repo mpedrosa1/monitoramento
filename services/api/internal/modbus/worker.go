@@ -3,6 +3,7 @@ package modbus
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -70,8 +71,8 @@ func ProbeEndpoint(ctx context.Context, targets []domain.MonitorTarget) []Target
 	unlock := lockEndpoint(ref.Host, uint16(port), slave)
 	defer unlock()
 
-	handler := newHandler(ref.Host, uint16(port), slave)
-	if err := handler.Connect(); err != nil {
+	session := newModbusSession(ref.Host, uint16(port), slave)
+	if err := session.connect(); err != nil {
 		errMsg := err.Error()
 		for i := range results {
 			results[i].Online = false
@@ -79,16 +80,15 @@ func ProbeEndpoint(ctx context.Context, targets []domain.MonitorTarget) []Target
 		}
 		return results
 	}
-	defer handler.Close()
+	defer session.close()
 
-	client := modbus.NewClient(handler)
 	for i, t := range targets {
 		select {
 		case <-ctx.Done():
 			return results
 		default:
 		}
-		results[i].Valores = readTargetPontos(ctx, client, t)
+		results[i].Valores = readTargetPontos(ctx, session, t)
 		results[i].Online = true
 	}
 
@@ -121,11 +121,46 @@ func lockEndpoint(host string, port uint16, slave byte) func() {
 func newHandler(host string, port uint16, slave byte) *modbus.TCPClientHandler {
 	handler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", strings.TrimSpace(host), port))
 	handler.Timeout = requestTimeout
+	handler.IdleTimeout = 0
 	handler.SlaveId = slave
 	return handler
 }
 
-func readTargetPontos(ctx context.Context, client modbus.Client, t domain.MonitorTarget) map[string]any {
+type modbusSession struct {
+	host    string
+	port    uint16
+	slave   byte
+	handler *modbus.TCPClientHandler
+	client  modbus.Client
+}
+
+func newModbusSession(host string, port uint16, slave byte) *modbusSession {
+	return &modbusSession{host: strings.TrimSpace(host), port: port, slave: slave}
+}
+
+func (s *modbusSession) connect() error {
+	s.close()
+	s.handler = newHandler(s.host, s.port, s.slave)
+	if err := s.handler.Connect(); err != nil {
+		return err
+	}
+	s.client = modbus.NewClient(s.handler)
+	return nil
+}
+
+func (s *modbusSession) close() {
+	if s.handler != nil {
+		_ = s.handler.Close()
+		s.handler = nil
+		s.client = nil
+	}
+}
+
+func (s *modbusSession) reconnect() error {
+	return s.connect()
+}
+
+func readTargetPontos(ctx context.Context, session *modbusSession, t domain.MonitorTarget) map[string]any {
 	valores := make(map[string]any)
 
 	pontos := t.Config.PontosModbus
@@ -140,7 +175,7 @@ func readTargetPontos(ctx context.Context, client modbus.Client, t domain.Monito
 			default:
 			}
 			key := modbusPontoKey(p)
-			val, err := readModbusPoint(client, p)
+			val, err := session.readPoint(p)
 			if err != nil {
 				msg := err.Error()
 				valores[key] = msg
@@ -165,7 +200,7 @@ func readTargetPontos(ctx context.Context, client modbus.Client, t domain.Monito
 			return valores
 		default:
 		}
-		results, err := client.ReadHoldingRegisters(reg, 1)
+		results, err := session.client.ReadHoldingRegisters(reg, 1)
 		if err != nil {
 			valores[fmt.Sprintf("reg_%d", reg)] = err.Error()
 		} else if len(results) >= 2 {
@@ -192,11 +227,71 @@ func modbusPontoKey(p domain.ModbusPonto) string {
 	return key
 }
 
-func readModbusPoint(client modbus.Client, p domain.ModbusPonto) (any, error) {
-	registro := strings.TrimSpace(p.Registro)
-	if registro == "" {
-		registro = "holding_register"
+func normalizeModbusRegistro(registro string) string {
+	switch strings.ToLower(strings.TrimSpace(registro)) {
+	case "", "holding_register", "holding register", "holding":
+		return "holding_register"
+	case "input_register", "input register", "input":
+		return "input_register"
+	case "coil_status", "coil status", "coil", "coils":
+		return "coil_status"
+	case "input_status", "input status", "discrete_input", "discrete input", "discrete":
+		return "input_status"
+	default:
+		return strings.TrimSpace(registro)
 	}
+}
+
+func (s *modbusSession) readPoint(p domain.ModbusPonto) (any, error) {
+	registro := normalizeModbusRegistro(p.Registro)
+
+	val, err := readModbusPointNative(s.client, p, registro)
+	if err != nil && isRetryableModbusError(err) {
+		if reconErr := s.reconnect(); reconErr == nil {
+			val, err = readModbusPointNative(s.client, p, registro)
+		}
+	}
+	if err == nil {
+		return val, nil
+	}
+	if registro == "holding_register" {
+		return nil, err
+	}
+	if !isRetryableModbusError(err) {
+		return nil, err
+	}
+
+	if reconErr := s.reconnect(); reconErr != nil {
+		return nil, err
+	}
+	return readModbusPointHoldingFallback(s.client, p, registro)
+}
+
+func isRetryableModbusError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var mbErr *modbus.ModbusError
+	if errors.As(err, &mbErr) {
+		switch mbErr.ExceptionCode {
+		case modbus.ExceptionCodeIllegalFunction,
+			modbus.ExceptionCodeIllegalDataAddress,
+			modbus.ExceptionCodeGatewayPathUnavailable,
+			modbus.ExceptionCodeGatewayTargetDeviceFailedToRespond:
+			return true
+		}
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "timed out") ||
+		strings.Contains(msg, "i/o timeout") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") ||
+		strings.Contains(msg, "eof") ||
+		strings.Contains(msg, "use of closed network connection")
+}
+
+func readModbusPointNative(client modbus.Client, p domain.ModbusPonto, registro string) (any, error) {
 	tipoDado := strings.TrimSpace(p.TipoDado)
 
 	switch registro {
@@ -205,19 +300,13 @@ func readModbusPoint(client modbus.Client, p domain.ModbusPonto) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(results) == 0 {
-			return nil, fmt.Errorf("resposta vazia do dispositivo")
-		}
-		return results[0] == 1, nil
+		return discreteIntValue(results)
 	case "input_status":
 		results, err := client.ReadDiscreteInputs(p.Offset, 1)
 		if err != nil {
 			return nil, err
 		}
-		if len(results) == 0 {
-			return nil, fmt.Errorf("resposta vazia do dispositivo")
-		}
-		return results[0] == 1, nil
+		return discreteIntValue(results)
 	case "input_register":
 		qty := registerQuantity(tipoDado)
 		results, err := client.ReadInputRegisters(p.Offset, qty)
@@ -230,17 +319,87 @@ func readModbusPoint(client modbus.Client, p domain.ModbusPonto) (any, error) {
 		}
 		return val, nil
 	default:
-		qty := registerQuantity(tipoDado)
-		results, err := client.ReadHoldingRegisters(p.Offset, qty)
+		return readHoldingRegisters(client, p.Offset, tipoDado)
+	}
+}
+
+func discreteIntValue(results []byte) (int, error) {
+	if len(results) == 0 {
+		return 0, fmt.Errorf("resposta vazia do dispositivo")
+	}
+	if (results[0] & 0x01) != 0 {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func readModbusPointHoldingFallback(client modbus.Client, p domain.ModbusPonto, registro string) (any, error) {
+	tipoDado := strings.TrimSpace(p.TipoDado)
+	switch registro {
+	case "coil_status", "input_status":
+		val, err := readHoldingRegisters(client, p.Offset, "uint16")
 		if err != nil {
 			return nil, err
 		}
-		val := decodeRegisterValue(tipoDado, results)
-		if val == nil {
-			return nil, fmt.Errorf("resposta vazia do dispositivo")
+		return coerceDiscreteRegisterValue(val), nil
+	default:
+		if tipoDado == "" {
+			tipoDado = "uint16"
 		}
-		return val, nil
+		return readHoldingRegisters(client, p.Offset, tipoDado)
 	}
+}
+
+func readHoldingRegisters(client modbus.Client, offset uint16, tipoDado string) (any, error) {
+	qty := registerQuantity(tipoDado)
+	results, err := client.ReadHoldingRegisters(offset, qty)
+	if err != nil {
+		return nil, err
+	}
+	val := decodeRegisterValue(tipoDado, results)
+	if val == nil {
+		return nil, fmt.Errorf("resposta vazia do dispositivo")
+	}
+	return val, nil
+}
+
+func coerceDiscreteRegisterValue(val any) any {
+	switch v := val.(type) {
+	case uint16:
+		if v <= 1 {
+			return int(v)
+		}
+	case int16:
+		if v >= 0 && v <= 1 {
+			return int(v)
+		}
+	case uint32:
+		if v <= 1 {
+			return int(v)
+		}
+	case int32:
+		if v >= 0 && v <= 1 {
+			return int(v)
+		}
+	case int:
+		if v >= 0 && v <= 1 {
+			return v
+		}
+	case float32:
+		if v == 0 || v == 1 {
+			return int(v)
+		}
+	case float64:
+		if v == 0 || v == 1 {
+			return int(v)
+		}
+	}
+	return val
+}
+
+func readModbusPoint(client modbus.Client, p domain.ModbusPonto) (any, error) {
+	registro := normalizeModbusRegistro(p.Registro)
+	return readModbusPointNative(client, p, registro)
 }
 
 func registerQuantity(tipoDado string) uint16 {
@@ -372,23 +531,18 @@ func TestOffset(host string, port uint16, slaveID byte, registro string, offset 
 	if slaveID == 0 {
 		slaveID = 1
 	}
-	registro = strings.TrimSpace(registro)
-	if registro == "" {
-		registro = "holding_register"
-	}
+	registro = normalizeModbusRegistro(registro)
 
 	unlock := lockEndpoint(host, port, slaveID)
 	defer unlock()
 
-	handler := newHandler(host, port, slaveID)
-	if err := handler.Connect(); err != nil {
+	session := newModbusSession(host, port, slaveID)
+	if err := session.connect(); err != nil {
 		return false, nil, err.Error()
 	}
-	defer handler.Close()
+	defer session.close()
 
-	client := modbus.NewClient(handler)
-
-	val, err := readModbusPoint(client, domain.ModbusPonto{
+	val, err := session.readPoint(domain.ModbusPonto{
 		Offset:   offset,
 		Registro: registro,
 		TipoDado: tipoDado,

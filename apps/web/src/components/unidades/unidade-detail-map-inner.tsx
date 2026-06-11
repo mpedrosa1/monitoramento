@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import L from "leaflet";
 import {
   Circle,
   CircleMarker,
   MapContainer,
   Marker,
+  Polygon,
   Popup,
   TileLayer,
   useMap,
 } from "react-leaflet";
+import {
+  fitAreaLabelFontSize,
+  formatAreaM2ComUnidade,
+  insetScreenPoints,
+  polygonAreaM2,
+  verticesToLatLng,
+} from "@/lib/unidade-area";
 import { apiFetch, asArray } from "@/lib/api";
 import {
   corOperadoraAntena,
@@ -18,13 +27,159 @@ import {
   rotuloTecnologiaAntena,
 } from "@/lib/antenas";
 import type { LatLng } from "@/lib/geocode";
-import { SP_STATE_CENTER } from "@/lib/geocode";
-import type { AntenaProxima } from "@/lib/types";
+import { MAP_ZOOM_COORD, SP_STATE_CENTER } from "@/lib/geocode";
+import type { AntenaProxima, UnidadeAreaVertice } from "@/lib/types";
 import { AntenasMapPainel } from "@/components/unidades/antenas-map-painel";
 
 import "leaflet/dist/leaflet.css";
 
 const RAIO_PADRAO_KM = 10;
+
+type AreaLabelLayout = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  clipPath: string;
+  fontSize: number;
+};
+
+function UnidadeAreaLabelOverlay({
+  vertices,
+  text,
+  visible,
+}: {
+  vertices: LatLng[];
+  text: string;
+  visible: boolean;
+}) {
+  const map = useMap();
+  const [layout, setLayout] = useState<AreaLabelLayout | null>(null);
+  const verticesKey = useMemo(
+    () => vertices.map((v) => `${v.lat},${v.lng}`).join("|"),
+    [vertices]
+  );
+
+  useEffect(() => {
+    if (!visible || vertices.length < 3) {
+      setLayout(null);
+      return;
+    }
+
+    const atualizar = () => {
+      const screenPts = vertices.map((v) => {
+        const p = map.latLngToContainerPoint([v.lat, v.lng]);
+        return { x: p.x, y: p.y };
+      });
+      const labelPts = insetScreenPoints(screenPts);
+      const xs = labelPts.map((p) => p.x);
+      const ys = labelPts.map((p) => p.y);
+      const left = Math.min(...xs);
+      const top = Math.min(...ys);
+      const width = Math.max(...xs) - left;
+      const height = Math.max(...ys) - top;
+
+      if (width < 8 || height < 8) {
+        setLayout(null);
+        return;
+      }
+
+      const clipPath = `polygon(${labelPts
+        .map((p) => `${p.x - left}px ${p.y - top}px`)
+        .join(", ")})`;
+      const fontSize = fitAreaLabelFontSize(text, width, height);
+
+      setLayout({ left, top, width, height, clipPath, fontSize });
+    };
+
+    atualizar();
+    map.on("zoom zoomend move moveend resize viewreset", atualizar);
+    return () => {
+      map.off("zoom zoomend move moveend resize viewreset", atualizar);
+    };
+  }, [map, visible, text, verticesKey, vertices]);
+
+  if (!visible || !layout) return null;
+
+  return createPortal(
+    <div
+      className="unidade-area-label-overlay"
+      style={{
+        position: "absolute",
+        left: layout.left,
+        top: layout.top,
+        width: layout.width,
+        height: layout.height,
+        clipPath: layout.clipPath,
+      }}
+    >
+      <span
+        className="unidade-area-label-overlay__text"
+        style={{ fontSize: layout.fontSize }}
+      >
+        {text}
+      </span>
+    </div>,
+    map.getContainer()
+  );
+}
+
+function UnidadeMarcadorOuArea({
+  position,
+  label,
+  vertices,
+  areaM2,
+}: {
+  position: LatLng;
+  label: string;
+  vertices: LatLng[];
+  areaM2: number;
+}) {
+  const map = useMap();
+  const [mostrarArea, setMostrarArea] = useState(false);
+  const verticesKey = useMemo(
+    () => vertices.map((v) => `${v.lat},${v.lng}`).join("|"),
+    [vertices]
+  );
+  const temPoligono = vertices.length >= 3 && areaM2 > 0;
+  const areaTexto = formatAreaM2ComUnidade(areaM2);
+
+  useEffect(() => {
+    if (!temPoligono) {
+      setMostrarArea(false);
+      return;
+    }
+
+    const atualizar = () => {
+      setMostrarArea(map.getZoom() >= MAP_ZOOM_COORD);
+    };
+
+    atualizar();
+    map.on("zoom zoomend", atualizar);
+    return () => {
+      map.off("zoom zoomend", atualizar);
+    };
+  }, [map, temPoligono, verticesKey]);
+
+  return (
+    <>
+      {!mostrarArea ? (
+        <Marker
+          key="unidade-pin"
+          position={[position.lat, position.lng]}
+          title={label}
+        />
+      ) : null}
+      {temPoligono ? (
+        <UnidadeAreaLabelOverlay
+          vertices={vertices}
+          text={areaTexto}
+          visible={mostrarArea}
+        />
+      ) : null}
+    </>
+  );
+}
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -46,10 +201,54 @@ function MapInvalidateSize({ painelAberto }: { painelAberto: boolean }) {
   return null;
 }
 
+function verticesFitKey(vertices: LatLng[], position: LatLng): string {
+  return [
+    position.lat,
+    position.lng,
+    ...vertices.map((v) => `${v.lat},${v.lng}`),
+  ].join("|");
+}
+
+function MapFitArea({
+  position,
+  vertices,
+  ativo,
+}: {
+  position: LatLng;
+  vertices: LatLng[];
+  ativo: boolean;
+}) {
+  const map = useMap();
+  const fittedKeyRef = useRef<string | null>(null);
+  const verticesKey = verticesFitKey(vertices, position);
+
+  useEffect(() => {
+    if (!ativo || vertices.length < 3) return;
+    if (fittedKeyRef.current === verticesKey) return;
+    fittedKeyRef.current = verticesKey;
+
+    const bounds = L.latLngBounds(
+      vertices.map((v) => [v.lat, v.lng] as [number, number])
+    );
+    bounds.extend([position.lat, position.lng]);
+    map.fitBounds(bounds, { padding: [36, 36] });
+  }, [map, verticesKey, ativo, vertices, position.lat, position.lng]);
+  return null;
+}
+
 function MapFitRaio({ center, raioKm, ativo }: { center: LatLng; raioKm: number; ativo: boolean }) {
   const map = useMap();
+  const fittedRef = useRef<string | null>(null);
+  const fitKey = `${center.lat}|${center.lng}|${raioKm}`;
+
   useEffect(() => {
-    if (!ativo) return;
+    if (!ativo) {
+      fittedRef.current = null;
+      return;
+    }
+    if (fittedRef.current === fitKey) return;
+    fittedRef.current = fitKey;
+
     const dLat = raioKm / 111.32;
     const dLng =
       raioKm / (111.32 * Math.max(Math.cos((center.lat * Math.PI) / 180), 0.01));
@@ -58,7 +257,7 @@ function MapFitRaio({ center, raioKm, ativo }: { center: LatLng; raioKm: number;
       [center.lat + dLat, center.lng + dLng]
     );
     map.fitBounds(bounds, { padding: [28, 28] });
-  }, [map, center.lat, center.lng, raioKm, ativo]);
+  }, [map, center.lat, center.lng, raioKm, ativo, fitKey]);
   return null;
 }
 
@@ -70,10 +269,25 @@ function formatDistancia(km: number): string {
 export default function UnidadeDetailMapInner({
   position,
   label,
+  areaVertices,
+  areaM2: areaM2Prop,
 }: {
   position: LatLng | null;
   label: string;
+  areaVertices?: UnidadeAreaVertice[];
+  areaM2?: number;
 }) {
+  const poligonoArea = verticesToLatLng(asArray(areaVertices));
+  const temPoligono = poligonoArea.length >= 3;
+  const areaM2 =
+    areaM2Prop && areaM2Prop > 0
+      ? areaM2Prop
+      : temPoligono
+        ? polygonAreaM2(poligonoArea)
+        : 0;
+  const poligonoPositions = poligonoArea.map(
+    (v) => [v.lat, v.lng] as [number, number]
+  );
   const [antenas, setAntenas] = useState<AntenaProxima[]>([]);
   const [loadingAntenas, setLoadingAntenas] = useState(false);
   const [erroAntenas, setErroAntenas] = useState<string | null>(null);
@@ -136,7 +350,23 @@ export default function UnidadeDetailMapInner({
         <MapInvalidateSize painelAberto={painelAberto} />
         {position && (
           <>
+            <MapFitArea
+              position={position}
+              vertices={poligonoArea}
+              ativo={temPoligono && !showRaio && !showAntenas}
+            />
             <MapFitRaio center={position} raioKm={raioKm} ativo={showRaio || showAntenas} />
+            {temPoligono ? (
+              <Polygon
+                positions={poligonoPositions}
+                pathOptions={{
+                  color: "#2563eb",
+                  weight: 2,
+                  fillColor: "#3b82f6",
+                  fillOpacity: 0.22,
+                }}
+              />
+            ) : null}
             {showRaio && (
               <Circle
                 center={[position.lat, position.lng]}
@@ -150,7 +380,12 @@ export default function UnidadeDetailMapInner({
                 }}
               />
             )}
-            <Marker position={[position.lat, position.lng]} title={label} />
+            <UnidadeMarcadorOuArea
+              position={position}
+              label={label}
+              vertices={poligonoArea}
+              areaM2={areaM2}
+            />
             {showAntenas &&
               antenas.map((a) => (
                 <CircleMarker

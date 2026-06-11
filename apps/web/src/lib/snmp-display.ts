@@ -58,10 +58,32 @@ function canonicalMultiEstadoChaveConfig(chave: string): string {
   return s;
 }
 
+/** Valor lido → chave configurada (prioriza 0/1 literais para estados Modbus). */
+function valorParaChaveMultiEstado(value: unknown): string | null {
+  if (typeof value === "boolean") {
+    return value ? "1" : "0";
+  }
+  const n = toNumber(value);
+  if (n != null && Number.isInteger(n) && (n === 0 || n === 1)) {
+    return String(n);
+  }
+  const raw = chaveValorSnmp(value).toLowerCase();
+  if (!raw) return null;
+  if (ALIASES_TRUE.has(raw)) return "1";
+  if (ALIASES_FALSE.has(raw)) return "0";
+  return chaveValorSnmp(value);
+}
+
 function findMultiEstadoItem(
   estados: SnmpMultiEstadoItem[],
   value: unknown
 ): SnmpMultiEstadoItem | undefined {
+  const chaveLida = valorParaChaveMultiEstado(value);
+  if (chaveLida) {
+    const direto = estados.find((e) => e.chave.trim() === chaveLida);
+    if (direto) return direto;
+  }
+
   const canonical = canonicalMultiEstadoChave(value);
   if (!canonical) return undefined;
   return estados.find((e) => {
