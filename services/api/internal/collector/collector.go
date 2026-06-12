@@ -18,6 +18,8 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/ws"
 )
 
+const pingFailuresForOffline = 3
+
 type collectWorker struct {
 	cancel context.CancelFunc
 	single *domain.MonitorTarget
@@ -196,13 +198,16 @@ func (c *Collector) monitorTarget(ctx context.Context, t domain.MonitorTarget) {
 		}
 	}()
 
+	var consecutiveFailures int
+
 	run := func() {
 		var metric domain.DeviceMetric
 		switch t.Tipo {
 		case domain.DispositivoPing:
-			online, lat := ping.Probe(ctx, t.Host)
-			metric = ping.MetricFromTarget(t, online, lat)
-			logPingResult(t, online, lat)
+			probeOK, lat := ping.Probe(ctx, t.Host)
+			reportedOnline := pingReportedOnline(probeOK, &consecutiveFailures, pingFailuresForOffline)
+			metric = ping.MetricFromTarget(t, reportedOnline, lat)
+			logPingResult(t, probeOK, reportedOnline, consecutiveFailures, lat)
 		case domain.DispositivoSNMP:
 			online, vals := snmp.Probe(t)
 			metric = snmp.MetricFromTarget(t, online, vals)
@@ -290,6 +295,18 @@ func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, m
 	}
 }
 
+func pingReportedOnline(probeOK bool, failures *int, threshold int) bool {
+	if probeOK {
+		*failures = 0
+		return true
+	}
+	*failures++
+	if *failures >= threshold {
+		return false
+	}
+	return true
+}
+
 func pingTargetLabel(t domain.MonitorTarget) string {
 	if t.Tipo == domain.DispositivoPing && t.Porta == 0 {
 		return fmt.Sprintf("unidade %q", t.Nome)
@@ -297,14 +314,25 @@ func pingTargetLabel(t domain.MonitorTarget) string {
 	return fmt.Sprintf("alvo %q", t.Nome)
 }
 
-func logPingResult(t domain.MonitorTarget, online bool, latenciaMs float64) {
-	status := "OFFLINE"
-	if online {
-		status = "ONLINE"
+func logPingResult(t domain.MonitorTarget, probeOK, reportedOnline bool, failures int, latenciaMs float64) {
+	probeStatus := "FALHA"
+	if probeOK {
+		probeStatus = "OK"
+	}
+	reported := "OFFLINE"
+	if reportedOnline {
+		reported = "ONLINE"
 	}
 	lat := ""
-	if online && latenciaMs > 0 {
+	if probeOK && latenciaMs > 0 {
 		lat = fmt.Sprintf(" lat=%.0fms", latenciaMs)
 	}
-	log.Printf("[ping] %s host=%s → %s%s", pingTargetLabel(t), t.Host, status, lat)
+	if probeOK == reportedOnline {
+		log.Printf("[ping] %s host=%s → %s%s", pingTargetLabel(t), t.Host, reported, lat)
+		return
+	}
+	log.Printf(
+		"[ping] %s host=%s → probe=%s reported=%s (falhas consecutivas %d/%d)%s",
+		pingTargetLabel(t), t.Host, probeStatus, reported, failures, pingFailuresForOffline, lat,
+	)
 }
