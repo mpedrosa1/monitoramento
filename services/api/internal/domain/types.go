@@ -175,6 +175,7 @@ type Colaborador struct {
 	Dependentes         []ColaboradorDependente `json:"dependentes,omitempty" bson:"dependentes,omitempty"`
 	Endereco            UnidadeEndereco      `json:"endereco,omitempty" bson:"endereco,omitempty"`
 	Cargo               string               `json:"cargo,omitempty" bson:"cargo,omitempty"`
+	DataAdmissao        string               `json:"dataAdmissao,omitempty" bson:"dataAdmissao,omitempty"`
 	LocalTrabalho       LocalTrabalho        `json:"localTrabalho,omitempty" bson:"localTrabalho,omitempty"`
 	TelefoneCorporativo string               `json:"telefoneCorporativo,omitempty" bson:"telefoneCorporativo,omitempty"`
 	EmailCorporativo    string               `json:"emailCorporativo,omitempty" bson:"emailCorporativo,omitempty"`
@@ -185,6 +186,25 @@ type Colaborador struct {
 	UnidadeID           primitive.ObjectID   `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
 	CreatedAt           time.Time            `json:"createdAt" bson:"createdAt"`
 	UpdatedAt           time.Time            `json:"updatedAt" bson:"updatedAt"`
+}
+
+const VeiculoFotoURLPadrao = "/veiculo-placeholder.webp"
+
+type Veiculo struct {
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Placa         string             `json:"placa" bson:"placa"`
+	Marca         string             `json:"marca" bson:"marca"`
+	Modelo        string             `json:"modelo" bson:"modelo"`
+	AnoFabricacao int                `json:"anoFabricacao,omitempty" bson:"anoFabricacao,omitempty"`
+	AnoModelo     int                `json:"anoModelo,omitempty" bson:"anoModelo,omitempty"`
+	Cor           string             `json:"cor,omitempty" bson:"cor,omitempty"`
+	Chassi        string             `json:"chassi,omitempty" bson:"chassi,omitempty"`
+	Renavam       string             `json:"renavam,omitempty" bson:"renavam,omitempty"`
+	KmAtual       int                `json:"kmAtual" bson:"kmAtual"`
+	FotoURL       string             `json:"fotoUrl" bson:"fotoUrl"`
+	ColaboradorID primitive.ObjectID `json:"colaboradorId" bson:"colaboradorId"`
+	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Chamado struct {

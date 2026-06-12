@@ -1,7 +1,8 @@
 "use client";
 
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { DashboardUserMenu } from "@/components/dashboard/dashboard-user-menu";
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 
@@ -28,14 +29,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             Painel de monitoramento
           </Button>
           {user ? (
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {user.nome}
-            </span>
+            <>
+              <div className="hidden h-8 w-px bg-border sm:block" aria-hidden />
+              <DashboardUserMenu user={user} onLogout={logout} />
+            </>
           ) : null}
-          <Button variant="ghost" size="sm" className="gap-2" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-            Sair
-          </Button>
         </div>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>

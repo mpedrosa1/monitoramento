@@ -41,6 +41,11 @@ type Store interface {
 	UpdateEquipamento(ctx context.Context, e *domain.Equipamento) error
 	DeleteEquipamento(ctx context.Context, id primitive.ObjectID) error
 
+	ListVeiculos(ctx context.Context) ([]domain.Veiculo, error)
+	CreateVeiculo(ctx context.Context, v *domain.Veiculo) error
+	UpdateVeiculo(ctx context.Context, v *domain.Veiculo) error
+	DeleteVeiculo(ctx context.Context, id primitive.ObjectID) error
+
 	// ListDispositivos alias legado.
 	ListDispositivos(ctx context.Context) ([]domain.Dispositivo, error)
 	CreateDispositivo(ctx context.Context, d *domain.Dispositivo) error

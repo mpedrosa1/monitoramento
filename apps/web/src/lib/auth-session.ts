@@ -9,6 +9,8 @@ export type AuthUser = {
   nome: string;
   email: string;
   tipoAcesso: TipoAcessoSistema;
+  cpf?: string;
+  dataAdmissao?: string;
 };
 
 export type AuthSession = {

@@ -17,10 +17,12 @@ type loginRequest struct {
 }
 
 type authUserResponse struct {
-	ID         string `json:"id"`
-	Nome       string `json:"nome"`
-	Email      string `json:"email"`
-	TipoAcesso string `json:"tipoAcesso"`
+	ID         string    `json:"id"`
+	Nome       string    `json:"nome"`
+	Email      string    `json:"email"`
+	TipoAcesso string    `json:"tipoAcesso"`
+	Cpf          string `json:"cpf,omitempty"`
+	DataAdmissao string `json:"dataAdmissao,omitempty"`
 }
 
 type loginResponse struct {
@@ -75,6 +77,8 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 			Nome:       colab.Nome,
 			Email:      loginEmail,
 			TipoAcesso: string(colab.TipoAcesso),
+			Cpf:          colab.CPF,
+			DataAdmissao: colab.DataAdmissao,
 		},
 	})
 }
@@ -108,5 +112,7 @@ func (a *API) Me(w http.ResponseWriter, r *http.Request) {
 		Nome:       colab.Nome,
 		Email:      email,
 		TipoAcesso: string(colab.TipoAcesso),
+		Cpf:          colab.CPF,
+		DataAdmissao: colab.DataAdmissao,
 	})
 }

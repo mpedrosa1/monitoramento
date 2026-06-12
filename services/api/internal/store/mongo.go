@@ -385,6 +385,50 @@ func (s *MongoStore) DeleteEquipamento(ctx context.Context, id primitive.ObjectI
 	return err
 }
 
+func (s *MongoStore) ListVeiculos(ctx context.Context) ([]domain.Veiculo, error) {
+	cur, err := s.col("veiculos").Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "placa", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var out []domain.Veiculo
+	return out, cur.All(ctx, &out)
+}
+
+func (s *MongoStore) CreateVeiculo(ctx context.Context, v *domain.Veiculo) error {
+	now := time.Now().UTC()
+	v.CreatedAt, v.UpdatedAt = now, now
+	res, err := s.col("veiculos").InsertOne(ctx, v)
+	if err != nil {
+		return err
+	}
+	v.ID = res.InsertedID.(primitive.ObjectID)
+	return nil
+}
+
+func (s *MongoStore) UpdateVeiculo(ctx context.Context, v *domain.Veiculo) error {
+	v.UpdatedAt = time.Now().UTC()
+	result, err := s.col("veiculos").UpdateOne(ctx, bson.M{"_id": v.ID}, bson.M{"$set": v})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) error {
+	result, err := s.col("veiculos").DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
 func (s *MongoStore) CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error {
 	e.CreatedAt = time.Now().UTC()
 	res, err := s.col("eventos_monitoramento").InsertOne(ctx, e)

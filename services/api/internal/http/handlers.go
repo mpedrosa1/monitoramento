@@ -779,6 +779,159 @@ func (a *API) DeleteEquipamento(w http.ResponseWriter, r *http.Request, id strin
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func normalizePlacaVeiculo(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToUpper(s) {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func isValidPlacaVeiculo(placa string) bool {
+	if len(placa) != 7 {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		if placa[i] < 'A' || placa[i] > 'Z' {
+			return false
+		}
+	}
+	oldFmt := true
+	for i := 3; i < 7; i++ {
+		if placa[i] < '0' || placa[i] > '9' {
+			oldFmt = false
+			break
+		}
+	}
+	if oldFmt {
+		return true
+	}
+	return placa[3] >= '0' && placa[3] <= '9' &&
+		placa[4] >= 'A' && placa[4] <= 'Z' &&
+		placa[5] >= '0' && placa[5] <= '9' &&
+		placa[6] >= '0' && placa[6] <= '9'
+}
+
+func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
+	list, err := a.Store.ListVeiculos(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSONList(w, http.StatusOK, list)
+}
+
+func (a *API) CreateVeiculo(w http.ResponseWriter, r *http.Request) {
+	var v domain.Veiculo
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	v.Placa = normalizePlacaVeiculo(v.Placa)
+	if !isValidPlacaVeiculo(v.Placa) {
+		writeError(w, http.StatusBadRequest, "placa inválida")
+		return
+	}
+	if strings.TrimSpace(v.Marca) == "" || strings.TrimSpace(v.Modelo) == "" {
+		writeError(w, http.StatusBadRequest, "marca e modelo são obrigatórios")
+		return
+	}
+	if v.ColaboradorID.IsZero() {
+		writeError(w, http.StatusBadRequest, "colaborador responsável é obrigatório")
+		return
+	}
+	if v.KmAtual < 0 {
+		writeError(w, http.StatusBadRequest, "KM atual inválido")
+		return
+	}
+	if _, err := a.Store.GetColaborador(r.Context(), v.ColaboradorID); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "colaborador não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if v.FotoURL == "" {
+		v.FotoURL = domain.VeiculoFotoURLPadrao
+	}
+	if err := a.Store.CreateVeiculo(r.Context(), &v); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, v)
+}
+
+func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	var v domain.Veiculo
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		writeError(w, http.StatusBadRequest, "json inválido")
+		return
+	}
+	v.ID = oid
+	v.Placa = normalizePlacaVeiculo(v.Placa)
+	if !isValidPlacaVeiculo(v.Placa) {
+		writeError(w, http.StatusBadRequest, "placa inválida")
+		return
+	}
+	if strings.TrimSpace(v.Marca) == "" || strings.TrimSpace(v.Modelo) == "" {
+		writeError(w, http.StatusBadRequest, "marca e modelo são obrigatórios")
+		return
+	}
+	if v.ColaboradorID.IsZero() {
+		writeError(w, http.StatusBadRequest, "colaborador responsável é obrigatório")
+		return
+	}
+	if v.KmAtual < 0 {
+		writeError(w, http.StatusBadRequest, "KM atual inválido")
+		return
+	}
+	if _, err := a.Store.GetColaborador(r.Context(), v.ColaboradorID); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "colaborador não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if v.FotoURL == "" {
+		v.FotoURL = domain.VeiculoFotoURLPadrao
+	}
+	if err := a.Store.UpdateVeiculo(r.Context(), &v); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (a *API) DeleteVeiculo(w http.ResponseWriter, r *http.Request, id string) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if err := a.Store.DeleteVeiculo(r.Context(), oid); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) ListEventos(w http.ResponseWriter, r *http.Request) {
 	limit := parseLimit(r.URL.Query().Get("limit"), 20)
 	list, err := a.Store.ListEventos(r.Context(), limit)

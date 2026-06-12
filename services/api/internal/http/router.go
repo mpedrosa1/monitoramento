@@ -169,6 +169,17 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 
 
+			r.Route("/veiculos", func(r chi.Router) {
+				r.Get("/", api.ListVeiculos)
+				r.With(RequireManageData).Post("/", api.CreateVeiculo)
+				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateVeiculo(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteVeiculo(w, req, chi.URLParam(req, "id"))
+				})
+			})
+
 			r.Route("/equipamentos", func(r chi.Router) {
 
 				r.Get("/", api.ListEquipamentos)

@@ -17,6 +17,7 @@ type MemoryStore struct {
 	chamados      []domain.Chamado
 	missoes       []domain.Missao
 	dispositivos  []domain.Equipamento
+	veiculos      []domain.Veiculo
 	eventos       []domain.EventoMonitoramento
 }
 
@@ -372,6 +373,56 @@ func (s *MemoryStore) DeleteEquipamento(ctx context.Context, id primitive.Object
 		}
 		s.unidades[i].Equipamentos = filtered
 	}
+	return nil
+}
+
+func (s *MemoryStore) ListVeiculos(ctx context.Context) ([]domain.Veiculo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]domain.Veiculo, len(s.veiculos))
+	copy(out, s.veiculos)
+	return out, nil
+}
+
+func (s *MemoryStore) CreateVeiculo(ctx context.Context, v *domain.Veiculo) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	v.ID = primitive.NewObjectID()
+	v.CreatedAt, v.UpdatedAt = now, now
+	s.veiculos = append(s.veiculos, *v)
+	return nil
+}
+
+func (s *MemoryStore) UpdateVeiculo(ctx context.Context, v *domain.Veiculo) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.veiculos {
+		if s.veiculos[i].ID == v.ID {
+			v.UpdatedAt = time.Now().UTC()
+			s.veiculos[i] = *v
+			return nil
+		}
+	}
+	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	found := false
+	next := s.veiculos[:0]
+	for _, v := range s.veiculos {
+		if v.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, v)
+	}
+	if !found {
+		return mongoErrNotFound()
+	}
+	s.veiculos = next
 	return nil
 }
 

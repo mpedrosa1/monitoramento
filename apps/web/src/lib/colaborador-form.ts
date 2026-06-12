@@ -74,6 +74,7 @@ export type ColaboradorFormState = {
   dependentes: DependenteForm[];
   endereco: ColaboradorEndereco;
   cargo: string;
+  dataAdmissao: string;
   localTrabalho: LocalTrabalho | "";
   telefoneCorporativo: string;
   emailCorporativo: string;
@@ -124,6 +125,7 @@ export function emptyColaboradorForm(): ColaboradorFormState {
     dependentes: [],
     endereco: emptyEndereco(),
     cargo: "",
+    dataAdmissao: "",
     localTrabalho: "",
     telefoneCorporativo: "",
     emailCorporativo: "",
@@ -164,6 +166,7 @@ export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
     })),
     endereco: c.endereco ? { ...c.endereco } : emptyEndereco(),
     cargo: c.cargo ?? "",
+    dataAdmissao: c.dataAdmissao ?? "",
     localTrabalho: c.localTrabalho ?? "",
     telefoneCorporativo: c.telefoneCorporativo ?? "",
     emailCorporativo: c.emailCorporativo ?? "",
@@ -299,6 +302,9 @@ export function validateColaboradorForm(
     errors[enderecoFieldKey("estado")] = "Informe o estado.";
   }
   if (!form.cargo.trim()) errors.cargo = "Informe o cargo.";
+  if (!form.dataAdmissao) {
+    errors.dataAdmissao = "Informe a data de admissão.";
+  }
   if (!form.localTrabalho) {
     errors.localTrabalho = "Selecione o local de trabalho.";
   }
@@ -351,6 +357,7 @@ export function formToColaboradorBody(
       estado: form.endereco.estado.trim().toUpperCase(),
     },
     cargo: form.cargo.trim(),
+    dataAdmissao: form.dataAdmissao,
     localTrabalho: form.localTrabalho as LocalTrabalho,
     telefoneCorporativo: formatTelefoneInput(
       telefoneDigits(form.telefoneCorporativo)

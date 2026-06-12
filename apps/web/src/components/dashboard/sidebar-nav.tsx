@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  Car,
   Cpu,
   Headphones,
   Home,
@@ -32,6 +33,12 @@ const items = [
     href: "/dashboard/colaboradores",
     label: "Colaboradores",
     icon: Users,
+    equipamentosOnly: false,
+  },
+  {
+    href: "/dashboard/veiculos",
+    label: "Veículos",
+    icon: Car,
     equipamentosOnly: false,
   },
   {

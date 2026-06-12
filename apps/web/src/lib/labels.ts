@@ -1,12 +1,24 @@
+import { TIPO_ACESSO_OPCOES } from "@/lib/colaborador-form";
 import type {
   ChamadoStatus,
   ColaboradorStatus,
   MissaoStatus,
   SnmpTipoDado,
   SnmpTipoSelecao,
+  TipoAcessoSistema,
   TipoEquipamento,
   TipoMonitoramento,
 } from "./types";
+
+export function labelTipoAcesso(
+  tipo: TipoAcessoSistema | string | undefined | null
+): string {
+  if (!tipo) return "Tipo não identificado";
+  return (
+    TIPO_ACESSO_OPCOES.find((o) => o.value === tipo)?.label ??
+    "Tipo não identificado"
+  );
+}
 
 export const chamadoStatusLabel: Record<ChamadoStatus, string> = {
   aberto: "Aberto",

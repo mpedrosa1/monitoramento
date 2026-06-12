@@ -618,6 +618,21 @@ export function ColaboradorFormFields({
             </Select>
           </ColaboradorField>
         </div>
+        <ColaboradorField
+          fieldKey="dataAdmissao"
+          label="Data de admissão"
+          required
+          error={errors.dataAdmissao}
+          className="sm:max-w-xs"
+        >
+          <Input
+            id="col-data-admissao"
+            type="date"
+            value={form.dataAdmissao}
+            onChange={(e) => onChange({ dataAdmissao: e.target.value })}
+            aria-invalid={!!errors.dataAdmissao}
+          />
+        </ColaboradorField>
         <div className="grid gap-4 sm:grid-cols-2">
           <ColaboradorField
             fieldKey="telefoneCorporativo"

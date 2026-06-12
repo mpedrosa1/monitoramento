@@ -231,6 +231,7 @@ export interface Colaborador {
   dependentes?: ColaboradorDependente[];
   endereco?: ColaboradorEndereco;
   cargo?: string;
+  dataAdmissao?: string;
   localTrabalho?: LocalTrabalho;
   telefoneCorporativo?: string;
   emailCorporativo?: string;
@@ -239,6 +240,23 @@ export interface Colaborador {
   /** Status operacional (presença / missão) — não exibido no cadastro. */
   status: ColaboradorStatus;
   unidadeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Veiculo {
+  id: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+  anoFabricacao?: number;
+  anoModelo?: number;
+  cor?: string;
+  chassi?: string;
+  renavam?: string;
+  kmAtual?: number;
+  fotoUrl: string;
+  colaboradorId: string;
   createdAt: string;
   updatedAt: string;
 }
