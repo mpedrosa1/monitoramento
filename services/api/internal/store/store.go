@@ -42,9 +42,26 @@ type Store interface {
 	DeleteEquipamento(ctx context.Context, id primitive.ObjectID) error
 
 	ListVeiculos(ctx context.Context) ([]domain.Veiculo, error)
+	GetVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.Veiculo, error)
+	GetVeiculosByColaborador(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.Veiculo, error)
 	CreateVeiculo(ctx context.Context, v *domain.Veiculo) error
 	UpdateVeiculo(ctx context.Context, v *domain.Veiculo) error
 	DeleteVeiculo(ctx context.Context, id primitive.ObjectID) error
+
+	CreateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error
+	GetTrocaVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.TrocaVeiculo, error)
+	UpdateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error
+	FindTrocaVeiculoPendente(ctx context.Context, solicitanteID, veiculoAlvoID primitive.ObjectID) (*domain.TrocaVeiculo, error)
+
+	ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error)
+	CreateNotificacao(ctx context.Context, n *domain.Notificacao) error
+	GetNotificacao(ctx context.Context, id primitive.ObjectID) (*domain.Notificacao, error)
+	MarcarNotificacaoLida(ctx context.Context, id, colaboradorID primitive.ObjectID) error
+
+	UpsertPushToken(ctx context.Context, colaboradorID primitive.ObjectID, token, platform string) error
+	DeletePushToken(ctx context.Context, colaboradorID primitive.ObjectID, token string) error
+	ListPushTokens(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.PushToken, error)
+	ListAllPushTokens(ctx context.Context) ([]domain.PushToken, error)
 
 	// ListDispositivos alias legado.
 	ListDispositivos(ctx context.Context) ([]domain.Dispositivo, error)

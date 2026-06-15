@@ -16,6 +16,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/config"
 	httpapi "github.com/mmrtec/monitoramento/api/internal/http"
+	"github.com/mmrtec/monitoramento/api/internal/push"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"github.com/mmrtec/monitoramento/api/internal/ws"
 )
@@ -23,6 +24,21 @@ import (
 func main() {
 	config.LoadEnvFiles()
 	cfg := config.Load()
+
+	if cfg.FCMCredentialsFile != "" {
+		resolved := config.ResolveDataFile(cfg.FCMCredentialsFile)
+		if resolved == "" {
+			log.Printf(
+				"AVISO: FCM_CREDENTIALS_FILE=%q não encontrado — push Android com app fechado desabilitado (veja PUSH_NOTIFICATIONS.md)",
+				cfg.FCMCredentialsFile,
+			)
+		} else {
+			push.ConfigureFCM(resolved)
+			log.Printf("FCM push habilitado (%s)", resolved)
+		}
+	} else {
+		log.Println("FCM_CREDENTIALS_FILE não definido — push Android com app fechado desabilitado")
+	}
 
 	ctx := context.Background()
 	var st store.Store
@@ -67,6 +83,7 @@ func main() {
 		Cache:     stateCache,
 		Collector: col,
 		Antenas:   antenasStore,
+		Hub:       hub,
 		JWTSecret: cfg.JWTSecret,
 		JWTExpiry: cfg.JWTExpiry,
 	}

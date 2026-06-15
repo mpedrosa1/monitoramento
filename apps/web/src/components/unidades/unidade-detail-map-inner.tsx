@@ -360,9 +360,9 @@ export default function UnidadeDetailMapInner({
               <Polygon
                 positions={poligonoPositions}
                 pathOptions={{
-                  color: "#2563eb",
+                  color: "#0b3e7b",
                   weight: 2,
-                  fillColor: "#3b82f6",
+                  fillColor: "#7eb5e0",
                   fillOpacity: 0.22,
                 }}
               />
@@ -372,9 +372,9 @@ export default function UnidadeDetailMapInner({
                 center={[position.lat, position.lng]}
                 radius={raioKm * 1000}
                 pathOptions={{
-                  color: "#3b82f6",
+                  color: "#1074b8",
                   weight: 1.5,
-                  fillColor: "#3b82f6",
+                  fillColor: "#7eb5e0",
                   fillOpacity: 0.06,
                   dashArray: "6 4",
                 }}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/lib/auth-session";
-import type { DeviceMetric, WSMessage } from "@/lib/types";
+import type { DeviceMetric, Notificacao, WSMessage } from "@/lib/types";
 
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws";
 
@@ -15,11 +15,24 @@ function wsUrlWithToken(): string | null {
 
 export type SocketStatus = "connecting" | "connected" | "disconnected";
 
+type NotificationListener = (notification: Notificacao) => void;
+
 export function useMonitoringSocket() {
   const [status, setStatus] = useState<SocketStatus>("disconnected");
   const [metrics, setMetrics] = useState<DeviceMetric[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notificationListenersRef = useRef<Set<NotificationListener>>(new Set());
+
+  const subscribeNotifications = useCallback(
+    (listener: NotificationListener) => {
+      notificationListenersRef.current.add(listener);
+      return () => {
+        notificationListenersRef.current.delete(listener);
+      };
+    },
+    []
+  );
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -39,10 +52,10 @@ export function useMonitoringSocket() {
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data as string) as WSMessage<
-          DeviceMetric[] | DeviceMetric
+          DeviceMetric[] | DeviceMetric | Notificacao
         >;
         if (msg.type === "snapshot" && Array.isArray(msg.payload)) {
-          setMetrics(msg.payload);
+          setMetrics(msg.payload as DeviceMetric[]);
         } else if (msg.type === "update" && msg.payload) {
           const update = msg.payload as DeviceMetric;
           const key = update.targetId || update.dispositivoId;
@@ -57,6 +70,11 @@ export function useMonitoringSocket() {
             }
             return [...prev, update];
           });
+        } else if (msg.type === "notification" && msg.payload) {
+          const notification = msg.payload as Notificacao;
+          for (const listener of notificationListenersRef.current) {
+            listener(notification);
+          }
         }
       } catch {
         /* ignore malformed */
@@ -80,5 +98,5 @@ export function useMonitoringSocket() {
     };
   }, [connect]);
 
-  return { status, metrics };
+  return { status, metrics, subscribeNotifications };
 }

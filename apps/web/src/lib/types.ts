@@ -261,6 +261,51 @@ export interface Veiculo {
   updatedAt: string;
 }
 
+export type NotificacaoTipo =
+  | "troca_veiculo_solicitacao"
+  | "troca_veiculo_resposta"
+  | "troca_veiculo_admin";
+
+export interface NotificacaoPayload {
+  trocaId?: string;
+  veiculoAlvoId?: string;
+  veiculoOfertadoId?: string;
+  solicitanteColaboradorId?: string;
+  solicitanteNome?: string;
+  veiculoAlvoPlaca?: string;
+  veiculoOfertadoPlaca?: string;
+  aceita?: boolean;
+}
+
+export interface Notificacao {
+  id: string;
+  destinatarioColaboradorId: string;
+  tipo: NotificacaoTipo;
+  titulo: string;
+  mensagem: string;
+  lida: boolean;
+  payload: NotificacaoPayload;
+  createdAt: string;
+}
+
+export type TrocaVeiculoStatus =
+  | "pendente"
+  | "aceita"
+  | "recusada"
+  | "cancelada";
+
+export interface TrocaVeiculo {
+  id: string;
+  solicitanteColaboradorId: string;
+  destinatarioColaboradorId: string;
+  veiculoAlvoId: string;
+  veiculoOfertadoId?: string;
+  status: TrocaVeiculoStatus;
+  origem: "solicitacao" | "admin";
+  createdAt: string;
+  respondidoAt?: string;
+}
+
 export type MissaoStatus = "planejada" | "em_andamento" | "concluida";
 
 export interface Missao {
@@ -377,7 +422,7 @@ export interface DashboardSummary {
 }
 
 export interface WSMessage<T = unknown> {
-  type: "snapshot" | "update";
+  type: "snapshot" | "update" | "notification";
   payload: T;
 }
 

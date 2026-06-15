@@ -100,7 +100,7 @@ export function MissaoMap({
           {route && !routeLoading && (
             <>
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                <Navigation className="h-3.5 w-3.5 text-blue-600" />
+                <Navigation className="h-3.5 w-3.5 text-primary" />
                 {formatRouteDistance(route.distanceMeters)}
               </span>
               <span>{formatRouteDuration(route.durationSeconds)} estimados</span>
@@ -120,7 +120,7 @@ export function MissaoMap({
 
       {podeRotear && userPosition && route && (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
           Sua localização
           <span className="text-foreground/40">→</span>
           <MapPin className="h-3.5 w-3.5 shrink-0 text-red-600" />

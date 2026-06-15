@@ -8,14 +8,18 @@ import type { Colaborador, Veiculo } from "@/lib/types";
 import { AdicionarVeiculoDialog } from "@/components/veiculos/adicionar-veiculo-dialog";
 import { EditarVeiculoDialog } from "@/components/veiculos/editar-veiculo-dialog";
 import { ExcluirVeiculoDialog } from "@/components/veiculos/excluir-veiculo-dialog";
+import { SolicitarTrocaVeiculoDialog } from "@/components/veiculos/solicitar-troca-veiculo-dialog";
+import { TrocaAdminVeiculosDialog } from "@/components/veiculos/troca-admin-veiculos-dialog";
 import { VeiculoCard } from "@/components/veiculos/veiculo-card";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
+import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Input } from "@/components/ui/input";
 
 export default function VeiculosPage() {
   const { status: socketStatus } = useMonitoring();
+  const { user } = useAuth();
   const { canManageData } = usePermissions();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
@@ -25,6 +29,10 @@ export default function VeiculosPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingTarget, setDeletingTarget] = useState<Veiculo | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapTarget, setSwapTarget] = useState<Veiculo | null>(null);
+  const [adminSwapOpen, setAdminSwapOpen] = useState(false);
+  const [adminSwapTarget, setAdminSwapTarget] = useState<Veiculo | null>(null);
 
   const colaboradorPorId = useMemo(() => {
     const map = new Map<string, Colaborador>();
@@ -100,6 +108,31 @@ export default function VeiculosPage() {
     });
   }, [veiculos, busca, colaboradorPorId]);
 
+  const ordered = useMemo(() => {
+    const colaboradorId = user?.id;
+    if (!colaboradorId) return filtered;
+    return [...filtered].sort((a, b) => {
+      const aMine = a.colaboradorId === colaboradorId ? 0 : 1;
+      const bMine = b.colaboradorId === colaboradorId ? 0 : 1;
+      return aMine - bMine;
+    });
+  }, [filtered, user?.id]);
+
+  const meusVeiculos = useMemo(() => {
+    if (!user?.id) return [];
+    return veiculos.filter((v) => v.colaboradorId === user.id);
+  }, [veiculos, user?.id]);
+
+  function requestSwap(veiculo: Veiculo) {
+    if (canManageData) {
+      setAdminSwapTarget(veiculo);
+      setAdminSwapOpen(true);
+      return;
+    }
+    setSwapTarget(veiculo);
+    setSwapOpen(true);
+  }
+
   return (
     <>
       <DashboardHeader title="Veículos" socketStatus={socketStatus} />
@@ -132,11 +165,13 @@ export default function VeiculosPage() {
           </p>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,240px))] gap-5 justify-items-center">
-            {filtered.map((v) => (
+            {ordered.map((v) => (
               <VeiculoCard
                 key={v.id}
                 veiculo={v}
                 colaborador={colaboradorPorId.get(v.colaboradorId)}
+                isMeuVeiculo={v.colaboradorId === user?.id}
+                onRequestSwap={requestSwap}
                 onEdit={canManageData ? openEdit : undefined}
                 onDelete={canManageData ? requestDelete : undefined}
                 deleting={deleting}
@@ -162,6 +197,27 @@ export default function VeiculosPage() {
         veiculo={deletingTarget}
         onConfirm={confirmDelete}
         loading={deleting}
+      />
+
+      <SolicitarTrocaVeiculoDialog
+        open={swapOpen}
+        onOpenChange={setSwapOpen}
+        veiculoAlvo={swapTarget}
+        colaboradorAlvo={
+          swapTarget
+            ? colaboradorPorId.get(swapTarget.colaboradorId)
+            : undefined
+        }
+        meusVeiculos={meusVeiculos}
+        onSuccess={load}
+      />
+
+      <TrocaAdminVeiculosDialog
+        open={adminSwapOpen}
+        onOpenChange={setAdminSwapOpen}
+        veiculoInicial={adminSwapTarget}
+        veiculos={veiculos}
+        onSuccess={load}
       />
     </>
   );

@@ -1,20 +1,25 @@
 import Image from "next/image";
-import { Pencil, Trash2, User } from "lucide-react";
+import { ArrowLeftRight, Pencil, Trash2, User } from "lucide-react";
 import { formatPlaca } from "@/lib/veiculo-placa";
 import { VEICULO_FOTO_PADRAO } from "@/lib/veiculo-imagem";
 import type { Colaborador, Veiculo } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function VeiculoCard({
   veiculo,
   colaborador,
+  isMeuVeiculo = false,
+  onRequestSwap,
   onEdit,
   onDelete,
   deleting = false,
 }: {
   veiculo: Veiculo;
   colaborador?: Colaborador | null;
+  isMeuVeiculo?: boolean;
+  onRequestSwap?: (veiculo: Veiculo) => void;
   onEdit?: (veiculo: Veiculo) => void;
   onDelete?: (veiculo: Veiculo) => void;
   deleting?: boolean;
@@ -23,6 +28,7 @@ export function VeiculoCard({
   const usaImgNativo = foto.startsWith("http") || foto.startsWith("/pics/");
   const condutor = colaborador?.nome?.trim() || "—";
   const showActions = Boolean(onEdit || onDelete);
+  const showSwap = Boolean(onRequestSwap && !isMeuVeiculo);
   const rotulo = `${veiculo.marca} ${veiculo.modelo}`.trim();
 
   return (
@@ -34,6 +40,11 @@ export function VeiculoCard({
     >
       <div className="p-2">
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/40">
+        {isMeuVeiculo && (
+          <Badge className="absolute left-1.5 top-1.5 z-10 border-amber-300 bg-amber-400 font-semibold text-amber-950 shadow-sm ring-1 ring-amber-300/80 dark:border-amber-400 dark:bg-amber-400 dark:text-amber-950">
+            Meu veículo
+          </Badge>
+        )}
         {showActions && (
           <div className="absolute right-1.5 top-1.5 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             {onEdit && (
@@ -61,6 +72,20 @@ export function VeiculoCard({
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
+          </div>
+        )}
+        {showSwap && (
+          <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1.5 text-xs shadow-sm"
+              onClick={() => onRequestSwap?.(veiculo)}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Solicitar troca
+            </Button>
           </div>
         )}
         {usaImgNativo ? (

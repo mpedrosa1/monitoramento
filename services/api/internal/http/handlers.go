@@ -15,6 +15,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/modbus"
 	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
+	"github.com/mmrtec/monitoramento/api/internal/ws"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -23,6 +24,7 @@ type API struct {
 	Cache     *cache.StateCache
 	Collector *collector.Collector
 	Antenas   *antenas.Store
+	Hub       *ws.Hub
 	JWTSecret string
 	JWTExpiry time.Duration
 }
@@ -125,6 +127,7 @@ func (a *API) CreateChamado(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.notificarChamadoAberto(c)
 	writeJSON(w, http.StatusCreated, c)
 }
 
@@ -406,6 +409,7 @@ func (a *API) CreateMissao(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.notificarMissaoAgendada(m)
 	writeJSON(w, http.StatusCreated, m)
 }
 

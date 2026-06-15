@@ -20,6 +20,7 @@ type Config struct {
 	SNMPIntervalSec   int
 	JWTSecret         string
 	JWTExpiry         time.Duration
+	FCMCredentialsFile string
 }
 
 func Load() Config {
@@ -40,6 +41,7 @@ func Load() Config {
 		SNMPIntervalSec:   getEnvInt("SNMP_INTERVAL_SEC", 30),
 		JWTSecret:         getEnv("JWT_SECRET", "dev-mmrtec-altere-em-producao"),
 		JWTExpiry:         time.Duration(hours) * time.Hour,
+		FCMCredentialsFile: getEnv("FCM_CREDENTIALS_FILE", ""),
 	}
 }
 

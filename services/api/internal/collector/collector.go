@@ -13,6 +13,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 	"github.com/mmrtec/monitoramento/api/internal/modbus"
 	"github.com/mmrtec/monitoramento/api/internal/ping"
+	"github.com/mmrtec/monitoramento/api/internal/push"
 	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"github.com/mmrtec/monitoramento/api/internal/ws"
@@ -279,7 +280,8 @@ func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, m
 
 	if had && prev.Online && !metric.Online {
 		msg := "equipamento offline: " + t.Nome
-		if t.Tipo == domain.DispositivoPing && t.Porta == 0 {
+		isUnidade := t.Tipo == domain.DispositivoPing && t.Porta == 0
+		if isUnidade {
 			msg = "unidade offline: " + t.Nome
 		}
 		_ = c.store.CreateEvento(ctx, &domain.EventoMonitoramento{
@@ -292,7 +294,32 @@ func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, m
 				"porta": t.Porta,
 			},
 		})
+		if isUnidade {
+			go c.pushOfflineAlert(t.Nome, metric.TargetID)
+		}
 	}
+}
+
+func (c *Collector) pushOfflineAlert(nome, targetID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	tokens, err := c.store.ListAllPushTokens(ctx)
+	if err != nil {
+		log.Printf("push offline: listar tokens: %v", err)
+		return
+	}
+	if len(tokens) == 0 {
+		return
+	}
+
+	title := "Unidade offline"
+	body := "unidade offline: " + nome
+	data := map[string]string{
+		"tipo":     "offline_unidade",
+		"targetId": targetID,
+	}
+	push.SendMobile(ctx, tokens, title, body, data)
 }
 
 func pingReportedOnline(probeOK bool, failures *int, threshold int) bool {

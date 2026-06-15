@@ -87,41 +87,41 @@
   --scrollbar-thumb-hover: oklch(0.556 0 0 / 50%);
 }
 
-/* Tema escuro MMRTEC — cor de marca #034181 */
+/* Tema escuro MMRTEC — cor de marca #0b3e7b */
 .dark {
-  --background: #011a33;
+  --background: #061e3a;
   --foreground: #f0f7fc;
-  --card: #022f5c;
+  --card: #0a2c54;
   --card-foreground: #f0f7fc;
-  --popover: #022f5c;
+  --popover: #0a2c54;
   --popover-foreground: #f0f7fc;
-  --primary: #034181;
+  --primary: #0b3e7b;
   --primary-foreground: #ffffff;
-  --secondary: #023566;
+  --secondary: #093560;
   --secondary-foreground: #e8f4fc;
-  --muted: #023566;
+  --muted: #093560;
   --muted-foreground: #8fb4d4;
-  --accent: #045a9e;
+  --accent: #0d5292;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.65 0.2 25);
   --border: rgb(79 143 200 / 28%);
   --input: rgb(79 143 200 / 22%);
-  --ring: #0670c2;
-  --chart-1: #0670c2;
-  --chart-2: #045a9e;
-  --chart-3: #034181;
-  --chart-4: #023566;
-  --chart-5: #022f5c;
-  --sidebar: #034181;
+  --ring: #1074b8;
+  --chart-1: #1074b8;
+  --chart-2: #0d5292;
+  --chart-3: #0b3e7b;
+  --chart-4: #093560;
+  --chart-5: #0a2c54;
+  --sidebar: #0b3e7b;
   --sidebar-foreground: #f0f7fc;
-  --sidebar-primary: #0563a8;
+  --sidebar-primary: #0f5499;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #045a9e;
+  --sidebar-accent: #0d5292;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 12%);
-  --sidebar-ring: #0670c2;
+  --sidebar-ring: #1074b8;
   --scrollbar-size: 8px;
-  --scrollbar-track: rgb(1 26 51 / 55%);
+  --scrollbar-track: rgb(6 30 58 / 55%);
   --scrollbar-thumb: rgb(79 143 200 / 38%);
   --scrollbar-thumb-hover: rgb(103 176 224 / 58%);
 }
@@ -198,7 +198,7 @@
   font-weight: 400;
   line-height: 1.15;
   letter-spacing: -0.01em;
-  color: #1d4ed8;
+  color: #0b3e7b;
   text-shadow:
     0 0 3px #fff,
     0 0 6px #fff,
@@ -214,8 +214,8 @@
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #60a5fa;
-  border: 2px solid #1d4ed8;
+  background: #7eb5e0;
+  border: 2px solid #0b3e7b;
   box-sizing: border-box;
   cursor: grab;
 }

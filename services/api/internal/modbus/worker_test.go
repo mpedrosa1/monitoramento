@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/goburrow/modbus"
+	"github.com/mmrtec/monitoramento/api/internal/domain"
 )
 
 func TestNormalizeModbusRegistro(t *testing.T) {
@@ -46,6 +47,16 @@ func TestCoerceDiscreteRegisterValue(t *testing.T) {
 	}
 	if coerceDiscreteRegisterValue(uint16(42)) != uint16(42) {
 		t.Fatal("non-binary values should pass through")
+	}
+}
+
+func TestReadModbusPointNativeNilClient(t *testing.T) {
+	_, err := readModbusPointNative(nil, domain.ModbusPonto{
+		Offset:   0,
+		Registro: "input_register",
+	}, "input_register")
+	if err == nil {
+		t.Fatal("expected error for nil client")
 	}
 }
 

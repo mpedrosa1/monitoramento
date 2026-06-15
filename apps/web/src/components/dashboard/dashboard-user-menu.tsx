@@ -1,9 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Menu } from "@base-ui/react/menu";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, LogOut, User } from "lucide-react";
 import type { AuthUser } from "@/lib/auth-session";
+import { NotificationsPanel } from "@/components/notifications/notifications-panel";
+import { useNotifications } from "@/components/notifications/notifications-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -63,6 +65,42 @@ function MenuActionItem({
   );
 }
 
+function NotificationsMenuButton({
+  naoLidas,
+  onOpen,
+}: {
+  naoLidas: number;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left outline-none",
+        "transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
+      )}
+      onClick={onOpen}
+    >
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <Bell className="h-5 w-5 text-primary" />
+        {naoLidas > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+            {naoLidas > 9 ? "9+" : naoLidas}
+          </span>
+        ) : null}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold leading-tight">Notificações</p>
+        <p className="text-xs text-muted-foreground">
+          {naoLidas > 0
+            ? `${naoLidas} pendente${naoLidas > 1 ? "s" : ""}`
+            : "Nenhuma pendência"}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 export function DashboardUserMenu({
   user,
   onLogout,
@@ -70,17 +108,37 @@ export function DashboardUserMenu({
   user: AuthUser;
   onLogout: () => void;
 }) {
+  const { naoLidas, refresh } = useNotifications();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<"menu" | "notificacoes">("menu");
+
+  function openNotificacoes() {
+    setView("notificacoes");
+    void refresh();
+  }
+
   return (
-    <Menu.Root>
+    <Menu.Root
+      open={menuOpen}
+      onOpenChange={(open) => {
+        setMenuOpen(open);
+        if (!open) setView("menu");
+      }}
+    >
       <Menu.Trigger
         className={cn(
-          "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none",
+          "group relative flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none",
           "transition-colors hover:bg-muted/60",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "data-[popup-open]:bg-muted/60"
         )}
         aria-label={`Menu do usuário ${user.nome}`}
       >
+        {naoLidas > 0 ? (
+          <span className="absolute right-1 top-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground sm:right-auto sm:left-0">
+            {naoLidas > 9 ? "9+" : naoLidas}
+          </span>
+        ) : null}
         <div className="hidden min-w-0 text-right sm:block">
           <p className="truncate text-sm font-semibold leading-tight text-foreground">
             {user.nome}
@@ -107,31 +165,54 @@ export function DashboardUserMenu({
         >
           <Menu.Popup
             className={cn(
-              "w-[min(100vw-2rem,20rem)] origin-[var(--transform-origin)] overflow-hidden rounded-xl",
+              "w-[min(100vw-2rem,22rem)] origin-[var(--transform-origin)] overflow-hidden rounded-xl",
               "border border-border bg-popover text-popover-foreground shadow-lg",
               "data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
               "data-[ending-style]:scale-95 data-[ending-style]:opacity-0",
               "transition-[transform,opacity] duration-100"
             )}
           >
-            <MenuActionItem
-              icon={<User className="h-5 w-5 text-muted-foreground" />}
-              iconClassName="bg-muted"
-              title="Meus Dados"
-              subtitle="Perfil e segurança"
-            />
+            {view === "notificacoes" ? (
+              <div>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 border-b border-border px-4 py-2.5 text-left text-sm font-medium hover:bg-muted/50"
+                  onClick={() => setView("menu")}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Voltar
+                </button>
+                <NotificationsPanel />
+              </div>
+            ) : (
+              <>
+                <NotificationsMenuButton
+                  naoLidas={naoLidas}
+                  onOpen={openNotificacoes}
+                />
 
-            <Separator />
+                <Separator />
 
-            <MenuActionItem
-              icon={<LogOut className="h-5 w-5 text-destructive" />}
-              iconClassName="bg-destructive/10"
-              title="Encerrar sessão"
-              subtitle="Sair da plataforma"
-              titleClassName="text-destructive"
-              subtitleClassName="text-destructive/80"
-              onClick={onLogout}
-            />
+                <MenuActionItem
+                  icon={<User className="h-5 w-5 text-muted-foreground" />}
+                  iconClassName="bg-muted"
+                  title="Meus Dados"
+                  subtitle="Perfil e segurança"
+                />
+
+                <Separator />
+
+                <MenuActionItem
+                  icon={<LogOut className="h-5 w-5 text-destructive" />}
+                  iconClassName="bg-destructive/10"
+                  title="Encerrar sessão"
+                  subtitle="Sair da plataforma"
+                  titleClassName="text-destructive"
+                  subtitleClassName="text-destructive/80"
+                  onClick={onLogout}
+                />
+              </>
+            )}
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>

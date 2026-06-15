@@ -52,7 +52,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-[#022f5c] to-background">
+    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-card to-background">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
       <Card className="relative z-10 w-full max-w-md border-border/50 bg-card/90 shadow-2xl backdrop-blur">
         <CardHeader className="space-y-4 text-center">

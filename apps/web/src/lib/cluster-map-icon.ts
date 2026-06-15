@@ -45,7 +45,7 @@ function clusterPieSvg(points: UnidadeMapPoint[], selected: boolean): string {
     .join("");
 
   const selectionRing = selected
-    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#0670c2" stroke-width="2.5" />`
+    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#1074b8" stroke-width="2.5" />`
     : "";
 
   const border = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ffffff" stroke-width="2" />`;
@@ -61,7 +61,7 @@ function singleUnitSvg(online: boolean, selected: boolean): string {
   const r = 11;
   const fill = online ? COLOR_ONLINE : COLOR_OFFLINE;
   const selectionRing = selected
-    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#0670c2" stroke-width="2.5" />`
+    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#1074b8" stroke-width="2.5" />`
     : "";
   const dot = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#ffffff" stroke-width="2" />`;
 

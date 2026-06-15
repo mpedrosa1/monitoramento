@@ -62,7 +62,13 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			r.Get("/eventos", api.ListEventos)
 
+			r.Get("/notificacoes", api.ListNotificacoes)
+			r.Patch("/notificacoes/{id}/lida", func(w http.ResponseWriter, req *http.Request) {
+				api.MarcarNotificacaoLida(w, req, chi.URLParam(req, "id"))
+			})
 
+			r.Put("/push-token", api.RegisterPushToken)
+			r.Delete("/push-token", api.DeletePushToken)
 
 			r.Route("/chamados", func(r chi.Router) {
 
@@ -171,6 +177,11 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			r.Route("/veiculos", func(r chi.Router) {
 				r.Get("/", api.ListVeiculos)
+				r.Post("/trocas/solicitar", api.SolicitarTrocaVeiculo)
+				r.Post("/trocas/{id}/responder", func(w http.ResponseWriter, req *http.Request) {
+					api.ResponderTrocaVeiculo(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Post("/trocas/admin", api.TrocaAdminVeiculos)
 				r.With(RequireManageData).Post("/", api.CreateVeiculo)
 				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateVeiculo(w, req, chi.URLParam(req, "id"))

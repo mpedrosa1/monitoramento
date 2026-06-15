@@ -28,7 +28,7 @@ function pinIcon(fill: string, stroke: string) {
   });
 }
 
-const userPinIcon = pinIcon("#3b82f6", "#1d4ed8");
+const userPinIcon = pinIcon("#7eb5e0", "#0b3e7b");
 const destinationPinIcon = pinIcon("#ef4444", "#b91c1c");
 
 function MapInvalidateSize() {
@@ -120,7 +120,7 @@ export default function MissaoMapInner({
         <Polyline
           positions={polylinePositions}
           pathOptions={{
-            color: "#2563eb",
+            color: "#0b3e7b",
             weight: 5,
             opacity: 0.85,
           }}

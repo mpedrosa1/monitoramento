@@ -190,6 +190,72 @@ type Colaborador struct {
 
 const VeiculoFotoURLPadrao = "/veiculo-placeholder.webp"
 
+type TrocaVeiculoStatus string
+
+const (
+	TrocaVeiculoStatusPendente  TrocaVeiculoStatus = "pendente"
+	TrocaVeiculoStatusAceita    TrocaVeiculoStatus = "aceita"
+	TrocaVeiculoStatusRecusada  TrocaVeiculoStatus = "recusada"
+	TrocaVeiculoStatusCancelada TrocaVeiculoStatus = "cancelada"
+)
+
+type TrocaVeiculoOrigem string
+
+const (
+	TrocaVeiculoOrigemSolicitacao TrocaVeiculoOrigem = "solicitacao"
+	TrocaVeiculoOrigemAdmin       TrocaVeiculoOrigem = "admin"
+)
+
+type NotificacaoTipo string
+
+const (
+	NotificacaoTrocaSolicitacao NotificacaoTipo = "troca_veiculo_solicitacao"
+	NotificacaoTrocaResposta    NotificacaoTipo = "troca_veiculo_resposta"
+	NotificacaoTrocaAdmin       NotificacaoTipo = "troca_veiculo_admin"
+	NotificacaoChamadoAberto    NotificacaoTipo = "chamado_aberto"
+	NotificacaoMissaoAgendada   NotificacaoTipo = "missao_agendada"
+)
+
+type NotificacaoPayload struct {
+	TrocaID                  string `json:"trocaId,omitempty" bson:"trocaId,omitempty"`
+	VeiculoAlvoID            string `json:"veiculoAlvoId,omitempty" bson:"veiculoAlvoId,omitempty"`
+	VeiculoOfertadoID        string `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
+	SolicitanteColaboradorID string `json:"solicitanteColaboradorId,omitempty" bson:"solicitanteColaboradorId,omitempty"`
+	SolicitanteNome          string `json:"solicitanteNome,omitempty" bson:"solicitanteNome,omitempty"`
+	VeiculoAlvoPlaca         string `json:"veiculoAlvoPlaca,omitempty" bson:"veiculoAlvoPlaca,omitempty"`
+	VeiculoOfertadoPlaca     string `json:"veiculoOfertadoPlaca,omitempty" bson:"veiculoOfertadoPlaca,omitempty"`
+	Aceita                   *bool  `json:"aceita,omitempty" bson:"aceita,omitempty"`
+	ChamadoID                string `json:"chamadoId,omitempty" bson:"chamadoId,omitempty"`
+	ChamadoNumero            string `json:"chamadoNumero,omitempty" bson:"chamadoNumero,omitempty"`
+	MissaoID                 string `json:"missaoId,omitempty" bson:"missaoId,omitempty"`
+	UnidadeID                string `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
+	DataInicio               string `json:"dataInicio,omitempty" bson:"dataInicio,omitempty"`
+	HoraInicio               string `json:"horaInicio,omitempty" bson:"horaInicio,omitempty"`
+}
+
+type Notificacao struct {
+	ID                        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	DestinatarioColaboradorID primitive.ObjectID `json:"destinatarioColaboradorId" bson:"destinatarioColaboradorId"`
+	Tipo                      NotificacaoTipo    `json:"tipo" bson:"tipo"`
+	Titulo                    string             `json:"titulo" bson:"titulo"`
+	Mensagem                  string             `json:"mensagem" bson:"mensagem"`
+	Lida                      bool               `json:"lida" bson:"lida"`
+	Payload                   NotificacaoPayload `json:"payload" bson:"payload"`
+	CreatedAt                 time.Time          `json:"createdAt" bson:"createdAt"`
+}
+
+type TrocaVeiculo struct {
+	ID                        primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	SolicitanteColaboradorID  primitive.ObjectID  `json:"solicitanteColaboradorId" bson:"solicitanteColaboradorId"`
+	DestinatarioColaboradorID primitive.ObjectID  `json:"destinatarioColaboradorId" bson:"destinatarioColaboradorId"`
+	VeiculoAlvoID             primitive.ObjectID  `json:"veiculoAlvoId" bson:"veiculoAlvoId"`
+	VeiculoOfertadoID         *primitive.ObjectID `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
+	Status                    TrocaVeiculoStatus  `json:"status" bson:"status"`
+	Origem                    TrocaVeiculoOrigem  `json:"origem" bson:"origem"`
+	CreatedAt                 time.Time           `json:"createdAt" bson:"createdAt"`
+	RespondidoAt              *time.Time          `json:"respondidoAt,omitempty" bson:"respondidoAt,omitempty"`
+}
+
 type Veiculo struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Placa         string             `json:"placa" bson:"placa"`

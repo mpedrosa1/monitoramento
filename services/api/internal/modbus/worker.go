@@ -160,6 +160,16 @@ func (s *modbusSession) reconnect() error {
 	return s.connect()
 }
 
+func (s *modbusSession) modbusClient() (modbus.Client, error) {
+	if s.client != nil {
+		return s.client, nil
+	}
+	if err := s.reconnect(); err != nil {
+		return nil, fmt.Errorf("sessão modbus indisponível: %w", err)
+	}
+	return s.client, nil
+}
+
 func readTargetPontos(ctx context.Context, session *modbusSession, t domain.MonitorTarget) map[string]any {
 	valores := make(map[string]any)
 
@@ -200,7 +210,13 @@ func readTargetPontos(ctx context.Context, session *modbusSession, t domain.Moni
 			return valores
 		default:
 		}
-		results, err := session.client.ReadHoldingRegisters(reg, 1)
+		client, err := session.modbusClient()
+		if err != nil {
+			valores[fmt.Sprintf("reg_%d", reg)] = err.Error()
+			sleepReadDelay()
+			continue
+		}
+		results, err := client.ReadHoldingRegisters(reg, 1)
 		if err != nil {
 			valores[fmt.Sprintf("reg_%d", reg)] = err.Error()
 		} else if len(results) >= 2 {
@@ -243,12 +259,21 @@ func normalizeModbusRegistro(registro string) string {
 }
 
 func (s *modbusSession) readPoint(p domain.ModbusPonto) (any, error) {
+	client, err := s.modbusClient()
+	if err != nil {
+		return nil, err
+	}
+
 	registro := normalizeModbusRegistro(p.Registro)
 
-	val, err := readModbusPointNative(s.client, p, registro)
+	val, err := readModbusPointNative(client, p, registro)
 	if err != nil && isRetryableModbusError(err) {
 		if reconErr := s.reconnect(); reconErr == nil {
-			val, err = readModbusPointNative(s.client, p, registro)
+			client, err = s.modbusClient()
+			if err != nil {
+				return nil, err
+			}
+			val, err = readModbusPointNative(client, p, registro)
 		}
 	}
 	if err == nil {
@@ -264,7 +289,11 @@ func (s *modbusSession) readPoint(p domain.ModbusPonto) (any, error) {
 	if reconErr := s.reconnect(); reconErr != nil {
 		return nil, err
 	}
-	return readModbusPointHoldingFallback(s.client, p, registro)
+	client, err = s.modbusClient()
+	if err != nil {
+		return nil, err
+	}
+	return readModbusPointHoldingFallback(client, p, registro)
 }
 
 func isRetryableModbusError(err error) bool {
@@ -292,6 +321,9 @@ func isRetryableModbusError(err error) bool {
 }
 
 func readModbusPointNative(client modbus.Client, p domain.ModbusPonto, registro string) (any, error) {
+	if client == nil {
+		return nil, errors.New("cliente modbus indisponível")
+	}
 	tipoDado := strings.TrimSpace(p.TipoDado)
 
 	switch registro {
@@ -351,6 +383,9 @@ func readModbusPointHoldingFallback(client modbus.Client, p domain.ModbusPonto, 
 }
 
 func readHoldingRegisters(client modbus.Client, offset uint16, tipoDado string) (any, error) {
+	if client == nil {
+		return nil, errors.New("cliente modbus indisponível")
+	}
 	qty := registerQuantity(tipoDado)
 	results, err := client.ReadHoldingRegisters(offset, qty)
 	if err != nil {

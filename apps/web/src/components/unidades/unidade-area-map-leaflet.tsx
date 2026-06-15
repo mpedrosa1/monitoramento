@@ -27,8 +27,8 @@ const vertexHandleIcon = L.divIcon({
 });
 
 const PREVIEW_VERTEX_STYLE = {
-  color: "#1d4ed8",
-  fillColor: "#93c5fd",
+  color: "#0b3e7b",
+  fillColor: "#7eb5e0",
   fillOpacity: 0.55,
   weight: 2,
 } as const;
@@ -180,7 +180,7 @@ export default function UnidadeAreaMapLeaflet({
       {vertices.length >= 2 ? (
         <Polyline
           positions={positions}
-          pathOptions={{ color: "#3b82f6", weight: 2, dashArray: "6 4" }}
+          pathOptions={{ color: "#1074b8", weight: 2, dashArray: "6 4" }}
         />
       ) : null}
 
@@ -188,9 +188,9 @@ export default function UnidadeAreaMapLeaflet({
         <Polygon
           positions={positions}
           pathOptions={{
-            color: "#2563eb",
+            color: "#0b3e7b",
             weight: 2,
-            fillColor: "#3b82f6",
+            fillColor: "#7eb5e0",
             fillOpacity: 0.25,
           }}
         />
@@ -203,7 +203,7 @@ export default function UnidadeAreaMapLeaflet({
             [hoverPos.lat, hoverPos.lng],
           ]}
           pathOptions={{
-            color: "#60a5fa",
+            color: "#1074b8",
             weight: 2,
             dashArray: "5 7",
             opacity: 0.95,

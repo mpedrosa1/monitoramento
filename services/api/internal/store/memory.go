@@ -18,6 +18,9 @@ type MemoryStore struct {
 	missoes       []domain.Missao
 	dispositivos  []domain.Equipamento
 	veiculos      []domain.Veiculo
+	trocasVeiculo []domain.TrocaVeiculo
+	notificacoes  []domain.Notificacao
+	pushTokens    []domain.PushToken
 	eventos       []domain.EventoMonitoramento
 }
 
@@ -384,6 +387,30 @@ func (s *MemoryStore) ListVeiculos(ctx context.Context) ([]domain.Veiculo, error
 	return out, nil
 }
 
+func (s *MemoryStore) GetVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.Veiculo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.veiculos {
+		if s.veiculos[i].ID == id {
+			v := s.veiculos[i]
+			return &v, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) GetVeiculosByColaborador(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.Veiculo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []domain.Veiculo
+	for _, v := range s.veiculos {
+		if v.ColaboradorID == colaboradorID {
+			out = append(out, v)
+		}
+	}
+	return out, nil
+}
+
 func (s *MemoryStore) CreateVeiculo(ctx context.Context, v *domain.Veiculo) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -424,6 +451,187 @@ func (s *MemoryStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) 
 	}
 	s.veiculos = next
 	return nil
+}
+
+func (s *MemoryStore) CreateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	t.ID = primitive.NewObjectID()
+	t.CreatedAt = now
+	s.trocasVeiculo = append(s.trocasVeiculo, *t)
+	return nil
+}
+
+func (s *MemoryStore) GetTrocaVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.TrocaVeiculo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.trocasVeiculo {
+		if s.trocasVeiculo[i].ID == id {
+			t := s.trocasVeiculo[i]
+			return &t, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) UpdateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.trocasVeiculo {
+		if s.trocasVeiculo[i].ID == t.ID {
+			s.trocasVeiculo[i] = *t
+			return nil
+		}
+	}
+	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) FindTrocaVeiculoPendente(ctx context.Context, solicitanteID, veiculoAlvoID primitive.ObjectID) (*domain.TrocaVeiculo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.trocasVeiculo {
+		t := s.trocasVeiculo[i]
+		if t.Status == domain.TrocaVeiculoStatusPendente &&
+			t.SolicitanteColaboradorID == solicitanteID &&
+			t.VeiculoAlvoID == veiculoAlvoID {
+			return &t, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []domain.Notificacao
+	for i := len(s.notificacoes) - 1; i >= 0; i-- {
+		n := s.notificacoes[i]
+		if n.DestinatarioColaboradorID != colaboradorID {
+			continue
+		}
+		out = append(out, n)
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	sortNotificacoes(out)
+	return out, nil
+}
+
+func sortNotificacoes(list []domain.Notificacao) {
+	for i := 0; i < len(list); i++ {
+		for j := i + 1; j < len(list); j++ {
+			li, lj := list[i], list[j]
+			swap := false
+			if !li.Lida && lj.Lida {
+				swap = true
+			} else if li.Lida == lj.Lida && li.CreatedAt.Before(lj.CreatedAt) {
+				swap = true
+			}
+			if swap {
+				list[i], list[j] = list[j], list[i]
+			}
+		}
+	}
+}
+
+func (s *MemoryStore) CreateNotificacao(ctx context.Context, n *domain.Notificacao) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n.ID = primitive.NewObjectID()
+	n.CreatedAt = time.Now().UTC()
+	s.notificacoes = append([]domain.Notificacao{*n}, s.notificacoes...)
+	return nil
+}
+
+func (s *MemoryStore) GetNotificacao(ctx context.Context, id primitive.ObjectID) (*domain.Notificacao, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.notificacoes {
+		if s.notificacoes[i].ID == id {
+			n := s.notificacoes[i]
+			return &n, nil
+		}
+	}
+	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) MarcarNotificacaoLida(ctx context.Context, id, colaboradorID primitive.ObjectID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.notificacoes {
+		if s.notificacoes[i].ID == id {
+			if s.notificacoes[i].DestinatarioColaboradorID != colaboradorID {
+				return mongoErrNotFound()
+			}
+			s.notificacoes[i].Lida = true
+			return nil
+		}
+	}
+	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) UpsertPushToken(ctx context.Context, colaboradorID primitive.ObjectID, token, platform string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	filtered := s.pushTokens[:0]
+	for _, pt := range s.pushTokens {
+		if pt.ColaboradorID == colaboradorID && pt.Platform == platform && pt.Token != token {
+			continue
+		}
+		filtered = append(filtered, pt)
+	}
+	s.pushTokens = filtered
+	for i := range s.pushTokens {
+		if s.pushTokens[i].Token == token {
+			s.pushTokens[i].ColaboradorID = colaboradorID
+			s.pushTokens[i].Platform = platform
+			s.pushTokens[i].UpdatedAt = now
+			return nil
+		}
+	}
+	s.pushTokens = append(s.pushTokens, domain.PushToken{
+		ID:            primitive.NewObjectID(),
+		ColaboradorID: colaboradorID,
+		Token:         token,
+		Platform:      platform,
+		UpdatedAt:     now,
+	})
+	return nil
+}
+
+func (s *MemoryStore) DeletePushToken(ctx context.Context, colaboradorID primitive.ObjectID, token string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.pushTokens {
+		if s.pushTokens[i].Token == token && s.pushTokens[i].ColaboradorID == colaboradorID {
+			s.pushTokens = append(s.pushTokens[:i], s.pushTokens[i+1:]...)
+			return nil
+		}
+	}
+	return mongoErrNotFound()
+}
+
+func (s *MemoryStore) ListPushTokens(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.PushToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []domain.PushToken
+	for _, pt := range s.pushTokens {
+		if pt.ColaboradorID == colaboradorID {
+			out = append(out, pt)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) ListAllPushTokens(ctx context.Context) ([]domain.PushToken, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]domain.PushToken, len(s.pushTokens))
+	copy(out, s.pushTokens)
+	return out, nil
 }
 
 func (s *MemoryStore) CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error {

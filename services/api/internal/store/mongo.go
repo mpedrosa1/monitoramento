@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/mmrtec/monitoramento/api/internal/domain"
@@ -41,6 +42,8 @@ func (s *MongoStore) ensureIndexes(ctx context.Context) error {
 		{"colaboradores", bson.D{{Key: "unidadeId", Value: 1}}},
 		{"equipamentos", bson.D{{Key: "nome", Value: 1}}},
 		{"eventos_monitoramento", bson.D{{Key: "createdAt", Value: -1}}},
+		{"push_tokens", bson.D{{Key: "colaboradorId", Value: 1}}},
+		{"push_tokens", bson.D{{Key: "token", Value: 1}}},
 	}
 	for _, idx := range indexes {
 		_, err := s.db.Collection(idx.coll).Indexes().CreateOne(ctx, mongo.IndexModel{Keys: idx.keys})
@@ -395,6 +398,28 @@ func (s *MongoStore) ListVeiculos(ctx context.Context) ([]domain.Veiculo, error)
 	return out, cur.All(ctx, &out)
 }
 
+func (s *MongoStore) GetVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.Veiculo, error) {
+	var v domain.Veiculo
+	err := s.col("veiculos").FindOne(ctx, bson.M{"_id": id}).Decode(&v)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, mongoErrNotFound()
+		}
+		return nil, err
+	}
+	return &v, nil
+}
+
+func (s *MongoStore) GetVeiculosByColaborador(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.Veiculo, error) {
+	cur, err := s.col("veiculos").Find(ctx, bson.M{"colaboradorId": colaboradorID}, options.Find().SetSort(bson.D{{Key: "placa", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var out []domain.Veiculo
+	return out, cur.All(ctx, &out)
+}
+
 func (s *MongoStore) CreateVeiculo(ctx context.Context, v *domain.Veiculo) error {
 	now := time.Now().UTC()
 	v.CreatedAt, v.UpdatedAt = now, now
@@ -427,6 +452,178 @@ func (s *MongoStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) e
 		return mongoErrNotFound()
 	}
 	return nil
+}
+
+func (s *MongoStore) CreateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error {
+	now := time.Now().UTC()
+	t.CreatedAt = now
+	res, err := s.col("trocas_veiculo").InsertOne(ctx, t)
+	if err != nil {
+		return err
+	}
+	t.ID = res.InsertedID.(primitive.ObjectID)
+	return nil
+}
+
+func (s *MongoStore) GetTrocaVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.TrocaVeiculo, error) {
+	var t domain.TrocaVeiculo
+	err := s.col("trocas_veiculo").FindOne(ctx, bson.M{"_id": id}).Decode(&t)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, mongoErrNotFound()
+		}
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (s *MongoStore) UpdateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error {
+	result, err := s.col("trocas_veiculo").UpdateOne(ctx, bson.M{"_id": t.ID}, bson.M{"$set": t})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) FindTrocaVeiculoPendente(ctx context.Context, solicitanteID, veiculoAlvoID primitive.ObjectID) (*domain.TrocaVeiculo, error) {
+	var t domain.TrocaVeiculo
+	err := s.col("trocas_veiculo").FindOne(ctx, bson.M{
+		"solicitanteColaboradorId": solicitanteID,
+		"veiculoAlvoId":            veiculoAlvoID,
+		"status":                   domain.TrocaVeiculoStatusPendente,
+	}).Decode(&t)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, mongoErrNotFound()
+		}
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (s *MongoStore) ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error) {
+	opts := options.Find().SetSort(bson.D{
+		{Key: "lida", Value: 1},
+		{Key: "createdAt", Value: -1},
+	})
+	if limit > 0 {
+		opts.SetLimit(int64(limit))
+	}
+	cur, err := s.col("notificacoes").Find(ctx, bson.M{"destinatarioColaboradorId": colaboradorID}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var out []domain.Notificacao
+	return out, cur.All(ctx, &out)
+}
+
+func (s *MongoStore) CreateNotificacao(ctx context.Context, n *domain.Notificacao) error {
+	n.CreatedAt = time.Now().UTC()
+	res, err := s.col("notificacoes").InsertOne(ctx, n)
+	if err != nil {
+		return err
+	}
+	n.ID = res.InsertedID.(primitive.ObjectID)
+	return nil
+}
+
+func (s *MongoStore) GetNotificacao(ctx context.Context, id primitive.ObjectID) (*domain.Notificacao, error) {
+	var n domain.Notificacao
+	err := s.col("notificacoes").FindOne(ctx, bson.M{"_id": id}).Decode(&n)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, mongoErrNotFound()
+		}
+		return nil, err
+	}
+	return &n, nil
+}
+
+func (s *MongoStore) MarcarNotificacaoLida(ctx context.Context, id, colaboradorID primitive.ObjectID) error {
+	result, err := s.col("notificacoes").UpdateOne(
+		ctx,
+		bson.M{"_id": id, "destinatarioColaboradorId": colaboradorID},
+		bson.M{"$set": bson.M{"lida": true}},
+	)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) UpsertPushToken(ctx context.Context, colaboradorID primitive.ObjectID, token, platform string) error {
+	now := time.Now().UTC()
+	_, err := s.col("push_tokens").DeleteMany(ctx, bson.M{
+		"colaboradorId": colaboradorID,
+		"platform":      platform,
+		"token":         bson.M{"$ne": token},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = s.col("push_tokens").UpdateOne(
+		ctx,
+		bson.M{"token": token},
+		bson.M{
+			"$set": bson.M{
+				"colaboradorId": colaboradorID,
+				"platform":      platform,
+				"updatedAt":     now,
+			},
+			"$setOnInsert": bson.M{
+				"_id": primitive.NewObjectID(),
+			},
+		},
+		options.Update().SetUpsert(true),
+	)
+	return err
+}
+
+func (s *MongoStore) DeletePushToken(ctx context.Context, colaboradorID primitive.ObjectID, token string) error {
+	result, err := s.col("push_tokens").DeleteOne(ctx, bson.M{
+		"token":         token,
+		"colaboradorId": colaboradorID,
+	})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongoErrNotFound()
+	}
+	return nil
+}
+
+func (s *MongoStore) ListPushTokens(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.PushToken, error) {
+	cur, err := s.col("push_tokens").Find(ctx, bson.M{"colaboradorId": colaboradorID})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var out []domain.PushToken
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *MongoStore) ListAllPushTokens(ctx context.Context) ([]domain.PushToken, error) {
+	cur, err := s.col("push_tokens").Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var out []domain.PushToken
+	if err := cur.All(ctx, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (s *MongoStore) CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error {

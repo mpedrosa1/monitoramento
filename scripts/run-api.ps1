@@ -56,6 +56,18 @@ if (Test-Path $envFile) {
   Copy-Item $envFile (Join-Path $build ".env") -Force
 }
 
+$firebaseCandidates = @(
+  (Join-Path $root "firebase-service-account.json"),
+  (Join-Path $src "firebase-service-account.json")
+)
+foreach ($firebase in $firebaseCandidates) {
+  if (Test-Path $firebase) {
+    Copy-Item $firebase (Join-Path $build "firebase-service-account.json") -Force
+    Write-Host "Firebase credentials: $firebase"
+    break
+  }
+}
+
 function Remove-Utf8Bom([string]$path) {
   if (-not (Test-Path $path)) { return }
   $bytes = [System.IO.File]::ReadAllBytes($path)

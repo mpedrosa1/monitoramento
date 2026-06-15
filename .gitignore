@@ -10,6 +10,8 @@ apps/web/.env.local
 services/api/.env
 services/api/vendor/
 services/api/api.exe
+firebase-service-account.json
+*-firebase-adminsdk-*.json
 .DS_Store
 Thumbs.db
 .idea/

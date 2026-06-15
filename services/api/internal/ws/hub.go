@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/mmrtec/monitoramento/api/internal/auth"
 	"github.com/mmrtec/monitoramento/api/internal/cache"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 )
@@ -42,9 +43,10 @@ type Hub struct {
 }
 
 type client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	hub           *Hub
+	conn          *websocket.Conn
+	send          chan []byte
+	colaboradorID string
 }
 
 func NewHub(state *cache.StateCache) *Hub {
@@ -99,6 +101,27 @@ func (h *Hub) BroadcastUpdate(metric domain.DeviceMetric) {
 	}
 }
 
+func (h *Hub) NotifyColaborador(colaboradorID string, msg Message) {
+	if colaboradorID == "" {
+		return
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		if c.colaboradorID != colaboradorID {
+			continue
+		}
+		select {
+		case c.send <- data:
+		default:
+		}
+	}
+}
+
 func (h *Hub) sendSnapshot(c *client) {
 	payload := h.cache.Snapshot()
 	msg, err := json.Marshal(Message{Type: "snapshot", Payload: payload})
@@ -112,11 +135,15 @@ func (h *Hub) sendSnapshot(c *client) {
 }
 
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	colaboradorID := ""
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		colaboradorID = claims.ColaboradorID
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
-	c := &client{hub: h, conn: conn, send: make(chan []byte, 256)}
+	c := &client{hub: h, conn: conn, send: make(chan []byte, 256), colaboradorID: colaboradorID}
 	h.register <- c
 	go c.writePump()
 	go c.readPump()
