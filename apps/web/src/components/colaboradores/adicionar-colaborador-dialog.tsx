@@ -14,6 +14,8 @@ import {
   type ColaboradorFormState,
 } from "@/lib/colaborador-form";
 import type { Colaborador } from "@/lib/types";
+import { useAuth } from "@/components/auth-provider";
+import { resolveAuthUserPermissoes, resolveAuthUserTipoAcesso } from "@/lib/auth-session";
 import { ColaboradorFormFields } from "@/components/colaboradores/colaborador-form-fields";
 import { FormErroDialog } from "@/components/colaboradores/form-erro-dialog";
 import { SenhaInicialColaboradorDialog } from "@/components/colaboradores/senha-inicial-colaborador-dialog";
@@ -42,6 +44,7 @@ export function AdicionarColaboradorDialog({
   } | null>(null);
   const [erroApi, setErroApi] = useState<string | null>(null);
   const estavaAberto = useRef(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && !estavaAberto.current) {
@@ -57,7 +60,10 @@ export function AdicionarColaboradorDialog({
   }
 
   async function salvar() {
-    const validation = validateColaboradorForm(form);
+    const validation = validateColaboradorForm(form, {
+      editorTipoAcesso: resolveAuthUserTipoAcesso(user),
+      editorPermissoesAdmin: resolveAuthUserPermissoes(user),
+    });
     if (hasColaboradorFormErrors(validation)) {
       setErrors(validation);
       scrollToFirstColaboradorFormError(validation);
@@ -88,7 +94,7 @@ export function AdicionarColaboradorDialog({
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button />}>Adicionar colaborador</DialogTrigger>
-        <DialogContent className="max-h-[92vh] w-full max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-2xl lg:max-w-3xl">
+        <DialogContent className="flex max-h-[92vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-2xl lg:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Novo colaborador</DialogTitle>
           </DialogHeader>

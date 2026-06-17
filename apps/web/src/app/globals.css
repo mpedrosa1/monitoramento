@@ -134,10 +134,14 @@
     font-family: var(--font-app-sans), ui-sans-serif, system-ui, sans-serif;
     color-scheme: dark;
     scrollbar-gutter: stable;
+    overflow-x: hidden;
+    max-width: 100%;
   }
   body {
     @apply bg-background text-foreground;
     font-family: inherit;
+    overflow-x: hidden;
+    max-width: 100%;
   }
   * {
     scrollbar-width: thin;

@@ -1,9 +1,20 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Menu } from "@base-ui/react/menu";
-import { Bell, ChevronDown, ChevronLeft, LogOut, User } from "lucide-react";
+import {
+  Bell,
+  ChevronDown,
+  ChevronLeft,
+  LogOut,
+  Moon,
+  Receipt,
+  Sun,
+  User,
+} from "lucide-react";
 import type { AuthUser } from "@/lib/auth-session";
+import { useTheme } from "@/components/theme-provider";
 import { NotificationsPanel } from "@/components/notifications/notifications-panel";
 import { useNotifications } from "@/components/notifications/notifications-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -108,9 +119,12 @@ export function DashboardUserMenu({
   user: AuthUser;
   onLogout: () => void;
 }) {
+  const router = useRouter();
   const { naoLidas, refresh } = useNotifications();
+  const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"menu" | "notificacoes">("menu");
+  const isDark = theme === "dark";
 
   function openNotificacoes() {
     setView("notificacoes");
@@ -197,8 +211,47 @@ export function DashboardUserMenu({
                   icon={<User className="h-5 w-5 text-muted-foreground" />}
                   iconClassName="bg-muted"
                   title="Meus Dados"
-                  subtitle="Perfil e segurança"
+                  subtitle="Ver minha ficha"
+                  onClick={() => router.push("/dashboard/meus-dados")}
                 />
+
+                <MenuActionItem
+                  icon={<Receipt className="h-5 w-5 text-emerald-600" />}
+                  iconClassName="bg-emerald-500/10"
+                  title="Registrar despesa"
+                  subtitle="Mobilidade e livre"
+                  onClick={() => router.push("/dashboard/registrar-despesa")}
+                />
+
+                <Separator />
+
+                <Menu.Item
+                  closeOnClick={false}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left outline-none",
+                    "data-[highlighted]:bg-muted/60"
+                  )}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    toggleTheme();
+                  }}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    {isDark ? (
+                      <Sun className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-indigo-500" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-tight">
+                      {isDark ? "Modo claro" : "Modo escuro"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Tema atual: {isDark ? "escuro" : "claro"}
+                    </p>
+                  </div>
+                </Menu.Item>
 
                 <Separator />
 

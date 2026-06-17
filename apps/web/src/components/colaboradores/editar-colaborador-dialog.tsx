@@ -13,6 +13,8 @@ import {
   type ColaboradorFormState,
 } from "@/lib/colaborador-form";
 import type { Colaborador } from "@/lib/types";
+import { useAuth } from "@/components/auth-provider";
+import { resolveAuthUserPermissoes, resolveAuthUserTipoAcesso } from "@/lib/auth-session";
 import { ColaboradorFormFields } from "@/components/colaboradores/colaborador-form-fields";
 import { FormErroDialog } from "@/components/colaboradores/form-erro-dialog";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,7 @@ export function EditarColaboradorDialog({
   );
   const [errors, setErrors] = useState<ColaboradorFormErrors>({});
   const [erroApi, setErroApi] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && colaborador) {
@@ -56,7 +59,11 @@ export function EditarColaboradorDialog({
 
   async function salvar() {
     if (!colaborador) return;
-    const validation = validateColaboradorForm(form);
+    const validation = validateColaboradorForm(form, {
+      editorTipoAcesso: resolveAuthUserTipoAcesso(user),
+      editorPermissoesAdmin: resolveAuthUserPermissoes(user),
+      colaboradorExistente: colaborador,
+    });
     if (hasColaboradorFormErrors(validation)) {
       setErrors(validation);
       scrollToFirstColaboradorFormError(validation);
@@ -83,7 +90,7 @@ export function EditarColaboradorDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92vh] w-full max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-2xl lg:max-w-3xl">
+        <DialogContent className="flex max-h-[92vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-2xl lg:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               Editar colaborador

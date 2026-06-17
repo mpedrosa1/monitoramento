@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { AUTH_COOKIE_NAME, jwtExpiresAtMs, jwtTipoAcesso } from "@/lib/auth-session";
+import { AUTH_COOKIE_NAME, jwtExpiresAtMs, jwtPermissoesAdmin, jwtTipoAcesso } from "@/lib/auth-session";
 import { canManageData } from "@/lib/permissions";
 import type { TipoAcessoSistema } from "@/lib/types";
 
@@ -33,9 +33,30 @@ export async function assertCanUploadColaboradorFoto(
   }
 
   const tipoAcesso = jwtTipoAcesso(token) as TipoAcessoSistema | null;
-  if (!canManageData(tipoAcesso)) {
+  const permissoesAdmin = jwtPermissoesAdmin(token);
+  if (!canManageData(tipoAcesso, permissoesAdmin ?? undefined)) {
     throw new Response(JSON.stringify({ error: "Sem permissão para enviar foto." }), {
       status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+export async function assertAuthenticatedUser(
+  request: Request
+): Promise<void> {
+  const token = await tokenFromRequest(request);
+  if (!token) {
+    throw new Response(JSON.stringify({ error: "Não autenticado." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const exp = jwtExpiresAtMs(token);
+  if (!exp || exp <= Date.now()) {
+    throw new Response(JSON.stringify({ error: "Sessão expirada." }), {
+      status: 401,
       headers: { "Content-Type": "application/json" },
     });
   }

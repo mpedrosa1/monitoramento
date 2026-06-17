@@ -1,46 +1,64 @@
 import { missaoIniciada } from "@/lib/missoes";
-import type { Chamado, Missao, TipoAcessoSistema } from "@/lib/types";
+import {
+  canAccessRecursosHumanos as canAccessRH,
+  canManagePadrao,
+  canManageRecargas,
+  canViewFinanceiro,
+  isDesenvolvedor,
+  isMaster,
+  resolvePermissoes,
+} from "@/lib/acesso";
+import type { Chamado, Missao, PermissoesAdmin, TipoAcessoSistema } from "@/lib/types";
 
-function isAdministrador(
-  tipoAcesso: TipoAcessoSistema | undefined | null
-): boolean {
-  return (
-    tipoAcesso === "admin_com_financeiro" ||
-    tipoAcesso === "admin_sem_financeiro"
-  );
+type AcessoContext = {
+  tipoAcesso?: TipoAcessoSistema | string | null;
+  permissoesAdmin?: PermissoesAdmin | null;
+};
+
+function ctx(tipoAcesso?: TipoAcessoSistema | string | null, permissoesAdmin?: PermissoesAdmin | null): AcessoContext {
+  return { tipoAcesso, permissoesAdmin };
 }
 
-/** Somente administradores — CRUD na página Missões. */
+/** Somente administradores com Padrão — CRUD na página Missões. */
 export function canManageMissoes(
-  tipoAcesso: TipoAcessoSistema | undefined | null
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return isAdministrador(tipoAcesso);
+  return canManagePadrao(tipoAcesso, permissoesAdmin);
 }
 
-/** Administradores e desenvolvedores — vincular e editar equipamentos na unidade. */
+/** Administradores com Padrão — vincular e editar equipamentos na unidade. */
 export function canManageEquipamentosUnidade(
-  tipoAcesso: TipoAcessoSistema | undefined | null
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return isAdministrador(tipoAcesso) || tipoAcesso === "desenvolvedor";
+  return canManagePadrao(tipoAcesso, permissoesAdmin);
 }
 
-/** Administradores e desenvolvedores — podem gerenciar cadastros. */
+/** Administradores com Padrão — podem gerenciar cadastros. */
 export function canManageData(
-  tipoAcesso: TipoAcessoSistema | undefined | null
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return (
-    tipoAcesso === "admin_com_financeiro" ||
-    tipoAcesso === "admin_sem_financeiro" ||
-    tipoAcesso === "desenvolvedor"
-  );
+  return canManagePadrao(tipoAcesso, permissoesAdmin);
 }
 
-/** Página de equipamentos — mesmo critério dos administradores. */
+/** Página de equipamentos — mesmo critério do Padrão. */
 export function canAccessEquipamentos(
-  tipoAcesso: TipoAcessoSistema | undefined | null
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canManageData(tipoAcesso);
+  return canManagePadrao(tipoAcesso, permissoesAdmin);
 }
+
+export function canAccessRecursosHumanos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return canAccessRH(tipoAcesso, permissoesAdmin);
+}
+
+export { canManageRecargas, canViewFinanceiro, isDesenvolvedor, isMaster, resolvePermissoes };
 
 /** Colaborador logado faz parte da missão (registro Missao). */
 export function isAtribuidoMissaoDireta(
@@ -61,18 +79,18 @@ export function canIniciarMissao(
 }
 
 /**
- * Concluir missão em andamento: administradores/desenvolvedores ou
- * colaborador atribuído à missão. Missões ainda não iniciadas
- * (agendadas) não podem ser concluídas.
+ * Concluir missão em andamento: administradores ou
+ * colaborador atribuído à missão.
  */
 export function canConcluirMissao(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   colaboradorId: string | undefined,
   missao: Missao | null | undefined,
-  chamado?: Chamado | null
+  chamado?: Chamado | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
   if (!missao || !missaoIniciada(missao, chamado)) return false;
-  if (canManageData(tipoAcesso)) return true;
+  if (canManagePadrao(tipoAcesso, permissoesAdmin)) return true;
   return isAtribuidoMissaoDireta(colaboradorId, missao);
 }
 
@@ -86,15 +104,18 @@ export function isAtribuidoMissao(
 }
 
 /**
- * Encerrar chamado em andamento: administradores/desenvolvedores ou
+ * Encerrar chamado em andamento: administradores ou
  * colaborador atribuído à missão.
  */
 export function canEncerrarChamado(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   colaboradorId: string | undefined,
-  chamado: Chamado | null | undefined
+  chamado: Chamado | null | undefined,
+  permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
   if (!chamado || chamado.status !== "em_andamento") return false;
-  if (canManageData(tipoAcesso)) return true;
+  if (canManagePadrao(tipoAcesso, permissoesAdmin)) return true;
   return isAtribuidoMissao(colaboradorId, chamado);
 }
+
+export type { AcessoContext };

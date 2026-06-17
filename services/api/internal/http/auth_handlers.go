@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mmrtec/monitoramento/api/internal/auth"
+	"github.com/mmrtec/monitoramento/api/internal/domain"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -17,12 +18,13 @@ type loginRequest struct {
 }
 
 type authUserResponse struct {
-	ID         string    `json:"id"`
-	Nome       string    `json:"nome"`
-	Email      string    `json:"email"`
-	TipoAcesso string    `json:"tipoAcesso"`
-	Cpf          string `json:"cpf,omitempty"`
-	DataAdmissao string `json:"dataAdmissao,omitempty"`
+	ID              string                  `json:"id"`
+	Nome            string                  `json:"nome"`
+	Email           string                  `json:"email"`
+	TipoAcesso      string                  `json:"tipoAcesso"`
+	PermissoesAdmin *domain.PermissoesAdmin `json:"permissoesAdmin,omitempty"`
+	Cpf             string                  `json:"cpf,omitempty"`
+	DataAdmissao    string                  `json:"dataAdmissao,omitempty"`
 }
 
 type loginResponse struct {
@@ -73,12 +75,13 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 		Token:     token,
 		ExpiresAt: expiresAt,
 		User: authUserResponse{
-			ID:         colab.ID.Hex(),
-			Nome:       colab.Nome,
-			Email:      loginEmail,
-			TipoAcesso: string(colab.TipoAcesso),
-			Cpf:          colab.CPF,
-			DataAdmissao: colab.DataAdmissao,
+			ID:              colab.ID.Hex(),
+			Nome:            colab.Nome,
+			Email:           loginEmail,
+			TipoAcesso:      string(colab.TipoAcesso),
+			PermissoesAdmin: colab.PermissoesAdmin,
+			Cpf:             colab.CPF,
+			DataAdmissao:    colab.DataAdmissao,
 		},
 	})
 }
@@ -108,11 +111,12 @@ func (a *API) Me(w http.ResponseWriter, r *http.Request) {
 		email = colab.Email
 	}
 	writeJSON(w, http.StatusOK, authUserResponse{
-		ID:         colab.ID.Hex(),
-		Nome:       colab.Nome,
-		Email:      email,
-		TipoAcesso: string(colab.TipoAcesso),
-		Cpf:          colab.CPF,
-		DataAdmissao: colab.DataAdmissao,
+		ID:              colab.ID.Hex(),
+		Nome:            colab.Nome,
+		Email:           email,
+		TipoAcesso:      string(colab.TipoAcesso),
+		PermissoesAdmin: colab.PermissoesAdmin,
+		Cpf:             colab.CPF,
+		DataAdmissao:    colab.DataAdmissao,
 	})
 }

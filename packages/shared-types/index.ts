@@ -194,9 +194,19 @@ export type LocalTrabalho =
 
 export type TipoAcessoSistema =
   | "usuario"
+  | "administrador"
   | "admin_com_financeiro"
   | "admin_sem_financeiro"
   | "desenvolvedor";
+
+export interface PermissoesAdmin {
+  padrao: boolean;
+  gestaoRecargas: boolean;
+  financeiro: boolean;
+  master: boolean;
+  /** @deprecated legado — use master */
+  desenvolvedor?: boolean;
+}
 
 export interface ColaboradorEndereco {
   cep: string;
@@ -228,6 +238,8 @@ export interface Colaborador {
   estadoCivil?: EstadoCivil;
   conjuge?: string;
   conjugeCpf?: string;
+  conjugeDataNascimento?: string;
+  conjugeDependente?: boolean;
   dependentes?: ColaboradorDependente[];
   endereco?: ColaboradorEndereco;
   cargo?: string;
@@ -237,11 +249,107 @@ export interface Colaborador {
   emailCorporativo?: string;
   salario?: number;
   tipoAcesso?: TipoAcessoSistema;
+  permissoesAdmin?: PermissoesAdmin;
   /** Status operacional (presença / missão) — não exibido no cadastro. */
   status: ColaboradorStatus;
   unidadeId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EscalaTrabalho {
+  id: string;
+  nome: string;
+  tipo: string;
+  horaInicio?: string;
+  horaFim?: string;
+  cor?: string;
+  observacao?: string;
+  colaboradorIds: string[];
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Sobreaviso {
+  id: string;
+  colaboradorId: string;
+  escalaId?: string;
+  dataInicio: string;
+  horaInicio?: string;
+  dataFim: string;
+  horaFim?: string;
+  observacao?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EscalaSobreavisoDefinida {
+  id: string;
+  competencia: string;
+  definidaPor?: string;
+  totalNotificados: number;
+  definidaEm: string;
+}
+
+export type ModalidadeDespesa = "mobilidade" | "livre";
+
+export type CategoriaDespesa =
+  | "combustivel"
+  | "transporte_app"
+  | "ferramentas"
+  | "materiais"
+  | "consumiveis";
+
+export type AppTransporte = "uber" | "99" | "indrive" | "outro";
+
+export interface Despesa {
+  id: string;
+  colaboradorId: string;
+  modalidade: ModalidadeDespesa;
+  categoria: CategoriaDespesa;
+  valor: number;
+  data: string;
+  competencia: string;
+  descricao?: string;
+  comprovanteUrl?: string;
+  hora?: string;
+  veiculoId?: string;
+  veiculoPessoal?: boolean;
+  placa?: string;
+  hodometro?: number;
+  appTransporte?: AppTransporte;
+  appTransporteOutro?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DespesaResumoModalidade {
+  deposito: number;
+  gasto: number;
+  saldoAnterior: number;
+  saldo: number;
+  saldoAjustado?: boolean;
+  ajustadoEm?: string;
+}
+
+export interface DepositoDespesa {
+  id: string;
+  colaboradorId: string;
+  /** yyyy-mm */
+  competencia: string;
+  modalidade: ModalidadeDespesa;
+  valor: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DespesasMeResponse {
+  competencia: string;
+  mobilidade: DespesaResumoModalidade;
+  livre: DespesaResumoModalidade;
+  depositos: DepositoDespesa[];
+  despesas: Despesa[];
 }
 
 export interface Veiculo {

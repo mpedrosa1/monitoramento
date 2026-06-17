@@ -23,6 +23,21 @@ type Store interface {
 	UpdateColaborador(ctx context.Context, c *domain.Colaborador) error
 	DeleteColaborador(ctx context.Context, id primitive.ObjectID) error
 
+	ListEscalas(ctx context.Context) ([]domain.EscalaTrabalho, error)
+	GetEscala(ctx context.Context, id primitive.ObjectID) (*domain.EscalaTrabalho, error)
+	CreateEscala(ctx context.Context, e *domain.EscalaTrabalho) error
+	UpdateEscala(ctx context.Context, e *domain.EscalaTrabalho) error
+	DeleteEscala(ctx context.Context, id primitive.ObjectID) error
+
+	ListSobreavisos(ctx context.Context) ([]domain.Sobreaviso, error)
+	GetSobreaviso(ctx context.Context, id primitive.ObjectID) (*domain.Sobreaviso, error)
+	CreateSobreaviso(ctx context.Context, s *domain.Sobreaviso) error
+	UpdateSobreaviso(ctx context.Context, s *domain.Sobreaviso) error
+	DeleteSobreaviso(ctx context.Context, id primitive.ObjectID) error
+
+	ListDefinicoesSobreaviso(ctx context.Context) ([]domain.EscalaSobreavisoDefinida, error)
+	UpsertDefinicaoSobreaviso(ctx context.Context, d *domain.EscalaSobreavisoDefinida) error
+
 	ListChamados(ctx context.Context, limit int) ([]domain.Chamado, error)
 	GetChamado(ctx context.Context, id primitive.ObjectID) (*domain.Chamado, error)
 	CreateChamado(ctx context.Context, c *domain.Chamado) error
@@ -70,6 +85,21 @@ type Store interface {
 
 	CreateEvento(ctx context.Context, e *domain.EventoMonitoramento) error
 	ListEventos(ctx context.Context, limit int) ([]domain.EventoMonitoramento, error)
+
+	ListDespesasByColaborador(ctx context.Context, colaboradorID primitive.ObjectID, competencia string) ([]domain.Despesa, error)
+	ListAllDespesas(ctx context.Context, competencia string) ([]domain.Despesa, error)
+	GetDespesa(ctx context.Context, id primitive.ObjectID) (*domain.Despesa, error)
+	CreateDespesa(ctx context.Context, d *domain.Despesa) error
+	UpdateDespesa(ctx context.Context, d *domain.Despesa) error
+	DeleteDespesa(ctx context.Context, id primitive.ObjectID) error
+
+	ListDepositosDespesa(ctx context.Context, colaboradorID primitive.ObjectID, competencia string) ([]domain.DepositoDespesa, error)
+	ListAllDepositosDespesa(ctx context.Context, competencia string) ([]domain.DepositoDespesa, error)
+	UpsertDepositoDespesa(ctx context.Context, d *domain.DepositoDespesa) error
+
+	ListAjustesSaldoDespesa(ctx context.Context, colaboradorID primitive.ObjectID) ([]domain.AjusteSaldoDespesa, error)
+	ListAllAjustesSaldoDespesa(ctx context.Context) ([]domain.AjusteSaldoDespesa, error)
+	UpsertAjusteSaldoDespesa(ctx context.Context, a *domain.AjusteSaldoDespesa) error
 
 	DashboardSummary(ctx context.Context) (*domain.DashboardSummary, error)
 }

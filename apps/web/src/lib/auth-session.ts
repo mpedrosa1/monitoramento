@@ -1,4 +1,4 @@
-import type { TipoAcessoSistema } from "@/lib/types";
+import type { PermissoesAdmin, TipoAcessoSistema } from "@/lib/types";
 
 export const AUTH_STORAGE_KEY = "mmrtec_auth";
 export const AUTH_COOKIE_NAME = "mmrtec_token";
@@ -9,6 +9,7 @@ export type AuthUser = {
   nome: string;
   email: string;
   tipoAcesso: TipoAcessoSistema;
+  permissoesAdmin?: PermissoesAdmin;
   cpf?: string;
   dataAdmissao?: string;
 };
@@ -55,12 +56,23 @@ export function loadAuthSession(): AuthSession | null {
       clearAuthSession();
       return null;
     }
+    let changed = false;
     if (!session.user.tipoAcesso) {
       const tipo = jwtTipoAcesso(session.token);
       if (tipo) {
         session.user.tipoAcesso = tipo;
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+        changed = true;
       }
+    }
+    if (!session.user.permissoesAdmin) {
+      const perm = jwtPermissoesAdmin(session.token);
+      if (perm) {
+        session.user.permissoesAdmin = perm;
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
     }
     return session;
   } catch {
@@ -90,19 +102,38 @@ export function jwtExpiresAtMs(token: string): number | null {
   return typeof exp === "number" ? exp * 1000 : null;
 }
 
+const TIPOS_ACESSO: TipoAcessoSistema[] = [
+  "usuario",
+  "administrador",
+  "admin_com_financeiro",
+  "admin_sem_financeiro",
+  "desenvolvedor",
+];
+
 /** Tipo de acesso no JWT (fallback quando a sessão local não tem o campo). */
 export function jwtTipoAcesso(token: string): TipoAcessoSistema | null {
   const data = decodeJwtPayload(token);
   const tipo = data?.tipoAcesso;
-  if (
-    tipo === "usuario" ||
-    tipo === "admin_com_financeiro" ||
-    tipo === "admin_sem_financeiro" ||
-    tipo === "desenvolvedor"
-  ) {
-    return tipo;
+  if (typeof tipo === "string" && TIPOS_ACESSO.includes(tipo as TipoAcessoSistema)) {
+    return tipo as TipoAcessoSistema;
   }
   return null;
+}
+
+function parsePermissoesAdmin(value: unknown): PermissoesAdmin | null {
+  if (!value || typeof value !== "object") return null;
+  const p = value as Record<string, unknown>;
+  return {
+    padrao: p.padrao === true,
+    gestaoRecargas: p.gestaoRecargas === true,
+    financeiro: p.financeiro === true,
+    master: p.master === true || p.desenvolvedor === true,
+  };
+}
+
+export function jwtPermissoesAdmin(token: string): PermissoesAdmin | null {
+  const data = decodeJwtPayload(token);
+  return parsePermissoesAdmin(data?.permissoesAdmin);
 }
 
 export function resolveAuthUserTipoAcesso(
@@ -112,4 +143,13 @@ export function resolveAuthUserTipoAcesso(
   const token = getAuthToken();
   if (!token) return undefined;
   return jwtTipoAcesso(token) ?? undefined;
+}
+
+export function resolveAuthUserPermissoes(
+  user: AuthUser | null | undefined
+): PermissoesAdmin | undefined {
+  if (user?.permissoesAdmin) return user.permissoesAdmin;
+  const token = getAuthToken();
+  if (!token) return undefined;
+  return jwtPermissoesAdmin(token) ?? undefined;
 }

@@ -145,7 +145,8 @@ export function MissaoDetailDialog({
     user?.tipoAcesso,
     user?.id,
     missao,
-    chamadoVinculado
+    chamadoVinculado,
+    user?.permissoesAdmin
   );
 
   const exibirConcluirMissao =

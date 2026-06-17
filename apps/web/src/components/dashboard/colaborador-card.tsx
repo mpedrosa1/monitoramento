@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Pencil, Shield, Trash2 } from "lucide-react";
 import { COLABORADOR_AVATAR_PADRAO } from "@/lib/colaborador-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,10 +36,13 @@ export function ColaboradorCard({
   const cargo = colaborador.cargo?.trim() || "Colaborador";
 
   return (
-    <article
+    <Link
+      href={`/dashboard/colaboradores/${colaborador.id}`}
+      aria-label={`Ver perfil de ${colaborador.nome}`}
       className={cn(
         "group relative mx-auto flex w-full max-w-[220px] flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all",
-        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10"
+        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       )}
     >
       {/* furo do cordão */}
@@ -59,7 +63,11 @@ export function ColaboradorCard({
                 variant="ghost"
                 size="icon-sm"
                 className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
-                onClick={() => onEdit(colaborador)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit(colaborador);
+                }}
                 aria-label={`Editar ${colaborador.nome}`}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -71,7 +79,11 @@ export function ColaboradorCard({
                 variant="ghost"
                 size="icon-sm"
                 className="h-7 w-7 text-primary-foreground hover:bg-destructive/20 hover:text-red-100"
-                onClick={() => onDelete(colaborador)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(colaborador);
+                }}
                 disabled={deleting}
                 aria-label={`Excluir ${colaborador.nome}`}
               >
@@ -127,6 +139,6 @@ export function ColaboradorCard({
           RG {colaborador.rg?.trim() || "—"}
         </p>
       </div>
-    </article>
+    </Link>
   );
 }

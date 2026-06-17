@@ -1,23 +1,21 @@
-import { TIPO_ACESSO_OPCOES } from "@/lib/colaborador-form";
+import { labelPermissoesAdmin } from "@/lib/acesso";
 import type {
   ChamadoStatus,
   ColaboradorStatus,
   MissaoStatus,
   SnmpTipoDado,
   SnmpTipoSelecao,
+  PermissoesAdmin,
   TipoAcessoSistema,
   TipoEquipamento,
   TipoMonitoramento,
 } from "./types";
 
 export function labelTipoAcesso(
-  tipo: TipoAcessoSistema | string | undefined | null
+  tipo: TipoAcessoSistema | string | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
 ): string {
-  if (!tipo) return "Tipo não identificado";
-  return (
-    TIPO_ACESSO_OPCOES.find((o) => o.value === tipo)?.label ??
-    "Tipo não identificado"
-  );
+  return labelPermissoesAdmin(tipo, permissoesAdmin);
 }
 
 export const chamadoStatusLabel: Record<ChamadoStatus, string> = {

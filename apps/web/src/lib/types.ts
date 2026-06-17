@@ -194,9 +194,19 @@ export type LocalTrabalho =
 
 export type TipoAcessoSistema =
   | "usuario"
+  | "administrador"
   | "admin_com_financeiro"
   | "admin_sem_financeiro"
   | "desenvolvedor";
+
+export interface PermissoesAdmin {
+  padrao: boolean;
+  gestaoRecargas: boolean;
+  financeiro: boolean;
+  master: boolean;
+  /** @deprecated legado — use master */
+  desenvolvedor?: boolean;
+}
 
 export interface ColaboradorEndereco {
   cep: string;
@@ -228,6 +238,8 @@ export interface Colaborador {
   estadoCivil?: EstadoCivil;
   conjuge?: string;
   conjugeCpf?: string;
+  conjugeDataNascimento?: string;
+  conjugeDependente?: boolean;
   dependentes?: ColaboradorDependente[];
   endereco?: ColaboradorEndereco;
   cargo?: string;
@@ -237,11 +249,136 @@ export interface Colaborador {
   emailCorporativo?: string;
   salario?: number;
   tipoAcesso?: TipoAcessoSistema;
+  permissoesAdmin?: PermissoesAdmin;
   /** Status operacional (presença / missão) — não exibido no cadastro. */
   status: ColaboradorStatus;
   unidadeId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EscalaTrabalho {
+  id: string;
+  nome: string;
+  /** Ex.: "12x36", "24x48", "5x2", "6x1", "personalizada". */
+  tipo: string;
+  horaInicio?: string;
+  horaFim?: string;
+  cor?: string;
+  observacao?: string;
+  colaboradorIds: string[];
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Sobreaviso {
+  id: string;
+  colaboradorId: string;
+  escalaId?: string;
+  /** yyyy-mm-dd */
+  dataInicio: string;
+  /** HH:mm */
+  horaInicio?: string;
+  /** yyyy-mm-dd */
+  dataFim: string;
+  /** HH:mm */
+  horaFim?: string;
+  observacao?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EscalaSobreavisoDefinida {
+  id: string;
+  /** Competência no formato "yyyy-mm". */
+  competencia: string;
+  definidaPor?: string;
+  totalNotificados: number;
+  /** ISO datetime */
+  definidaEm: string;
+}
+
+export type ModalidadeDespesa = "mobilidade" | "livre";
+
+export type CategoriaDespesa =
+  | "combustivel"
+  | "transporte_app"
+  | "ferramentas"
+  | "materiais"
+  | "consumiveis";
+
+export type AppTransporte = "uber" | "99" | "indrive" | "outro";
+
+export interface Despesa {
+  id: string;
+  colaboradorId: string;
+  modalidade: ModalidadeDespesa;
+  categoria: CategoriaDespesa;
+  valor: number;
+  /** yyyy-mm-dd */
+  data: string;
+  /** yyyy-mm */
+  competencia: string;
+  descricao?: string;
+  comprovanteUrl?: string;
+  /** HH:mm — categoria combustível */
+  hora?: string;
+  veiculoId?: string;
+  veiculoPessoal?: boolean;
+  placa?: string;
+  hodometro?: number;
+  /** Categoria transporte por aplicativo */
+  appTransporte?: AppTransporte;
+  appTransporteOutro?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DespesaResumoModalidade {
+  deposito: number;
+  gasto: number;
+  saldoAnterior: number;
+  saldo: number;
+  saldoAjustado?: boolean;
+  ajustadoEm?: string;
+}
+
+export interface DepositoDespesa {
+  id: string;
+  colaboradorId: string;
+  /** yyyy-mm */
+  competencia: string;
+  modalidade: ModalidadeDespesa;
+  valor: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DespesasMeResponse {
+  competencia: string;
+  mobilidade: DespesaResumoModalidade;
+  livre: DespesaResumoModalidade;
+  depositos: DepositoDespesa[];
+  despesas: Despesa[];
+}
+
+export interface DespesaColaboradorResumoItem {
+  colaboradorId: string;
+  nome: string;
+  mobilidade: DespesaResumoModalidade;
+  livre: DespesaResumoModalidade;
+  totalGasto: number;
+}
+
+export interface DespesasResumoColaboradoresResponse {
+  competencia: string;
+  colaboradores: DespesaColaboradorResumoItem[];
+  totais: {
+    mobilidade: DespesaResumoModalidade;
+    livre: DespesaResumoModalidade;
+    totalGasto: number;
+  };
 }
 
 export interface Veiculo {

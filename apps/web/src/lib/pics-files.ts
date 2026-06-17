@@ -29,5 +29,13 @@ export function picsFilePathFromUrl(fotoUrl: string): string | null {
     return path.join(picsRootDir(), "veiculos", parts[1]);
   }
 
+  if (
+    parts.length === 2 &&
+    parts[0] === "despesas" &&
+    picsFotoFilenameSafe(parts[1])
+  ) {
+    return path.join(picsRootDir(), "despesas", parts[1]);
+  }
+
   return null;
 }

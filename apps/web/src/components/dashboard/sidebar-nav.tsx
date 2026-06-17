@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BriefcaseBusiness,
   Building2,
   Car,
   Cpu,
@@ -16,51 +17,85 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/dashboard", label: "Início", icon: Home, equipamentosOnly: false },
+  {
+    href: "/dashboard",
+    label: "Início",
+    icon: Home,
+    equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
+  },
   {
     href: "/dashboard/unidades",
     label: "Unidades Prisionais",
     icon: Building2,
     equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
   },
   {
     href: "/dashboard/equipamentos",
     label: "Equipamentos",
     icon: Cpu,
     equipamentosOnly: true,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
   },
   {
     href: "/dashboard/colaboradores",
     label: "Colaboradores",
     icon: Users,
     equipamentosOnly: false,
+    managePadraoOnly: true,
+    recursosHumanosOnly: false,
+  },
+  {
+    href: "/dashboard/recursos-humanos",
+    label: "Recursos Humanos",
+    icon: BriefcaseBusiness,
+    equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: true,
   },
   {
     href: "/dashboard/veiculos",
     label: "Veículos",
     icon: Car,
     equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
   },
   {
     href: "/dashboard/chamados",
     label: "Chamados",
     icon: Headphones,
     equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
   },
   {
     href: "/dashboard/missoes",
     label: "Missões",
     icon: MapPinned,
     equipamentosOnly: false,
+    managePadraoOnly: false,
+    recursosHumanosOnly: false,
   },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { canAccessEquipamentos } = usePermissions();
+  const {
+    canAccessEquipamentos,
+    canManageData,
+    canAccessRecursosHumanos,
+  } = usePermissions();
 
   const visibleItems = items.filter(
-    (item) => !item.equipamentosOnly || canAccessEquipamentos
+    (item) =>
+      (!item.equipamentosOnly || canAccessEquipamentos) &&
+      (!item.managePadraoOnly || canManageData) &&
+      (!item.recursosHumanosOnly || canAccessRecursosHumanos)
   );
 
   return (

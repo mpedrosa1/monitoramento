@@ -126,7 +126,8 @@ export function ChamadoDetailDialog({
   const podeEncerrar = canEncerrarChamado(
     user?.tipoAcesso,
     user?.id,
-    chamado
+    chamado,
+    user?.permissoesAdmin
   );
   const missaoEmAndamentoSemPermissaoEncerrar =
     chamado?.status === "em_andamento" && !podeEncerrar;
@@ -450,7 +451,7 @@ export function ChamadoDetailDialog({
               <Separator />
               <div className="rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
                 Este chamado aguarda atribuição de missão por um administrador
-                ou desenvolvedor.
+                ou administrador.
               </div>
             </>
           )}

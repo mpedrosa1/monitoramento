@@ -154,11 +154,11 @@ func (a *API) UpdateChamado(w http.ResponseWriter, r *http.Request, id string) {
 	c.ID = oid
 	c.CreatedAt = existing.CreatedAt
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
-		if domain.CanManageData(claims.TipoAcesso) {
-			// administradores e desenvolvedores: qualquer atualização permitida
+		if domain.CanManageData(claims.TipoAcesso, claims.PermissoesAdmin) {
+			// administradores: qualquer atualização permitida
 		} else if domain.IsEncerramentoChamado(*existing, c) {
 			cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
-			if err != nil || !domain.CanEncerrarChamado(claims.TipoAcesso, cid, *existing) {
+			if err != nil || !domain.CanEncerrarChamado(claims.TipoAcesso, claims.PermissoesAdmin, cid, *existing) {
 				writeError(w, http.StatusForbidden, "somente colaboradores atribuídos à missão ou administradores podem encerrar este chamado")
 				return
 			}
@@ -295,7 +295,41 @@ func (a *API) ListColaboradores(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if !domain.CanViewFinanceiro(claims.TipoAcesso, claims.PermissoesAdmin) {
+			for i := range list {
+				list[i].Salario = 0
+			}
+		}
+	}
 	writeJSONList(w, http.StatusOK, list)
+}
+
+// GetColaboradorMe retorna a ficha do próprio colaborador autenticado.
+// Disponível para qualquer usuário logado; não expõe o salário.
+func (a *API) GetColaboradorMe(w http.ResponseWriter, r *http.Request) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "não autenticado")
+		return
+	}
+	oid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "sessão inválida")
+		return
+	}
+	colab, err := a.Store.GetColaborador(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	colab.Salario = 0
+	colab.SenhaHash = ""
+	writeJSON(w, http.StatusOK, colab)
 }
 
 func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
@@ -321,6 +355,17 @@ func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.SenhaHash = senhaHash
+	if c.PermissoesAdmin != nil {
+		domain.NormalizePermissoesAdmin(c.PermissoesAdmin)
+	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if !domain.PermissoesAtribuicaoPermitida(
+			claims.TipoAcesso, claims.PermissoesAdmin, c.TipoAcesso, c.PermissoesAdmin, nil,
+		) {
+			writeError(w, http.StatusForbidden, "não é permitido atribuir permissões acima da sua hierarquia")
+			return
+		}
+	}
 	if err := a.Store.CreateColaborador(r.Context(), &c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -351,6 +396,17 @@ func (a *API) UpdateColaborador(w http.ResponseWriter, r *http.Request, id strin
 	c.ID = oid
 	c.CreatedAt = existing.CreatedAt
 	c.SenhaHash = existing.SenhaHash
+	if c.PermissoesAdmin != nil {
+		domain.NormalizePermissoesAdmin(c.PermissoesAdmin)
+	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if !domain.PermissoesAtribuicaoPermitida(
+			claims.TipoAcesso, claims.PermissoesAdmin, c.TipoAcesso, c.PermissoesAdmin, existing.PermissoesAdmin,
+		) {
+			writeError(w, http.StatusForbidden, "não é permitido atribuir permissões acima da sua hierarquia")
+			return
+		}
+	}
 	if err := a.Store.UpdateColaborador(r.Context(), &c); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -512,7 +568,7 @@ func (a *API) ConcluirMissao(w http.ResponseWriter, r *http.Request, id string) 
 		writeError(w, http.StatusForbidden, "sem permissão para concluir esta missão")
 		return
 	}
-	if !domain.CanConcluirMissao(claims.TipoAcesso, cid, *existing, chamadoVinculado) {
+	if !domain.CanConcluirMissao(claims.TipoAcesso, claims.PermissoesAdmin, cid, *existing, chamadoVinculado) {
 		writeError(w, http.StatusForbidden, "somente colaboradores atribuídos à missão ou administradores podem concluí-la")
 		return
 	}

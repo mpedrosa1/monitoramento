@@ -1,5 +1,10 @@
 import { COLABORADOR_AVATAR_PADRAO } from "./colaborador-avatar";
 import {
+  colaboradorAcessoToForm,
+  emptyPermissoesAdmin,
+  permissoesAtribuicaoPermitida,
+} from "./acesso";
+import {
   cpfDigits,
   formatCpfInput,
   formatRgInput,
@@ -19,6 +24,7 @@ import type {
   ColaboradorStatus,
   EstadoCivil,
   LocalTrabalho,
+  PermissoesAdmin,
   TipoAcessoSistema,
 } from "./types";
 
@@ -38,18 +44,10 @@ export const LOCAL_TRABALHO_OPCOES: { value: LocalTrabalho; label: string }[] =
     { value: "laboratorio", label: "Laboratório" },
   ];
 
-export const TIPO_ACESSO_OPCOES: { value: TipoAcessoSistema; label: string }[] =
+export const TIPO_ACESSO_OPCOES: { value: "usuario" | "administrador"; label: string }[] =
   [
     { value: "usuario", label: "Usuário" },
-    {
-      value: "admin_com_financeiro",
-      label: "Administrador (com acesso financeiro)",
-    },
-    {
-      value: "admin_sem_financeiro",
-      label: "Administrador (sem acesso financeiro)",
-    },
-    { value: "desenvolvedor", label: "Desenvolvedor" },
+    { value: "administrador", label: "Administrador" },
   ];
 
 export type DependenteForm = {
@@ -71,6 +69,8 @@ export type ColaboradorFormState = {
   estadoCivil: EstadoCivil | "";
   conjuge: string;
   conjugeCpf: string;
+  conjugeDataNascimento: string;
+  conjugeDependente: boolean;
   dependentes: DependenteForm[];
   endereco: ColaboradorEndereco;
   cargo: string;
@@ -79,7 +79,8 @@ export type ColaboradorFormState = {
   telefoneCorporativo: string;
   emailCorporativo: string;
   salario: string;
-  tipoAcesso: TipoAcessoSistema | "";
+  tipoAcesso: "usuario" | "administrador" | "";
+  permissoesAdmin: PermissoesAdmin;
 };
 
 function emptyEndereco(): ColaboradorEndereco {
@@ -122,6 +123,8 @@ export function emptyColaboradorForm(): ColaboradorFormState {
     estadoCivil: "",
     conjuge: "",
     conjugeCpf: "",
+    conjugeDataNascimento: "",
+    conjugeDependente: false,
     dependentes: [],
     endereco: emptyEndereco(),
     cargo: "",
@@ -131,6 +134,7 @@ export function emptyColaboradorForm(): ColaboradorFormState {
     emailCorporativo: "",
     salario: "",
     tipoAcesso: "",
+    permissoesAdmin: emptyPermissoesAdmin(),
   };
 }
 
@@ -146,6 +150,7 @@ export function senhaInicialFromDataNascimento(dataNascimento: string): string {
 
 export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
   if (!c) return emptyColaboradorForm();
+  const acesso = colaboradorAcessoToForm(c.tipoAcesso, c.permissoesAdmin);
   return {
     fotoUrl: c.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO,
     nome: c.nome ?? "",
@@ -158,6 +163,8 @@ export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
     estadoCivil: c.estadoCivil ?? "",
     conjuge: c.conjuge ?? "",
     conjugeCpf: c.conjugeCpf ?? "",
+    conjugeDataNascimento: c.conjugeDataNascimento ?? "",
+    conjugeDependente: c.conjugeDependente ?? false,
     dependentes: (c.dependentes ?? []).map((d) => ({
       localId: novoDependenteLocalId(),
       nome: d.nome ?? "",
@@ -171,7 +178,8 @@ export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
     telefoneCorporativo: c.telefoneCorporativo ?? "",
     emailCorporativo: c.emailCorporativo ?? "",
     salario: c.salario != null ? salarioNumeroParaInput(c.salario) : "",
-    tipoAcesso: c.tipoAcesso ?? "",
+    tipoAcesso: acesso.tipoAcesso,
+    permissoesAdmin: acesso.permissoesAdmin,
   };
 }
 
@@ -234,6 +242,10 @@ export function scrollToFirstColaboradorFormError(
 ): void {
   const firstKey = Object.keys(errors)[0];
   if (!firstKey) return;
+  // Permite que UIs com abas/steps ativem a seção correta antes do scroll.
+  window.dispatchEvent(
+    new CustomEvent("colaborador-form:focus-field", { detail: { fieldKey: firstKey } })
+  );
   requestAnimationFrame(() => {
     document
       .querySelector(`[data-field="${firstKey}"]`)
@@ -241,8 +253,15 @@ export function scrollToFirstColaboradorFormError(
   });
 }
 
+export type ColaboradorFormValidateOptions = {
+  editorTipoAcesso?: TipoAcessoSistema;
+  editorPermissoesAdmin?: PermissoesAdmin;
+  colaboradorExistente?: Colaborador | null;
+};
+
 export function validateColaboradorForm(
-  form: ColaboradorFormState
+  form: ColaboradorFormState,
+  opts?: ColaboradorFormValidateOptions
 ): ColaboradorFormErrors {
   const errors: ColaboradorFormErrors = {};
 
@@ -261,8 +280,12 @@ export function validateColaboradorForm(
   if (form.estadoCivil === "casado" && !form.conjuge.trim()) {
     errors.conjuge = "Informe o nome do cônjuge.";
   }
-  if (form.estadoCivil === "casado" && !isCpfComplete(form.conjugeCpf)) {
-    errors.conjugeCpf = "Informe o CPF do cônjuge.";
+  if (
+    form.estadoCivil === "casado" &&
+    form.conjugeCpf.trim() &&
+    !isCpfComplete(form.conjugeCpf)
+  ) {
+    errors.conjugeCpf = "Informe um CPF válido para o cônjuge.";
   }
 
   for (let i = 0; i < form.dependentes.length; i++) {
@@ -317,6 +340,28 @@ export function validateColaboradorForm(
   if (!form.tipoAcesso) {
     errors.tipoAcesso = "Selecione o tipo de acesso ao sistema.";
   }
+  if (form.tipoAcesso === "administrador") {
+    const p = form.permissoesAdmin;
+    if (!p.padrao && !p.gestaoRecargas && !p.financeiro && !p.master) {
+      errors.permissoesAdmin =
+        "Selecione ao menos uma permissão para o administrador.";
+    }
+  }
+
+  if (opts?.editorTipoAcesso) {
+    if (
+      !permissoesAtribuicaoPermitida(
+        opts.editorTipoAcesso,
+        opts.editorPermissoesAdmin,
+        form.tipoAcesso,
+        form.tipoAcesso === "administrador" ? form.permissoesAdmin : undefined,
+        opts.colaboradorExistente?.permissoesAdmin
+      )
+    ) {
+      errors.permissoesAdmin =
+        "Não é permitido atribuir permissões acima da sua hierarquia.";
+    }
+  }
 
   return errors;
 }
@@ -340,6 +385,12 @@ export function formToColaboradorBody(
       form.estadoCivil === "casado"
         ? formatCpfInput(cpfDigits(form.conjugeCpf))
         : undefined,
+    conjugeDataNascimento:
+      form.estadoCivil === "casado"
+        ? form.conjugeDataNascimento || undefined
+        : undefined,
+    conjugeDependente:
+      form.estadoCivil === "casado" ? form.conjugeDependente : undefined,
     dependentes: form.dependentes
       .filter((d) => d.nome.trim())
       .map((d) => ({
@@ -367,6 +418,10 @@ export function formToColaboradorBody(
       ? salarioParaNumero(form.salario)
       : (existing?.salario ?? 0),
     tipoAcesso: form.tipoAcesso as TipoAcessoSistema,
+    permissoesAdmin:
+      form.tipoAcesso === "administrador"
+        ? form.permissoesAdmin
+        : undefined,
     fotoUrl: form.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO,
     status: existing?.status ?? ("escritorio" as ColaboradorStatus),
     unidadeId: existing?.unidadeId,

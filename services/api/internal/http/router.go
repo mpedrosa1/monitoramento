@@ -1,12 +1,7 @@
 package httpapi
 
-
-
 import (
-
 	"net/http"
-
-
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,10 +10,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/config"
 
 	"github.com/mmrtec/monitoramento/api/internal/ws"
-
 )
-
-
 
 func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
@@ -34,21 +26,15 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 	r.Use(CORSMiddleware(cfg.CORSOrigins))
 
-
-
 	r.Get("/health", api.Health)
 
 	r.Get("/ws", AuthWebSocket(cfg.JWTSecret, hub))
-
-
 
 	r.Route("/api/v1", func(r chi.Router) {
 
 		r.Use(JSONContentType)
 
 		r.Post("/auth/login", api.Login)
-
-
 
 		r.Group(func(r chi.Router) {
 
@@ -96,8 +82,6 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			})
 
-
-
 			r.Route("/unidades", func(r chi.Router) {
 
 				r.Get("/", api.ListUnidades)
@@ -122,11 +106,11 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			})
 
-
-
 			r.Route("/colaboradores", func(r chi.Router) {
 
 				r.Get("/", api.ListColaboradores)
+
+				r.Get("/me", api.GetColaboradorMe)
 
 				r.With(RequireManageData).Post("/", api.CreateColaborador)
 
@@ -148,7 +132,57 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			})
 
+			r.Route("/escalas", func(r chi.Router) {
 
+				r.Use(RequireAccessRH)
+
+				r.Get("/", api.ListEscalas)
+
+				r.With(RequireManageData).Post("/", api.CreateEscala)
+
+				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+
+					api.UpdateEscala(w, req, chi.URLParam(req, "id"))
+
+				})
+
+				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+
+					api.DeleteEscala(w, req, chi.URLParam(req, "id"))
+
+				})
+
+			})
+
+			r.Get("/sobreavisos/me/escalado", api.GetSobreavisoMeEscalado)
+
+			r.Get("/sobreavisos/calendario", api.GetSobreavisoCalendario)
+
+			r.Route("/sobreavisos", func(r chi.Router) {
+
+				r.Use(RequireAccessRH)
+
+				r.Get("/", api.ListSobreavisos)
+
+				r.Get("/definicoes", api.ListDefinicoesSobreaviso)
+
+				r.With(RequireManageData).Post("/definir", api.DefinirSobreaviso)
+
+				r.With(RequireManageData).Post("/", api.CreateSobreaviso)
+
+				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+
+					api.UpdateSobreaviso(w, req, chi.URLParam(req, "id"))
+
+				})
+
+				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+
+					api.DeleteSobreaviso(w, req, chi.URLParam(req, "id"))
+
+				})
+
+			})
 
 			r.Route("/missoes", func(r chi.Router) {
 				r.Get("/", api.ListMissoes)
@@ -169,11 +203,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 				})
 			})
 
-
-
 			r.Get("/antenas/proximas", api.ListAntenasProximas)
-
-
 
 			r.Route("/veiculos", func(r chi.Router) {
 				r.Get("/", api.ListVeiculos)
@@ -219,11 +249,39 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			})
 
+			r.Route("/despesas", func(r chi.Router) {
+				r.Get("/me", api.GetDespesasMe)
+				r.Post("/me", api.CreateDespesaMe)
+				r.Put("/me/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateDespesaMe(w, req, chi.URLParam(req, "id"))
+				})
+				r.Delete("/me/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteDespesaMe(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Post("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
+					api.CreateDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"))
+				})
+				r.With(RequireManageData).Put("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"), chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Delete("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"), chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Get("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
+					api.GetDespesasColaborador(w, req, chi.URLParam(req, "colaboradorId"))
+				})
+				r.With(RequireAccessRH).Get("/resumo", api.GetDespesasResumoColaboradores)
+				r.With(RequireGestaoRecargas).Put("/depositos/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpsertDepositoDespesa(w, req, chi.URLParam(req, "colaboradorId"))
+				})
+				r.With(RequireGestaoRecargas).Put("/colaboradores/{colaboradorId}/ajustes-saldo", func(w http.ResponseWriter, req *http.Request) {
+					api.UpsertAjusteSaldoDespesa(w, req, chi.URLParam(req, "colaboradorId"))
+				})
+			})
+
 		})
 
 	})
-
-
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 
@@ -233,10 +291,6 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 	})
 
-
-
 	return r
 
 }
-
-
