@@ -23,6 +23,7 @@ import {
 import { resolveAuthUserPermissoes, resolveAuthUserTipoAcesso } from "@/lib/auth-session";
 import { useAuth } from "@/components/auth-provider";
 import {
+  formatCnhInput,
   formatCpfInput,
   formatRgInput,
   formatSalarioInput,
@@ -348,6 +349,20 @@ export function ColaboradorFormFields({
               />
             </ColaboradorField>
           </div>
+          <ColaboradorField
+            fieldKey="cnh"
+            label="Número da CNH"
+            error={errors.cnh}
+          >
+            <Input
+              id="col-cnh"
+              value={form.cnh}
+              onChange={(e) => onChange({ cnh: formatCnhInput(e.target.value) })}
+              placeholder="000.000.000-00"
+              inputMode="numeric"
+              aria-invalid={!!errors.cnh}
+            />
+          </ColaboradorField>
           <ColaboradorField
             fieldKey="estadoCivil"
             label="Estado civil"

@@ -12,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { MmrtecLogo } from "@/components/mmrtec-logo";
+import { PAINEL_MONITORAMENTO_NOME } from "@/lib/brand";
 import {
   PainelMonitoramentoSubheader,
   type PainelMonitoramentoTab,
@@ -106,7 +108,10 @@ export function PainelMonitoramentoView() {
   return (
     <div className="flex h-screen min-h-0 bg-background">
       <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-        <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
+        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+          <MmrtecLogo className="h-8 w-auto max-w-full" />
+        </div>
+        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">Unidades prisionais</p>
             <p className="truncate text-xs text-muted-foreground">
@@ -165,7 +170,7 @@ export function PainelMonitoramentoView() {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <DashboardHeader title="Painel de monitoramento" socketStatus={status} />
+        <DashboardHeader title={PAINEL_MONITORAMENTO_NOME} socketStatus={status} />
         <PainelMonitoramentoSubheader
           activeTab={activeTab}
           onTabChange={setActiveTab}

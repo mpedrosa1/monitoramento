@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { MmrtecLogo } from "@/components/mmrtec-logo";
+import { SISTEMA_DESCRICAO, SISTEMA_NOME } from "@/lib/brand";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +12,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,17 +53,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-card to-background">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
-      <Card className="relative z-10 w-full max-w-md border-border/50 bg-card/90 shadow-2xl backdrop-blur">
+    <div className="flex h-screen w-full items-center justify-center overflow-hidden bg-background">
+      <Card className="w-full max-w-md border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-            <Shield className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">MMRTEC Monitoramento</CardTitle>
-          <CardDescription>
-            Sistema de monitoramento de unidades prisionais
-          </CardDescription>
+          <MmrtecLogo className="mx-auto h-14 w-auto" priority />
+          <h1 className="sr-only">{SISTEMA_NOME}</h1>
+          <CardDescription className="text-base">{SISTEMA_DESCRICAO}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => void handleSubmit(e)} className="grid gap-4">

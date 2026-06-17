@@ -63,10 +63,25 @@ type Store interface {
 	UpdateVeiculo(ctx context.Context, v *domain.Veiculo) error
 	DeleteVeiculo(ctx context.Context, id primitive.ObjectID) error
 
+	ListVeiculoPeriodosMotorista(ctx context.Context, veiculoID primitive.ObjectID) ([]domain.VeiculoPeriodoMotorista, error)
+	GetVeiculoPeriodoMotorista(ctx context.Context, id primitive.ObjectID) (*domain.VeiculoPeriodoMotorista, error)
+	CreateVeiculoPeriodoMotorista(ctx context.Context, p *domain.VeiculoPeriodoMotorista) error
+	UpdateVeiculoPeriodoMotorista(ctx context.Context, p *domain.VeiculoPeriodoMotorista) error
+	DeleteVeiculoPeriodoMotorista(ctx context.Context, id primitive.ObjectID) error
+	FecharPeriodoMotoristaAberto(ctx context.Context, veiculoID primitive.ObjectID, dataFim, horaFim string) error
+	DeleteVeiculoHistoricoPorVeiculo(ctx context.Context, veiculoID primitive.ObjectID) error
+
+	ListVeiculoMultas(ctx context.Context, veiculoID primitive.ObjectID) ([]domain.VeiculoMulta, error)
+	GetVeiculoMulta(ctx context.Context, id primitive.ObjectID) (*domain.VeiculoMulta, error)
+	CreateVeiculoMulta(ctx context.Context, m *domain.VeiculoMulta) error
+	UpdateVeiculoMulta(ctx context.Context, m *domain.VeiculoMulta) error
+	DeleteVeiculoMulta(ctx context.Context, id primitive.ObjectID) error
+
 	CreateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error
 	GetTrocaVeiculo(ctx context.Context, id primitive.ObjectID) (*domain.TrocaVeiculo, error)
 	UpdateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error
 	FindTrocaVeiculoPendente(ctx context.Context, solicitanteID, veiculoAlvoID primitive.ObjectID) (*domain.TrocaVeiculo, error)
+	VeiculoIDsComTrocaNaoAutorizadaPendente(ctx context.Context) ([]primitive.ObjectID, error)
 
 	ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error)
 	CreateNotificacao(ctx context.Context, n *domain.Notificacao) error

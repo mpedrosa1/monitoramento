@@ -540,7 +540,7 @@ export function DespesaFormDialog({
                     id="despesa-placa"
                     value={form.placa}
                     readOnly={!veiculoPessoal}
-                    placeholder="ABC-1D23"
+                    placeholder="ABC1D23"
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,

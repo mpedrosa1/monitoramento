@@ -15,6 +15,19 @@ export function isCpfComplete(value: string): boolean {
   return cpfDigits(value).length === 11;
 }
 
+/** CNH (número de registro): 11 dígitos, formato visual igual ao CPF. */
+export function formatCnhInput(value: string): string {
+  return formatCpfInput(value);
+}
+
+export function cnhDigits(value: string): string {
+  return cpfDigits(value);
+}
+
+export function isCnhComplete(value: string): boolean {
+  return cnhDigits(value).length === 11;
+}
+
 /** RG: 00.000.000 ou 00.000.000-0 (último caractere opcional; pode ser X) */
 function extractRgChars(value: string): string {
   const upper = value.toUpperCase();

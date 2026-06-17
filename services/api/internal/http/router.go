@@ -212,6 +212,30 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 					api.ResponderTrocaVeiculo(w, req, chi.URLParam(req, "id"))
 				})
 				r.With(RequireManageData).Post("/trocas/admin", api.TrocaAdminVeiculos)
+				r.Get("/{id}/periodos-motorista", func(w http.ResponseWriter, req *http.Request) {
+					api.ListVeiculoPeriodosMotorista(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Post("/{id}/periodos-motorista", func(w http.ResponseWriter, req *http.Request) {
+					api.CreateVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Put("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "periodoId"))
+				})
+				r.With(RequireManageData).Delete("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "periodoId"))
+				})
+				r.Get("/{id}/multas", func(w http.ResponseWriter, req *http.Request) {
+					api.ListVeiculoMultas(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Post("/{id}/multas", func(w http.ResponseWriter, req *http.Request) {
+					api.CreateVeiculoMulta(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireManageData).Put("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateVeiculoMulta(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "multaId"))
+				})
+				r.With(RequireManageData).Delete("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteVeiculoMulta(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "multaId"))
+				})
 				r.With(RequireManageData).Post("/", api.CreateVeiculo)
 				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateVeiculo(w, req, chi.URLParam(req, "id"))

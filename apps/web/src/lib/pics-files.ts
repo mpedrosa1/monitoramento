@@ -1,4 +1,5 @@
 import path from "node:path";
+import { veiculoContratoFilenameSafe } from "@/lib/veiculo-contrato";
 
 export function picsRootDir(): string {
   return path.join(process.cwd(), "pics");
@@ -27,6 +28,15 @@ export function picsFilePathFromUrl(fotoUrl: string): string | null {
     picsFotoFilenameSafe(parts[1])
   ) {
     return path.join(picsRootDir(), "veiculos", parts[1]);
+  }
+
+  if (
+    parts.length === 3 &&
+    parts[0] === "veiculos" &&
+    parts[1] === "contratos" &&
+    veiculoContratoFilenameSafe(parts[2])
+  ) {
+    return path.join(picsRootDir(), "veiculos", "contratos", parts[2]);
   }
 
   if (

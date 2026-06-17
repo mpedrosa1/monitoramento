@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+import { PAINEL_MONITORAMENTO_NOME } from "@/lib/brand";
+
+export const metadata: Metadata = {
+  title: PAINEL_MONITORAMENTO_NOME,
+};
+
 export default function PainelMonitoramentoLayout({
   children,
 }: {

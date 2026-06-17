@@ -171,6 +171,8 @@ export default function VeiculosPage() {
                 veiculo={v}
                 colaborador={colaboradorPorId.get(v.colaboradorId)}
                 isMeuVeiculo={v.colaboradorId === user?.id}
+                showAlertasAdmin={canManageData}
+                trocaComoAdmin={canManageData}
                 onRequestSwap={requestSwap}
                 onEdit={canManageData ? openEdit : undefined}
                 onDelete={canManageData ? requestDelete : undefined}

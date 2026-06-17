@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sort"
@@ -880,7 +881,35 @@ func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSONList(w, http.StatusOK, list)
+
+	type veiculoComAlerta struct {
+		domain.Veiculo
+		AlertaTrocaNaoAutorizada bool `json:"alertaTrocaNaoAutorizada,omitempty"`
+	}
+
+	out := make([]veiculoComAlerta, len(list))
+	for i, v := range list {
+		out[i] = veiculoComAlerta{Veiculo: v}
+	}
+
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if domain.CanManagePadrao(claims.TipoAcesso, claims.PermissoesAdmin) {
+			alertIDs, err := a.Store.VeiculoIDsComTrocaNaoAutorizadaPendente(r.Context())
+			if err == nil {
+				alertSet := make(map[primitive.ObjectID]bool, len(alertIDs))
+				for _, id := range alertIDs {
+					alertSet[id] = true
+				}
+				for i := range out {
+					if alertSet[out[i].ID] {
+						out[i].AlertaTrocaNaoAutorizada = true
+					}
+				}
+			}
+		}
+	}
+
+	writeJSONList(w, http.StatusOK, out)
 }
 
 func (a *API) CreateVeiculo(w http.ResponseWriter, r *http.Request) {
@@ -917,10 +946,31 @@ func (a *API) CreateVeiculo(w http.ResponseWriter, r *http.Request) {
 	if v.FotoURL == "" {
 		v.FotoURL = domain.VeiculoFotoURLPadrao
 	}
+	normalizarVeiculoLocacao(&v)
+	if err := a.validarColaboradoresAdicionaisVeiculo(r.Context(), v.ColaboradorID, v.ColaboradoresAdicionaisIDs); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "condutor adicional não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := a.Store.CreateVeiculo(r.Context(), &v); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	dataInicio := strings.TrimSpace(v.DataLocacao)
+	if dataInicio == "" {
+		dataInicio = domain.DataHojeISO()
+	}
+	_ = a.registrarTrocaMotoristaVeiculo(
+		r.Context(),
+		v.ID,
+		primitive.NilObjectID,
+		v.ColaboradorID,
+		dataInicio,
+		"",
+	)
 	writeJSON(w, http.StatusCreated, v)
 }
 
@@ -964,6 +1014,24 @@ func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 	if v.FotoURL == "" {
 		v.FotoURL = domain.VeiculoFotoURLPadrao
 	}
+	normalizarVeiculoLocacao(&v)
+	if err := a.validarColaboradoresAdicionaisVeiculo(r.Context(), v.ColaboradorID, v.ColaboradoresAdicionaisIDs); err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "condutor adicional não encontrado")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	existing, err := a.Store.GetVeiculo(r.Context(), oid)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "não encontrado")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := a.Store.UpdateVeiculo(r.Context(), &v); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -971,6 +1039,16 @@ func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if existing.ColaboradorID != v.ColaboradorID {
+		_ = a.registrarTrocaMotoristaVeiculo(
+			r.Context(),
+			v.ID,
+			existing.ColaboradorID,
+			v.ColaboradorID,
+			"",
+			"",
+		)
 	}
 	writeJSON(w, http.StatusOK, v)
 }
@@ -990,6 +1068,43 @@ func (a *API) DeleteVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func normalizarVeiculoLocacao(v *domain.Veiculo) {
+	v.Locadora = strings.TrimSpace(v.Locadora)
+	v.NumeroContrato = strings.TrimSpace(v.NumeroContrato)
+	v.DataLocacao = strings.TrimSpace(v.DataLocacao)
+	v.ContratoURL = strings.TrimSpace(v.ContratoURL)
+	v.DataDevolucao = strings.TrimSpace(v.DataDevolucao)
+	v.HoraDevolucao = strings.TrimSpace(v.HoraDevolucao)
+	if len(v.ColaboradoresAdicionaisIDs) == 0 {
+		return
+	}
+	seen := map[primitive.ObjectID]bool{}
+	unique := make([]primitive.ObjectID, 0, len(v.ColaboradoresAdicionaisIDs))
+	for _, id := range v.ColaboradoresAdicionaisIDs {
+		if id.IsZero() || seen[id] {
+			continue
+		}
+		seen[id] = true
+		unique = append(unique, id)
+	}
+	v.ColaboradoresAdicionaisIDs = unique
+}
+
+func (a *API) validarColaboradoresAdicionaisVeiculo(ctx context.Context, primario primitive.ObjectID, adicionais []primitive.ObjectID) error {
+	for _, id := range adicionais {
+		if id.IsZero() {
+			continue
+		}
+		if id == primario {
+			continue
+		}
+		if _, err := a.Store.GetColaborador(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *API) ListEventos(w http.ResponseWriter, r *http.Request) {

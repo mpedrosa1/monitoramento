@@ -20,6 +20,7 @@ import {
   colaboradorStatusVariant,
 } from "@/lib/labels";
 import { salarioNumeroParaInput } from "@/lib/masks";
+import { rhColaboradorDetailPath } from "@/lib/dashboard-paths";
 import type {
   Colaborador,
   ColaboradorStatus,
@@ -317,7 +318,7 @@ export default function RecursosHumanosPage() {
                       return (
                         <Link
                           key={c.id}
-                          href={`/dashboard/colaboradores/${c.id}`}
+                          href={rhColaboradorDetailPath(c.id)}
                           className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-muted/50"
                         >
                           <Avatar className="h-9 w-9">
@@ -377,7 +378,7 @@ export default function RecursosHumanosPage() {
                       return (
                         <Link
                           key={c.id}
-                          href={`/dashboard/colaboradores/${c.id}`}
+                          href={rhColaboradorDetailPath(c.id)}
                           className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-muted/50"
                         >
                           <Avatar className="h-9 w-9">

@@ -5,11 +5,14 @@ import {
   permissoesAtribuicaoPermitida,
 } from "./acesso";
 import {
+  cnhDigits,
   cpfDigits,
   formatCpfInput,
+  formatCnhInput,
   formatRgInput,
   formatSalarioInput,
   formatTelefoneInput,
+  isCnhComplete,
   isCpfComplete,
   isRgComplete,
   isTelefoneComplete,
@@ -64,6 +67,7 @@ export type ColaboradorFormState = {
   telefoneContato: string;
   email: string;
   cpf: string;
+  cnh: string;
   rg: string;
   rgOrgaoEmissor: string;
   estadoCivil: EstadoCivil | "";
@@ -118,6 +122,7 @@ export function emptyColaboradorForm(): ColaboradorFormState {
     telefoneContato: "",
     email: "",
     cpf: "",
+    cnh: "",
     rg: "",
     rgOrgaoEmissor: "",
     estadoCivil: "",
@@ -158,6 +163,7 @@ export function colaboradorToForm(c: Colaborador | null): ColaboradorFormState {
     telefoneContato: c.telefoneContato ?? "",
     email: c.email ?? "",
     cpf: c.cpf ?? "",
+    cnh: c.cnh ?? "",
     rg: c.rg ?? "",
     rgOrgaoEmissor: c.rgOrgaoEmissor ?? "",
     estadoCivil: c.estadoCivil ?? "",
@@ -272,6 +278,9 @@ export function validateColaboradorForm(
   }
   if (!isEmailValido(form.email)) errors.email = "Informe um e-mail válido.";
   if (!isCpfComplete(form.cpf)) errors.cpf = "Informe um CPF válido.";
+  if (form.cnh.trim() && !isCnhComplete(form.cnh)) {
+    errors.cnh = "Informe um número de CNH válido (11 dígitos).";
+  }
   if (!isRgComplete(form.rg)) errors.rg = "Informe um RG válido.";
   if (!form.rgOrgaoEmissor.trim()) {
     errors.rgOrgaoEmissor = "Informe o órgão emissor do RG.";
@@ -375,6 +384,9 @@ export function formToColaboradorBody(
     nome,
     dataNascimento: form.dataNascimento,
     cpf: formatCpfInput(cpfDigits(form.cpf)),
+    cnh: form.cnh.trim()
+      ? formatCnhInput(cnhDigits(form.cnh))
+      : undefined,
     rg: formatRgInput(rgDigits(form.rg)),
     rgOrgaoEmissor: form.rgOrgaoEmissor.trim(),
     telefoneContato: formatTelefoneInput(telefoneDigits(form.telefoneContato)),

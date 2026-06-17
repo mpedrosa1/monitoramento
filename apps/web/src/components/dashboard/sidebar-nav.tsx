@@ -10,9 +10,8 @@ import {
   Headphones,
   Home,
   MapPinned,
-  Shield,
-  Users,
 } from "lucide-react";
+import { MmrtecLogo } from "@/components/mmrtec-logo";
 import { usePermissions } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
 
@@ -39,14 +38,6 @@ const items = [
     icon: Cpu,
     equipamentosOnly: true,
     managePadraoOnly: false,
-    recursosHumanosOnly: false,
-  },
-  {
-    href: "/dashboard/colaboradores",
-    label: "Colaboradores",
-    icon: Users,
-    equipamentosOnly: false,
-    managePadraoOnly: true,
     recursosHumanosOnly: false,
   },
   {
@@ -100,13 +91,12 @@ export function SidebarNav() {
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-        <Shield className="h-7 w-7 text-primary" />
-        <div>
-          <p className="text-sm font-semibold tracking-tight">MMRTEC</p>
-          <p className="text-xs text-muted-foreground">Monitoramento</p>
-        </div>
-      </div>
+      <Link
+        href="/dashboard"
+        className="flex h-16 items-center border-b border-sidebar-border px-4 py-2 transition-opacity hover:opacity-90"
+      >
+        <MmrtecLogo className="h-10 w-auto max-w-full" />
+      </Link>
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {visibleItems.map(({ href, label, icon: Icon }) => {
           const active =
@@ -118,7 +108,7 @@ export function SidebarNav() {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"

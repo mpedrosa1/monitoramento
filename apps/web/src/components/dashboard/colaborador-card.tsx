@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { Pencil, Shield, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { MmrtecLogo } from "@/components/mmrtec-logo";
 import { COLABORADOR_AVATAR_PADRAO } from "@/lib/colaborador-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +11,10 @@ import {
   colaboradorStatusLabel,
   colaboradorStatusVariant,
 } from "@/lib/labels";
+import { rhColaboradorDetailPath } from "@/lib/dashboard-paths";
 import type { Colaborador } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 function colaboradorIniciais(nome: string): string {
   return nome
@@ -25,26 +30,33 @@ export function ColaboradorCard({
   onEdit,
   onDelete,
   deleting = false,
+  linkable = true,
+  centered = true,
 }: {
   colaborador: Colaborador;
   onEdit?: (colaborador: Colaborador) => void;
   onDelete?: (colaborador: Colaborador) => void;
   deleting?: boolean;
+  /** Quando false, exibe o crachá sem navegação (ex.: ficha do veículo). */
+  linkable?: boolean;
+  /** Centraliza o crachá no container (padrão em grades). */
+  centered?: boolean;
 }) {
   const showActions = Boolean(onEdit || onDelete);
+  const { isMaster, isLoading } = usePermissions();
+  const showStatusBadge = !isLoading && isMaster;
   const foto = colaborador.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO;
   const cargo = colaborador.cargo?.trim() || "Colaborador";
 
-  return (
-    <Link
-      href={`/dashboard/colaboradores/${colaborador.id}`}
-      aria-label={`Ver perfil de ${colaborador.nome}`}
-      className={cn(
-        "group relative mx-auto flex w-full max-w-[220px] flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all",
-        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      )}
-    >
+  const cardClass = cn(
+    "colaborador-cracha group relative flex w-full max-w-[220px] flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm transition-all",
+    centered && linkable && "mx-auto",
+    linkable &&
+      "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+  );
+
+  const content = (
+    <>
       {/* furo do cordão */}
       <div
         className="flex justify-center bg-muted/40 pt-2.5 pb-1"
@@ -92,13 +104,9 @@ export function ColaboradorCard({
             )}
           </div>
         )}
-        <div className="flex items-center justify-center gap-2">
-          <Shield className="h-4 w-4 shrink-0 opacity-90" strokeWidth={2.25} />
-          <p className="text-xs font-semibold tracking-[0.2em]">MMRTEC</p>
+        <div className="flex flex-col items-center justify-center py-0.5">
+          <MmrtecLogo className="h-7 w-auto max-w-[90%]" />
         </div>
-        <p className="mt-0.5 text-center text-[10px] font-medium uppercase tracking-wider opacity-80">
-          Monitoramento
-        </p>
       </div>
 
       {/* área da foto */}
@@ -125,12 +133,14 @@ export function ColaboradorCard({
           </p>
         </div>
 
-        <Badge
-          variant={colaboradorStatusVariant[colaborador.status]}
-          className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
-        >
-          {colaboradorStatusLabel[colaborador.status]}
-        </Badge>
+        {showStatusBadge ? (
+          <Badge
+            variant={colaboradorStatusVariant[colaborador.status]}
+            className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
+          >
+            {colaboradorStatusLabel[colaborador.status]}
+          </Badge>
+        ) : null}
       </div>
 
       {/* rodapé do crachá */}
@@ -139,6 +149,20 @@ export function ColaboradorCard({
           RG {colaborador.rg?.trim() || "—"}
         </p>
       </div>
+    </>
+  );
+
+  if (!linkable) {
+    return <div className={cardClass}>{content}</div>;
+  }
+
+  return (
+    <Link
+      href={rhColaboradorDetailPath(colaborador.id)}
+      aria-label={`Ver perfil de ${colaborador.nome}`}
+      className={cardClass}
+    >
+      {content}
     </Link>
   );
 }

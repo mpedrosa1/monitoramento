@@ -21,6 +21,8 @@ type MemoryStore struct {
 	missoes              []domain.Missao
 	dispositivos         []domain.Equipamento
 	veiculos             []domain.Veiculo
+	veiculoPeriodosMotorista []domain.VeiculoPeriodoMotorista
+	veiculoMultas        []domain.VeiculoMulta
 	trocasVeiculo        []domain.TrocaVeiculo
 	notificacoes         []domain.Notificacao
 	pushTokens           []domain.PushToken
@@ -456,6 +458,22 @@ func (s *MemoryStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) 
 		return mongoErrNotFound()
 	}
 	s.veiculos = next
+
+	filterPeriodos := s.veiculoPeriodosMotorista[:0]
+	for _, p := range s.veiculoPeriodosMotorista {
+		if p.VeiculoID != id {
+			filterPeriodos = append(filterPeriodos, p)
+		}
+	}
+	s.veiculoPeriodosMotorista = filterPeriodos
+
+	filterMultas := s.veiculoMultas[:0]
+	for _, m := range s.veiculoMultas {
+		if m.VeiculoID != id {
+			filterMultas = append(filterMultas, m)
+		}
+	}
+	s.veiculoMultas = filterMultas
 	return nil
 }
 
@@ -505,6 +523,34 @@ func (s *MemoryStore) FindTrocaVeiculoPendente(ctx context.Context, solicitanteI
 		}
 	}
 	return nil, mongoErrNotFound()
+}
+
+func (s *MemoryStore) VeiculoIDsComTrocaNaoAutorizadaPendente(ctx context.Context) ([]primitive.ObjectID, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	veiculoPorID := make(map[primitive.ObjectID]domain.Veiculo, len(s.veiculos))
+	for i := range s.veiculos {
+		veiculoPorID[s.veiculos[i].ID] = s.veiculos[i]
+	}
+
+	seen := map[primitive.ObjectID]bool{}
+	var ids []primitive.ObjectID
+	for i := range s.trocasVeiculo {
+		t := s.trocasVeiculo[i]
+		alvo, ok := veiculoPorID[t.VeiculoAlvoID]
+		if !ok {
+			continue
+		}
+		if !domain.TrocaPendenteSolicitanteNaoAutorizado(&t, &alvo) {
+			continue
+		}
+		if seen[t.VeiculoAlvoID] {
+			continue
+		}
+		seen[t.VeiculoAlvoID] = true
+		ids = append(ids, t.VeiculoAlvoID)
+	}
+	return ids, nil
 }
 
 func (s *MemoryStore) ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error) {

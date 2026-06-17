@@ -451,7 +451,7 @@ func (s *MongoStore) DeleteVeiculo(ctx context.Context, id primitive.ObjectID) e
 	if result.DeletedCount == 0 {
 		return mongoErrNotFound()
 	}
-	return nil
+	return s.DeleteVeiculoHistoricoPorVeiculo(ctx, id)
 }
 
 func (s *MongoStore) CreateTrocaVeiculo(ctx context.Context, t *domain.TrocaVeiculo) error {
@@ -502,6 +502,39 @@ func (s *MongoStore) FindTrocaVeiculoPendente(ctx context.Context, solicitanteID
 		return nil, err
 	}
 	return &t, nil
+}
+
+func (s *MongoStore) VeiculoIDsComTrocaNaoAutorizadaPendente(ctx context.Context) ([]primitive.ObjectID, error) {
+	cur, err := s.col("trocas_veiculo").Find(ctx, bson.M{
+		"status": domain.TrocaVeiculoStatusPendente,
+		"origem": bson.M{"$ne": domain.TrocaVeiculoOrigemAdmin},
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	seen := map[primitive.ObjectID]bool{}
+	var ids []primitive.ObjectID
+	for cur.Next(ctx) {
+		var t domain.TrocaVeiculo
+		if err := cur.Decode(&t); err != nil {
+			return nil, err
+		}
+		alvo, err := s.GetVeiculo(ctx, t.VeiculoAlvoID)
+		if err != nil {
+			continue
+		}
+		if !domain.TrocaPendenteSolicitanteNaoAutorizado(&t, alvo) {
+			continue
+		}
+		if seen[t.VeiculoAlvoID] {
+			continue
+		}
+		seen[t.VeiculoAlvoID] = true
+		ids = append(ids, t.VeiculoAlvoID)
+	}
+	return ids, cur.Err()
 }
 
 func (s *MongoStore) ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error) {

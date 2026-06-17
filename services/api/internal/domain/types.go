@@ -175,6 +175,7 @@ type Colaborador struct {
 	FotoURL               string                  `json:"fotoUrl" bson:"fotoUrl"`
 	DataNascimento        string                  `json:"dataNascimento,omitempty" bson:"dataNascimento,omitempty"`
 	CPF                   string                  `json:"cpf,omitempty" bson:"cpf,omitempty"`
+	CNH                   string                  `json:"cnh,omitempty" bson:"cnh,omitempty"`
 	RG                    string                  `json:"rg,omitempty" bson:"rg,omitempty"`
 	RGOrgaoEmissor        string                  `json:"rgOrgaoEmissor,omitempty" bson:"rgOrgaoEmissor,omitempty"`
 	TelefoneContato       string                  `json:"telefoneContato,omitempty" bson:"telefoneContato,omitempty"`
@@ -222,10 +223,11 @@ const (
 type NotificacaoTipo string
 
 const (
-	NotificacaoTrocaSolicitacao   NotificacaoTipo = "troca_veiculo_solicitacao"
-	NotificacaoTrocaResposta      NotificacaoTipo = "troca_veiculo_resposta"
-	NotificacaoTrocaAdmin         NotificacaoTipo = "troca_veiculo_admin"
-	NotificacaoChamadoAberto      NotificacaoTipo = "chamado_aberto"
+	NotificacaoTrocaSolicitacao      NotificacaoTipo = "troca_veiculo_solicitacao"
+	NotificacaoTrocaResposta           NotificacaoTipo = "troca_veiculo_resposta"
+	NotificacaoTrocaAdmin              NotificacaoTipo = "troca_veiculo_admin"
+	NotificacaoTrocaNaoAutorizada      NotificacaoTipo = "troca_veiculo_nao_autorizada"
+	NotificacaoChamadoAberto           NotificacaoTipo = "chamado_aberto"
 	NotificacaoMissaoAgendada     NotificacaoTipo = "missao_agendada"
 	NotificacaoSobreavisoDefinido NotificacaoTipo = "sobreaviso_definido"
 )
@@ -265,6 +267,7 @@ type TrocaVeiculo struct {
 	DestinatarioColaboradorID primitive.ObjectID  `json:"destinatarioColaboradorId" bson:"destinatarioColaboradorId"`
 	VeiculoAlvoID             primitive.ObjectID  `json:"veiculoAlvoId" bson:"veiculoAlvoId"`
 	VeiculoOfertadoID         *primitive.ObjectID `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
+	SolicitanteNaoAutorizado   bool                `json:"solicitanteNaoAutorizado,omitempty" bson:"solicitanteNaoAutorizado,omitempty"`
 	Status                    TrocaVeiculoStatus  `json:"status" bson:"status"`
 	Origem                    TrocaVeiculoOrigem  `json:"origem" bson:"origem"`
 	CreatedAt                 time.Time           `json:"createdAt" bson:"createdAt"`
@@ -272,20 +275,28 @@ type TrocaVeiculo struct {
 }
 
 type Veiculo struct {
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Placa         string             `json:"placa" bson:"placa"`
-	Marca         string             `json:"marca" bson:"marca"`
-	Modelo        string             `json:"modelo" bson:"modelo"`
-	AnoFabricacao int                `json:"anoFabricacao,omitempty" bson:"anoFabricacao,omitempty"`
-	AnoModelo     int                `json:"anoModelo,omitempty" bson:"anoModelo,omitempty"`
-	Cor           string             `json:"cor,omitempty" bson:"cor,omitempty"`
-	Chassi        string             `json:"chassi,omitempty" bson:"chassi,omitempty"`
-	Renavam       string             `json:"renavam,omitempty" bson:"renavam,omitempty"`
-	KmAtual       int                `json:"kmAtual" bson:"kmAtual"`
-	FotoURL       string             `json:"fotoUrl" bson:"fotoUrl"`
-	ColaboradorID primitive.ObjectID `json:"colaboradorId" bson:"colaboradorId"`
-	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
+	ID                         primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Placa                      string               `json:"placa" bson:"placa"`
+	Marca                      string               `json:"marca" bson:"marca"`
+	Modelo                     string               `json:"modelo" bson:"modelo"`
+	AnoFabricacao              int                  `json:"anoFabricacao,omitempty" bson:"anoFabricacao,omitempty"`
+	AnoModelo                  int                  `json:"anoModelo,omitempty" bson:"anoModelo,omitempty"`
+	Cor                        string               `json:"cor,omitempty" bson:"cor,omitempty"`
+	Chassi                     string               `json:"chassi,omitempty" bson:"chassi,omitempty"`
+	Renavam                    string               `json:"renavam,omitempty" bson:"renavam,omitempty"`
+	KmAtual                    int                  `json:"kmAtual" bson:"kmAtual"`
+	FotoURL                    string               `json:"fotoUrl" bson:"fotoUrl"`
+	ColaboradorID              primitive.ObjectID   `json:"colaboradorId" bson:"colaboradorId"`
+	Locadora                   string               `json:"locadora,omitempty" bson:"locadora,omitempty"`
+	NumeroContrato             string               `json:"numeroContrato,omitempty" bson:"numeroContrato,omitempty"`
+	ValorAluguel               float64              `json:"valorAluguel,omitempty" bson:"valorAluguel,omitempty"`
+	DataLocacao                string               `json:"dataLocacao,omitempty" bson:"dataLocacao,omitempty"`
+	ContratoURL                string               `json:"contratoUrl,omitempty" bson:"contratoUrl,omitempty"`
+	DataDevolucao              string               `json:"dataDevolucao,omitempty" bson:"dataDevolucao,omitempty"`
+	HoraDevolucao              string               `json:"horaDevolucao,omitempty" bson:"horaDevolucao,omitempty"`
+	ColaboradoresAdicionaisIDs []primitive.ObjectID `json:"colaboradoresAdicionaisIds,omitempty" bson:"colaboradoresAdicionaisIds,omitempty"`
+	CreatedAt                  time.Time            `json:"createdAt" bson:"createdAt"`
+	UpdatedAt                  time.Time            `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Chamado struct {

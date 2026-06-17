@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { formatPlaca } from "@/lib/veiculo-placa";
+import { colaboradorAutorizadoVeiculo } from "@/lib/veiculo-condutores";
 import { solicitarTrocaVeiculo } from "@/lib/notificacoes";
 import type { Colaborador, Veiculo } from "@/lib/types";
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +40,7 @@ export function SolicitarTrocaVeiculoDialog({
   meusVeiculos: Veiculo[];
   onSuccess?: () => void;
 }) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [veiculoOfertadoId, setVeiculoOfertadoId] = useState<string>("");
 
@@ -48,7 +52,12 @@ export function SolicitarTrocaVeiculoDialog({
     ? `${formatPlaca(veiculoAlvo.placa)} — ${veiculoAlvo.marca} ${veiculoAlvo.modelo}`
     : "";
 
-  const condutorAlvo = colaboradorAlvo?.nome?.trim() || "o condutor atual";
+  const condutorAlvo = colaboradorAlvo?.nome?.trim() || "o motorista atual";
+
+  const solicitanteNaoAutorizado = useMemo(() => {
+    if (!veiculoAlvo || !user?.id) return false;
+    return !colaboradorAutorizadoVeiculo(veiculoAlvo, user.id);
+  }, [veiculoAlvo, user?.id]);
 
   const descricao = useMemo(() => {
     if (!veiculoAlvo) return "";
@@ -58,7 +67,7 @@ export function SolicitarTrocaVeiculoDialog({
     if (ofertaUnica) {
       return `Você está solicitando trocar seu veículo ${formatPlaca(ofertaUnica.placa)} pelo ${formatPlaca(veiculoAlvo.placa)} de ${condutorAlvo}. ${condutorAlvo} receberá uma notificação para confirmar ou recusar.`;
     }
-    return `Selecione qual dos seus veículos deseja oferecer em troca do ${formatPlaca(veiculoAlvo.placa)} de ${condutorAlvo}. O condutor receberá uma notificação para confirmar ou recusar.`;
+    return `Selecione qual dos seus veículos deseja oferecer em troca do ${formatPlaca(veiculoAlvo.placa)} de ${condutorAlvo}. O motorista atual receberá uma notificação para confirmar ou recusar.`;
   }, [veiculoAlvo, temVeiculo, ofertaUnica, condutorAlvo]);
 
   async function confirmar() {
@@ -70,7 +79,7 @@ export function SolicitarTrocaVeiculoDialog({
 
     setLoading(true);
     try {
-      await solicitarTrocaVeiculo({
+      const troca = await solicitarTrocaVeiculo({
         veiculoAlvoId: veiculoAlvo.id,
         veiculoOfertadoId: precisaSelecionarOferta
           ? veiculoOfertadoId
@@ -78,9 +87,15 @@ export function SolicitarTrocaVeiculoDialog({
       });
       onOpenChange(false);
       onSuccess?.();
-      window.alert(
-        "Solicitação enviada. O condutor será notificado para confirmar a troca."
-      );
+      if (troca.solicitanteNaoAutorizado) {
+        window.alert(
+          "Solicitação enviada. Você não está entre os condutores autorizados deste veículo — os administradores foram notificados. O motorista atual também receberá a solicitação para confirmar ou recusar."
+        );
+      } else {
+        window.alert(
+          "Solicitação enviada. O motorista atual será notificado para confirmar a troca."
+        );
+      }
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Erro ao solicitar troca");
     } finally {
@@ -95,6 +110,20 @@ export function SolicitarTrocaVeiculoDialog({
           <DialogTitle>Solicitar troca</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
+
+        {solicitanteNaoAutorizado ? (
+          <div
+            role="alert"
+            className="flex gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Você não está entre os condutores autorizados deste veículo. A
+              solicitação será registrada, mas os administradores serão
+              notificados para análise.
+            </p>
+          </div>
+        ) : null}
 
         {rotuloAlvo ? (
           <p className="rounded-md bg-muted/50 px-3 py-2 text-sm text-foreground">

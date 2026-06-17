@@ -231,6 +231,7 @@ export interface Colaborador {
   fotoUrl: string;
   dataNascimento?: string;
   cpf?: string;
+  cnh?: string;
   rg?: string;
   rgOrgaoEmissor?: string;
   telefoneContato?: string;
@@ -365,6 +366,42 @@ export interface Veiculo {
   kmAtual?: number;
   fotoUrl: string;
   colaboradorId: string;
+  locadora?: string;
+  numeroContrato?: string;
+  valorAluguel?: number;
+  dataLocacao?: string;
+  contratoUrl?: string;
+  dataDevolucao?: string;
+  horaDevolucao?: string;
+  colaboradoresAdicionaisIds?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type VeiculoMultaStatus = "pendente" | "paga";
+
+export interface VeiculoPeriodoMotorista {
+  id: string;
+  veiculoId: string;
+  colaboradorId: string;
+  dataInicio: string;
+  horaInicio?: string;
+  dataFim?: string;
+  horaFim?: string;
+  observacao?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VeiculoMulta {
+  id: string;
+  veiculoId: string;
+  colaboradorId?: string;
+  data: string;
+  infracao: string;
+  valor?: number;
+  status: VeiculoMultaStatus;
+  observacao?: string;
   createdAt: string;
   updatedAt: string;
 }

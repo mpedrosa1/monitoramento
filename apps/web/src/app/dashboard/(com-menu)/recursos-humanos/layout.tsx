@@ -7,10 +7,16 @@ import { Loader2 } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { usePermissions } from "@/hooks/use-permissions";
+import { RH_COLABORADORES_PATH } from "@/lib/dashboard-paths";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/dashboard/recursos-humanos", label: "Visão geral", exact: true },
+  {
+    href: RH_COLABORADORES_PATH,
+    label: "Colaboradores",
+    manageOnly: true,
+  },
   {
     href: "/dashboard/recursos-humanos/escalas",
     label: "Escalas de trabalho",
@@ -33,7 +39,7 @@ export default function RecursosHumanosLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { status } = useMonitoring();
-  const { canAccessRecursosHumanos, isLoading } = usePermissions();
+  const { canAccessRecursosHumanos, canManageData, isLoading } = usePermissions();
 
   useEffect(() => {
     if (!isLoading && !canAccessRecursosHumanos) {
@@ -53,12 +59,14 @@ export default function RecursosHumanosLayout({
     return null;
   }
 
+  const visibleTabs = tabs.filter((t) => !t.manageOnly || canManageData);
+
   return (
     <>
       <DashboardHeader title="Recursos Humanos" socketStatus={status} />
       <div className="border-b border-border bg-background/80 px-6">
         <nav className="flex flex-wrap gap-1">
-          {tabs.map((t) => {
+          {visibleTabs.map((t) => {
             const active = t.exact
               ? pathname === t.href
               : pathname.startsWith(t.href);

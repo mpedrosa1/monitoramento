@@ -231,6 +231,7 @@ export interface Colaborador {
   fotoUrl: string;
   dataNascimento?: string;
   cpf?: string;
+  cnh?: string;
   rg?: string;
   rgOrgaoEmissor?: string;
   telefoneContato?: string;
@@ -394,6 +395,43 @@ export interface Veiculo {
   kmAtual?: number;
   fotoUrl: string;
   colaboradorId: string;
+  locadora?: string;
+  numeroContrato?: string;
+  valorAluguel?: number;
+  dataLocacao?: string;
+  contratoUrl?: string;
+  dataDevolucao?: string;
+  horaDevolucao?: string;
+  colaboradoresAdicionaisIds?: string[];
+  alertaTrocaNaoAutorizada?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type VeiculoMultaStatus = "pendente" | "paga";
+
+export interface VeiculoPeriodoMotorista {
+  id: string;
+  veiculoId: string;
+  colaboradorId: string;
+  dataInicio: string;
+  horaInicio?: string;
+  dataFim?: string;
+  horaFim?: string;
+  observacao?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VeiculoMulta {
+  id: string;
+  veiculoId: string;
+  colaboradorId?: string;
+  data: string;
+  infracao: string;
+  valor?: number;
+  status: VeiculoMultaStatus;
+  observacao?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -401,7 +439,8 @@ export interface Veiculo {
 export type NotificacaoTipo =
   | "troca_veiculo_solicitacao"
   | "troca_veiculo_resposta"
-  | "troca_veiculo_admin";
+  | "troca_veiculo_admin"
+  | "troca_veiculo_nao_autorizada";
 
 export interface NotificacaoPayload {
   trocaId?: string;
@@ -437,6 +476,7 @@ export interface TrocaVeiculo {
   destinatarioColaboradorId: string;
   veiculoAlvoId: string;
   veiculoOfertadoId?: string;
+  solicitanteNaoAutorizado?: boolean;
   status: TrocaVeiculoStatus;
   origem: "solicitacao" | "admin";
   createdAt: string;

@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { RH_COLABORADORES_PATH } from "@/lib/dashboard-paths";
 
 function iniciais(nome: string): string {
   return nome
@@ -105,7 +106,7 @@ export function ColaboradorDetail({
   colaborador,
   canManage,
   onChanged,
-  voltarHref = "/dashboard/colaboradores",
+  voltarHref = RH_COLABORADORES_PATH,
   escaladoSobreaviso = false,
   sobreavisoHref = "/dashboard/meus-dados/sobreaviso",
 }: {
@@ -117,7 +118,9 @@ export function ColaboradorDetail({
   sobreavisoHref?: string;
 }) {
   const router = useRouter();
-  const { canViewFinanceiro } = usePermissions();
+  const { canViewFinanceiro, isMaster, isLoading: permissoesLoading } =
+    usePermissions();
+  const showStatusBadge = !permissoesLoading && isMaster;
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -142,7 +145,7 @@ export function ColaboradorDetail({
         method: "DELETE",
       });
       setDeleteOpen(false);
-      router.push("/dashboard/colaboradores");
+      router.push(RH_COLABORADORES_PATH);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao excluir";
       window.alert(msg);
@@ -174,12 +177,14 @@ export function ColaboradorDetail({
           <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {cargo}
           </p>
-          <Badge
-            variant={colaboradorStatusVariant[colaborador.status]}
-            className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
-          >
-            {colaboradorStatusLabel[colaborador.status]}
-          </Badge>
+          {showStatusBadge ? (
+            <Badge
+              variant={colaboradorStatusVariant[colaborador.status]}
+              className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
+            >
+              {colaboradorStatusLabel[colaborador.status]}
+            </Badge>
+          ) : null}
 
           <div className="mt-5 flex w-full flex-col gap-2">
             <Button
@@ -230,6 +235,7 @@ export function ColaboradorDetail({
               value={formatarData(colaborador.dataNascimento)}
             />
             <InfoRow label="CPF" value={valorOuTraco(colaborador.cpf)} />
+            <InfoRow label="Número da CNH" value={valorOuTraco(colaborador.cnh)} />
             <InfoRow
               label="RG"
               value={

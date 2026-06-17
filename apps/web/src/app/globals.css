@@ -49,42 +49,43 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Tema claro MMRTEC — superfícies suaves (sem branco puro) */
+  --background: #e7edf4;
+  --foreground: #0f2438;
+  --card: #f2f5f9;
+  --card-foreground: #0f2438;
+  --popover: #f4f7fb;
+  --popover-foreground: #0f2438;
+  --primary: #0b3e7b;
+  --primary-foreground: #ffffff;
+  --secondary: #dce5ef;
+  --secondary-foreground: #0b3e7b;
+  --muted: #dce5ef;
+  --muted-foreground: #4a657d;
+  --accent: #d2e0ef;
+  --accent-foreground: #0b3e7b;
+  --destructive: oklch(0.55 0.22 27);
+  --border: #c2d0df;
+  --input: #cbd6e3;
+  --ring: #0b3e7b;
+  --chart-1: #0b3e7b;
+  --chart-2: #0d5292;
+  --chart-3: #4a657d;
+  --chart-4: #6b849c;
+  --chart-5: #8fa8be;
+  --radius: 0.15rem;
+  --sidebar: #dfe8f2;
+  --sidebar-foreground: #0f2438;
+  --sidebar-primary: #0b3e7b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d0ddef;
+  --sidebar-accent-foreground: #0b3e7b;
+  --sidebar-border: #c2d0df;
+  --sidebar-ring: #0b3e7b;
   --scrollbar-size: 8px;
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: oklch(0.708 0 0 / 35%);
-  --scrollbar-thumb-hover: oklch(0.556 0 0 / 50%);
+  --scrollbar-track: rgb(15 36 56 / 4%);
+  --scrollbar-thumb: rgb(11 62 123 / 22%);
+  --scrollbar-thumb-hover: rgb(11 62 123 / 36%);
 }
 
 /* Tema escuro MMRTEC — cor de marca #0b3e7b */
@@ -124,6 +125,10 @@
   --scrollbar-track: rgb(6 30 58 / 55%);
   --scrollbar-thumb: rgb(79 143 200 / 38%);
   --scrollbar-thumb-hover: rgb(103 176 224 / 58%);
+  /* Contraste em superfícies escuras (ícones, abas, chips selecionados) */
+  --primary-bright: #84d0ff;
+  --primary-subtle: rgb(132 208 255 / 20%);
+  --primary-subtle-border: rgb(132 208 255 / 45%);
 }
 
 @layer base {
@@ -132,10 +137,13 @@
   }
   html {
     font-family: var(--font-app-sans), ui-sans-serif, system-ui, sans-serif;
-    color-scheme: dark;
+    color-scheme: light;
     scrollbar-gutter: stable;
     overflow-x: hidden;
     max-width: 100%;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   body {
     @apply bg-background text-foreground;
@@ -183,6 +191,31 @@
   [data-slot="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+}
+
+/* Crachá de colaborador — mantém arredondamento original dentro do card */
+.colaborador-cracha {
+  --radius: 0.625rem;
+}
+
+/* Tema escuro: ícones e destaques primary legíveis sobre cards e modais */
+.dark .text-primary {
+  color: var(--primary-bright);
+}
+
+.dark .bg-primary {
+  color: var(--primary-foreground);
+}
+
+.dark button[aria-current="page"] {
+  color: var(--primary-bright) !important;
+  background-color: var(--primary-subtle) !important;
+  border-color: var(--primary-subtle-border) !important;
+}
+
+.dark :is(label, button).border-primary {
+  background-color: var(--primary-subtle) !important;
+  border-color: var(--primary-subtle-border) !important;
 }
 
 /* Rótulo de área no mapa da unidade — recortado ao polígono */

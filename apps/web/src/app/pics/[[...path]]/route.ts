@@ -18,9 +18,12 @@ export async function GET(
 
   try {
     const data = await readFile(filePath);
+    const contentType = fotoUrl.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : "image/webp";
     return new NextResponse(data, {
       headers: {
-        "Content-Type": "image/webp",
+        "Content-Type": contentType,
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

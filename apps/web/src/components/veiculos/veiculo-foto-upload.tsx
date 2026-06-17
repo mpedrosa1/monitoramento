@@ -10,7 +10,6 @@ import {
   uploadVeiculoFoto,
 } from "@/lib/veiculo-foto";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export function VeiculoFotoUpload({
   fotoUrl,
@@ -75,31 +74,27 @@ export function VeiculoFotoUpload({
   }
 
   return (
-    <div className="space-y-3">
-      <div
-        className={cn(
-          "relative aspect-[16/10] w-full overflow-hidden rounded-lg border border-border bg-muted/40"
-        )}
-      >
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className="relative aspect-[16/10] w-40 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40">
         {usaImgNativo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={preview}
             alt={rotulo || "Foto do veículo"}
-            className="h-full w-full object-contain p-2"
+            className="h-full w-full object-contain p-1.5"
           />
         ) : (
           <Image
             src={preview}
             alt={rotulo || "Foto do veículo"}
             fill
-            className="object-contain p-4"
-            sizes="(max-width: 512px) 100vw, 480px"
+            className="object-contain p-2"
+            sizes="160px"
           />
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="min-w-0 flex-1 space-y-2">
         <p className="text-sm font-medium">Foto do veículo</p>
         <p className="text-xs text-muted-foreground">
           JPG, PNG ou WebP até 5 MB. A imagem é redimensionada para exibição

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { ThemeProvider, themeInitScript } from "@/components/theme-provider";
+import { SISTEMA_DESCRICAO, SISTEMA_NOME } from "@/lib/brand";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -16,8 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MMRTEC Monitoramento",
-  description: "Sistema de monitoramento de unidades prisionais",
+  title: SISTEMA_NOME,
+  description: SISTEMA_DESCRICAO,
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

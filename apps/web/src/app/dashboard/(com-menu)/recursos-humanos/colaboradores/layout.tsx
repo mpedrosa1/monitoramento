@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
-export default function ColaboradoresLayout({
+export default function ColaboradoresRhLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -15,7 +15,7 @@ export default function ColaboradoresLayout({
 
   useEffect(() => {
     if (!isLoading && !canManageData) {
-      router.replace("/dashboard");
+      router.replace("/dashboard/recursos-humanos");
     }
   }, [canManageData, isLoading, router]);
 

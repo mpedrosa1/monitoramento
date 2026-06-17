@@ -9,6 +9,7 @@ import {
   veiculoToForm,
   type VeiculoFormState,
 } from "@/lib/veiculo-form";
+import { tabFromVeiculoFormError, type VeiculoFormTab } from "@/lib/veiculo-form-tabs";
 import { VeiculoFormFields } from "@/components/veiculos/veiculo-form-fields";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ export function EditarVeiculoDialog({
   const [form, setForm] = useState<VeiculoFormState>(() => veiculoToForm(veiculo));
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [focusTab, setFocusTab] = useState<VeiculoFormTab | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +48,7 @@ export function EditarVeiculoDialog({
     if (open && veiculo) {
       setForm(veiculoToForm(veiculo));
       setErro(null);
+      setFocusTab(null);
     }
   }, [open, veiculo]);
 
@@ -59,8 +62,10 @@ export function EditarVeiculoDialog({
     const validation = validateVeiculoForm(form);
     if (validation) {
       setErro(validation);
+      setFocusTab(tabFromVeiculoFormError(validation));
       return;
     }
+    setFocusTab(null);
     setLoading(true);
     setErro(null);
     try {
@@ -79,7 +84,7 @@ export function EditarVeiculoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="flex max-h-[92vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-2xl lg:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Editar veículo</DialogTitle>
         </DialogHeader>
@@ -87,6 +92,7 @@ export function EditarVeiculoDialog({
           form={form}
           onChange={patch}
           colaboradores={colaboradores}
+          focusTab={focusTab}
         />
         {erro ? <p className="text-sm text-destructive">{erro}</p> : null}
         <DialogFooter>

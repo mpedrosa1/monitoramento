@@ -53,3 +53,54 @@ func TestAplicarTrocaAdminMesmoCondutor(t *testing.T) {
 		t.Fatalf("esperava erro, got %v", err)
 	}
 }
+
+func TestTrocaPendenteSolicitanteNaoAutorizado(t *testing.T) {
+	motorista := primitive.NewObjectID()
+	solicitante := primitive.NewObjectID()
+	alvo := Veiculo{ColaboradorID: motorista}
+
+	troca := TrocaVeiculo{
+		Status:                   TrocaVeiculoStatusPendente,
+		Origem:                   TrocaVeiculoOrigemSolicitacao,
+		SolicitanteColaboradorID: solicitante,
+	}
+	if !TrocaPendenteSolicitanteNaoAutorizado(&troca, &alvo) {
+		t.Fatal("esperava alerta para solicitante não autorizado")
+	}
+
+	trocaAdmin := troca
+	trocaAdmin.Origem = TrocaVeiculoOrigemAdmin
+	if TrocaPendenteSolicitanteNaoAutorizado(&trocaAdmin, &alvo) {
+		t.Fatal("troca admin não deve gerar alerta")
+	}
+
+	trocaLegada := troca
+	trocaLegada.Origem = ""
+	trocaLegada.SolicitanteNaoAutorizado = false
+	if !TrocaPendenteSolicitanteNaoAutorizado(&trocaLegada, &alvo) {
+		t.Fatal("troca legada sem flag deve recalcular autorização")
+	}
+}
+
+func TestColaboradorAutorizadoVeiculo(t *testing.T) {
+	motorista := primitive.NewObjectID()
+	autorizado := primitive.NewObjectID()
+	outro := primitive.NewObjectID()
+	v := Veiculo{
+		ColaboradorID:              motorista,
+		ColaboradoresAdicionaisIDs: []primitive.ObjectID{autorizado},
+	}
+
+	if !ColaboradorAutorizadoVeiculo(&v, motorista) {
+		t.Fatal("motorista atual deve ser autorizado")
+	}
+	if !ColaboradorAutorizadoVeiculo(&v, autorizado) {
+		t.Fatal("condutor autorizado deve ser reconhecido")
+	}
+	if ColaboradorAutorizadoVeiculo(&v, outro) {
+		t.Fatal("colaborador não listado não deve ser autorizado")
+	}
+	if ColaboradorAutorizadoVeiculo(nil, motorista) {
+		t.Fatal("veículo nil")
+	}
+}

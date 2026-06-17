@@ -154,11 +154,14 @@ func (a *API) SolicitarTrocaVeiculo(w http.ResponseWriter, r *http.Request) {
 		ofertadoPlaca = ofertado.Placa
 	}
 
+	solicitanteNaoAutorizado := !domain.ColaboradorAutorizadoVeiculo(alvo, solicitanteID)
+
 	troca := domain.TrocaVeiculo{
 		SolicitanteColaboradorID:  solicitanteID,
 		DestinatarioColaboradorID: alvo.ColaboradorID,
 		VeiculoAlvoID:             alvoOID,
 		VeiculoOfertadoID:         ofertadoOID,
+		SolicitanteNaoAutorizado:  solicitanteNaoAutorizado,
 		Status:                    domain.TrocaVeiculoStatusPendente,
 		Origem:                    domain.TrocaVeiculoOrigemSolicitacao,
 	}
@@ -196,6 +199,10 @@ func (a *API) SolicitarTrocaVeiculo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.pushNotificacao(notif)
+
+	if solicitanteNaoAutorizado {
+		a.notificarAdminsTrocaNaoAutorizada(r.Context(), &troca, alvo, claims.Nome, ofertadoPlaca)
+	}
 
 	writeJSON(w, http.StatusCreated, troca)
 }
@@ -275,6 +282,12 @@ func (a *API) ResponderTrocaVeiculo(w http.ResponseWriter, r *http.Request, id s
 		}
 	}
 
+	alvoMotoristaAnterior := alvo.ColaboradorID
+	var ofertadoMotoristaAnterior primitive.ObjectID
+	if ofertado != nil {
+		ofertadoMotoristaAnterior = ofertado.ColaboradorID
+	}
+
 	domain.AplicarTrocaSolicitacao(alvo, ofertado, troca.SolicitanteColaboradorID)
 	if err := a.Store.UpdateVeiculo(r.Context(), alvo); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -285,6 +298,25 @@ func (a *API) ResponderTrocaVeiculo(w http.ResponseWriter, r *http.Request, id s
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+
+	_ = a.registrarTrocaMotoristaVeiculo(
+		r.Context(),
+		alvo.ID,
+		alvoMotoristaAnterior,
+		alvo.ColaboradorID,
+		"",
+		"",
+	)
+	if ofertado != nil {
+		_ = a.registrarTrocaMotoristaVeiculo(
+			r.Context(),
+			ofertado.ID,
+			ofertadoMotoristaAnterior,
+			ofertado.ColaboradorID,
+			"",
+			"",
+		)
 	}
 
 	troca.Status = domain.TrocaVeiculoStatusAceita
@@ -360,6 +392,9 @@ func (a *API) TrocaAdminVeiculos(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	_ = a.registrarTrocaMotoristaVeiculo(r.Context(), veiculoA.ID, colabOrigA, veiculoA.ColaboradorID, "", "")
+	_ = a.registrarTrocaMotoristaVeiculo(r.Context(), veiculoB.ID, colabOrigB, veiculoB.ColaboradorID, "", "")
 
 	now := time.Now().UTC()
 	troca := domain.TrocaVeiculo{
@@ -439,9 +474,58 @@ func (a *API) notificarRespostaTroca(ctx context.Context, troca *domain.TrocaVei
 }
 
 func formatPlacaDisplay(placa string) string {
-	p := strings.ToUpper(strings.TrimSpace(placa))
-	if len(p) == 7 {
-		return p[:3] + "-" + p[3:]
+	return normalizePlacaVeiculo(placa)
+}
+
+func (a *API) notificarAdminsTrocaNaoAutorizada(
+	ctx context.Context,
+	troca *domain.TrocaVeiculo,
+	alvo *domain.Veiculo,
+	solicitanteNome string,
+	ofertadoPlaca string,
+) {
+	colabs, err := a.Store.ListColaboradores(ctx)
+	if err != nil {
+		return
 	}
-	return p
+
+	placaAlvo := formatPlacaDisplay(alvo.Placa)
+	msg := fmt.Sprintf(
+		"%s solicitou troca do veículo %s sem estar entre os condutores autorizados.",
+		solicitanteNome,
+		placaAlvo,
+	)
+	if ofertadoPlaca != "" {
+		msg = fmt.Sprintf(
+			"%s solicitou troca do veículo %s (oferecendo %s) sem estar entre os condutores autorizados.",
+			solicitanteNome,
+			placaAlvo,
+			formatPlacaDisplay(ofertadoPlaca),
+		)
+	}
+
+	payload := domain.NotificacaoPayload{
+		TrocaID:                  troca.ID.Hex(),
+		VeiculoAlvoID:            troca.VeiculoAlvoID.Hex(),
+		SolicitanteColaboradorID: troca.SolicitanteColaboradorID.Hex(),
+		SolicitanteNome:          solicitanteNome,
+		VeiculoAlvoPlaca:         alvo.Placa,
+	}
+	if troca.VeiculoOfertadoID != nil {
+		payload.VeiculoOfertadoID = troca.VeiculoOfertadoID.Hex()
+		payload.VeiculoOfertadoPlaca = ofertadoPlaca
+	}
+
+	for _, colab := range colabs {
+		if !domain.CanManagePadrao(colab.TipoAcesso, colab.PermissoesAdmin) {
+			continue
+		}
+		a.criarENotificar(ctx, domain.Notificacao{
+			DestinatarioColaboradorID: colab.ID,
+			Tipo:                      domain.NotificacaoTrocaNaoAutorizada,
+			Titulo:                    "Troca de veículo não autorizada",
+			Mensagem:                  msg,
+			Payload:                   payload,
+		})
+	}
 }

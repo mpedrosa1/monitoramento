@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Car,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Package,
   Pencil,
@@ -25,13 +24,12 @@ import type {
   DepositoDespesa,
   Despesa,
   DespesasMeResponse,
-  DespesasResumoColaboradoresResponse,
   ModalidadeDespesa,
 } from "@/lib/types";
 import { DespesaFormDialog } from "@/components/despesas/despesa-form-dialog";
 import { DespesaResumoCard } from "@/components/despesas/despesa-resumo-card";
 import { BalancearSaldoDialog } from "@/components/rh/balancear-saldo-dialog";
-import { DespesasVisaoGeralTable } from "@/components/rh/despesas-visao-geral-table";
+import { useRecargasDespesasPeriodo } from "@/components/rh/recargas-despesas-periodo";
 import { RecargaFormDialog } from "@/components/rh/recarga-form-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Badge } from "@/components/ui/badge";
@@ -53,21 +51,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const MESES = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
-
 function formatarAtualizadoEm(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
@@ -81,18 +64,13 @@ function formatarAtualizadoEm(value: string): string {
 }
 
 export default function RecargasDespesasPage() {
+  const searchParams = useSearchParams();
   const { canManageData, canManageRecargas } = usePermissions();
-  const hoje = new Date();
-  const [ano, setAno] = useState(hoje.getFullYear());
-  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const { ano, mes, competencia } = useRecargasDespesasPeriodo();
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [colaboradorId, setColaboradorId] = useState("");
-  const [resumo, setResumo] = useState<DespesasResumoColaboradoresResponse | null>(
-    null
-  );
   const [dados, setDados] = useState<DespesasMeResponse | null>(null);
   const [loadingCols, setLoadingCols] = useState(true);
-  const [loadingResumo, setLoadingResumo] = useState(false);
   const [loadingDados, setLoadingDados] = useState(false);
   const [filtro, setFiltro] = useState<"todos" | ModalidadeDespesa>("todos");
   const [recargaDialogOpen, setRecargaDialogOpen] = useState(false);
@@ -104,8 +82,6 @@ export default function RecargasDespesasPage() {
   const [balancearOpen, setBalancearOpen] = useState(false);
   const [balancearModalidade, setBalancearModalidade] =
     useState<ModalidadeDespesa>("mobilidade");
-
-  const competencia = `${ano}-${String(mes).padStart(2, "0")}`;
 
   const colaboradoresOrdenados = useMemo(
     () =>
@@ -136,23 +112,10 @@ export default function RecargasDespesasPage() {
     })();
   }, []);
 
-  const loadResumo = useCallback(async () => {
-    setLoadingResumo(true);
-    try {
-      const res = await apiFetch<DespesasResumoColaboradoresResponse>(
-        `/api/v1/despesas/resumo?ano=${ano}&mes=${mes}`
-      );
-      setResumo(res);
-    } catch {
-      setResumo(null);
-    } finally {
-      setLoadingResumo(false);
-    }
-  }, [ano, mes]);
-
   useEffect(() => {
-    void loadResumo();
-  }, [loadResumo]);
+    const id = searchParams.get("colaborador");
+    if (id) setColaboradorId(id);
+  }, [searchParams]);
 
   const loadDados = useCallback(async () => {
     if (!colaboradorId) {
@@ -171,10 +134,6 @@ export default function RecargasDespesasPage() {
       setLoadingDados(false);
     }
   }, [colaboradorId, ano, mes]);
-
-  const recarregarTudo = useCallback(async () => {
-    await Promise.all([loadResumo(), loadDados()]);
-  }, [loadResumo, loadDados]);
 
   useEffect(() => {
     void loadDados();
@@ -198,25 +157,8 @@ export default function RecargasDespesasPage() {
     [recargas]
   );
 
-  const podeNovaRecarga = modalidadesOcupadas.length < MODALIDADE_DESPESA_OPCOES.length;
-
-  function mesAnterior() {
-    if (mes === 1) {
-      setMes(12);
-      setAno((a) => a - 1);
-    } else {
-      setMes((m) => m - 1);
-    }
-  }
-
-  function mesSeguinte() {
-    if (mes === 12) {
-      setMes(1);
-      setAno((a) => a + 1);
-    } else {
-      setMes((m) => m + 1);
-    }
-  }
+  const podeNovaRecarga =
+    modalidadesOcupadas.length < MODALIDADE_DESPESA_OPCOES.length;
 
   function abrirNovaRecarga() {
     setEditingRecarga(null);
@@ -261,93 +203,47 @@ export default function RecargasDespesasPage() {
         `/api/v1/despesas/colaboradores/${colaboradorId}/${d.id}`,
         { method: "DELETE" }
       );
-      await recarregarTudo();
+      await loadDados();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Erro ao excluir");
     }
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h2 className="text-lg font-semibold">Recargas e despesas</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Acompanhe recargas, gastos e saldos de todos os colaboradores no
-          período. Selecione um colaborador para gerenciar recargas e despesas
-          em detalhe.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={mesAnterior}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <p className="min-w-36 text-center text-sm font-semibold">
-            {MESES[mes - 1]} de {ano}
-          </p>
-          <Button variant="outline" size="sm" onClick={mesSeguinte}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Visão geral</h3>
-        <div className="rounded-2xl border border-border">
-          {loadingResumo ? (
-            <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Carregando resumo…
+    <>
+      <div className="grid gap-4 sm:max-w-md">
+        <div className="grid gap-2">
+          <Label>Colaborador</Label>
+          {loadingCols ? (
+            <div className="flex h-9 items-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Carregando…
             </div>
           ) : (
-            <DespesasVisaoGeralTable
-              itens={resumo?.colaboradores ?? []}
-              totais={resumo?.totais}
-              colaboradorSelecionadoId={colaboradorId}
-              onSelecionarColaborador={setColaboradorId}
-            />
+            <Select
+              value={colaboradorId || null}
+              onValueChange={(v) => setColaboradorId(v ?? "")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um colaborador…">
+                  {colaboradorSelecionado?.nome}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {colaboradoresOrdenados.map((c) => (
+                  <SelectItem key={c.id} value={c.id} label={c.nome}>
+                    {c.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
-        </div>
-      </div>
-
-      <div className="border-t border-border pt-6">
-        <h3 className="mb-4 text-sm font-semibold">Detalhes do colaborador</h3>
-        <div className="grid gap-4 sm:max-w-md">
-          <div className="grid gap-2">
-            <Label>Colaborador</Label>
-            {loadingCols ? (
-              <div className="flex h-9 items-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Carregando…
-              </div>
-            ) : (
-              <Select
-                value={colaboradorId || null}
-                onValueChange={(v) => setColaboradorId(v ?? "")}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um colaborador…">
-                    {colaboradorSelecionado?.nome}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradoresOrdenados.map((c) => (
-                    <SelectItem key={c.id} value={c.id} label={c.nome}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
         </div>
       </div>
 
       {!colaboradorId ? (
         <p className="text-sm text-muted-foreground">
-          Selecione um colaborador na tabela acima ou no campo acima para ver
-          recargas e despesas em detalhe.
+          Selecione um colaborador para gerenciar recargas e visualizar despesas.
         </p>
       ) : loadingDados ? (
         <p className="text-sm text-muted-foreground">Carregando…</p>
@@ -582,7 +478,7 @@ export default function RecargasDespesasPage() {
             colaboradorId={colaboradorId}
             competencia={competencia}
             modalidadesOcupadas={modalidadesOcupadas}
-            onSuccess={recarregarTudo}
+            onSuccess={loadDados}
           />
           <DespesaFormDialog
             open={despesaDialogOpen}
@@ -590,7 +486,7 @@ export default function RecargasDespesasPage() {
             despesa={editingDespesa}
             colaboradorId={colaboradorId}
             colaboradorNome={colaboradorSelecionado?.nome}
-            onSuccess={recarregarTudo}
+            onSuccess={loadDados}
           />
           <BalancearSaldoDialog
             open={balancearOpen}
@@ -600,10 +496,10 @@ export default function RecargasDespesasPage() {
             competencia={competencia}
             modalidade={balancearModalidade}
             saldoAtual={saldoBalancearAtual}
-            onSuccess={recarregarTudo}
+            onSuccess={loadDados}
           />
         </>
       )}
-    </div>
+    </>
   );
 }
