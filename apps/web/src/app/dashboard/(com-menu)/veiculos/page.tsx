@@ -20,7 +20,10 @@ import { Input } from "@/components/ui/input";
 export default function VeiculosPage() {
   const { status: socketStatus } = useMonitoring();
   const { user } = useAuth();
-  const { canManageData } = usePermissions();
+  const {
+    canCrudVeiculos,
+    canFrotaTrocarVeiculos,
+  } = usePermissions();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [busca, setBusca] = useState("");
@@ -124,7 +127,7 @@ export default function VeiculosPage() {
   }, [veiculos, user?.id]);
 
   function requestSwap(veiculo: Veiculo) {
-    if (canManageData) {
+    if (canFrotaTrocarVeiculos) {
       setAdminSwapTarget(veiculo);
       setAdminSwapOpen(true);
       return;
@@ -152,7 +155,7 @@ export default function VeiculosPage() {
               aria-label="Buscar veículos"
             />
           </div>
-          {canManageData ? <AdicionarVeiculoDialog onSuccess={load} /> : null}
+          {canCrudVeiculos ? <AdicionarVeiculoDialog onSuccess={load} /> : null}
         </div>
 
         {veiculos.length === 0 ? (
@@ -171,11 +174,11 @@ export default function VeiculosPage() {
                 veiculo={v}
                 colaborador={colaboradorPorId.get(v.colaboradorId)}
                 isMeuVeiculo={v.colaboradorId === user?.id}
-                showAlertasAdmin={canManageData}
-                trocaComoAdmin={canManageData}
+                showAlertasAdmin={canFrotaTrocarVeiculos}
+                trocaComoAdmin={canFrotaTrocarVeiculos}
                 onRequestSwap={requestSwap}
-                onEdit={canManageData ? openEdit : undefined}
-                onDelete={canManageData ? requestDelete : undefined}
+                onEdit={canCrudVeiculos ? openEdit : undefined}
+                onDelete={canCrudVeiculos ? requestDelete : undefined}
                 deleting={deleting}
               />
             ))}

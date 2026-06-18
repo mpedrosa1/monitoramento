@@ -1,4 +1,17 @@
 import type { PermissoesAdmin, TipoAcessoSistema } from "@/lib/types";
+import {
+  emptyPermissoesAdminDetalhadas,
+  limparFlagsLegadoPermissoes,
+  migrarPermissoesLegadoParaDetalhadas,
+  permissoesGranularesIguais,
+  permissoesGranularesSubset,
+  resumoPermissoesAdmin,
+  temPermissao,
+  temPermissaoAdminDetalhada,
+  type PermissaoAdminDetalhadaKey,
+} from "@/lib/permissoes-admin";
+
+export { limparFlagsLegadoPermissoes };
 
 export type PermissaoAdminCheckbox =
   | "padrao"
@@ -44,12 +57,7 @@ export const PERMISSOES_ADMIN_OPCOES: {
 ];
 
 export function emptyPermissoesAdmin(): PermissoesAdmin {
-  return {
-    padrao: false,
-    gestaoRecargas: false,
-    financeiro: false,
-    master: false,
-  };
+  return emptyPermissoesAdminDetalhadas();
 }
 
 function normalizePermissoesInput(p: PermissoesAdmin): PermissoesAdmin {
@@ -89,13 +97,13 @@ export function resolvePermissoes(
       };
     case "desenvolvedor":
       return {
-        tipo: "administrador",
-        permissoes: {
-          padrao: true,
-          gestaoRecargas: true,
-          financeiro: true,
-          master: true,
-        },
+        tipo: "master",
+        permissoes: emptyPermissoesAdmin(),
+      };
+    case "master":
+      return {
+        tipo: "master",
+        permissoes: emptyPermissoesAdmin(),
       };
     case "administrador": {
       const base = normalizePermissoesInput(permissoes ?? emptyPermissoesAdmin());
@@ -151,19 +159,31 @@ function permissoesResolvidasIguais(a: PermissoesAdmin, b: PermissoesAdmin): boo
 export function permissoesAtribuicaoPermitida(
   editorTipo: TipoAcessoSistema | string | undefined | null,
   editorPerm: PermissoesAdmin | null | undefined,
-  targetTipo: "usuario" | "administrador" | "" | TipoAcessoSistema,
+  targetTipo: "usuario" | "administrador" | "master" | "" | TipoAcessoSistema,
   targetPerm: PermissoesAdmin | null | undefined,
   existingTarget?: PermissoesAdmin | null
 ): boolean {
   if (targetTipo === "usuario" || targetTipo === "" || !targetTipo) return true;
-  const editorN = nivelHierarquiaUsuario(editorTipo, editorPerm);
-  const targetN = nivelHierarquiaUsuario("administrador", targetPerm);
-  if (targetN <= editorN) return true;
+  if (targetTipo === "master") {
+    return isMaster(editorTipo, editorPerm);
+  }
+  if (isMaster(editorTipo, editorPerm)) return true;
+  if (targetTipo !== "administrador") return false;
+  const editorResolved = migrarPermissoesLegadoParaDetalhadas({
+    ...emptyPermissoesAdmin(),
+    ...(editorPerm ?? {}),
+  });
+  const targetResolved = migrarPermissoesLegadoParaDetalhadas({
+    ...emptyPermissoesAdmin(),
+    ...(targetPerm ?? {}),
+  });
+  if (permissoesGranularesSubset(editorResolved, targetResolved)) {
+    return true;
+  }
   if (existingTarget && targetPerm) {
-    const existingN = nivelHierarquiaUsuario("administrador", existingTarget);
-    return (
-      existingN === targetN &&
-      permissoesResolvidasIguais(existingTarget, targetPerm)
+    return permissoesGranularesIguais(
+      migrarPermissoesLegadoParaDetalhadas(existingTarget),
+      migrarPermissoesLegadoParaDetalhadas(targetPerm)
     );
   }
   return false;
@@ -180,41 +200,60 @@ export function canManagePadrao(
   tipoAcesso: TipoAcessoSistema | string | undefined | null,
   permissoes?: PermissoesAdmin | null
 ): boolean {
-  const { tipo, permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
-  return tipo === "administrador" && p.padrao;
+  if (isMaster(tipoAcesso, permissoes)) return true;
+  if (resolvePermissoes(tipoAcesso, permissoes).tipo !== "administrador") {
+    return false;
+  }
+  const keys: PermissaoAdminDetalhadaKey[] = [
+    "crudColaboradores",
+    "crudUnidades",
+    "crudVeiculos",
+    "crudEquipamentos",
+    "crudMissoes",
+    "crudChamados",
+  ];
+  return keys.some((key) => temPermissao(tipoAcesso, permissoes, key));
 }
 
 export function canManageRecargas(
   tipoAcesso: TipoAcessoSistema | string | undefined | null,
   permissoes?: PermissoesAdmin | null
 ): boolean {
-  const { permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
-  return p.gestaoRecargas || p.financeiro || p.master;
+  return temPermissao(tipoAcesso, permissoes, "rhRecarregarSaldos");
 }
 
 export function canViewFinanceiro(
   tipoAcesso: TipoAcessoSistema | string | undefined | null,
   permissoes?: PermissoesAdmin | null
 ): boolean {
-  const { permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
-  return p.financeiro || p.master;
+  return temPermissao(tipoAcesso, permissoes, "rhSalariosBonificacoes");
 }
 
 export function canAccessRecursosHumanos(
   tipoAcesso: TipoAcessoSistema | string | undefined | null,
   permissoes?: PermissoesAdmin | null
 ): boolean {
-  const { tipo, permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
-  if (tipo !== "administrador") return false;
-  return p.padrao || p.gestaoRecargas || p.financeiro || p.master;
+  if (isMaster(tipoAcesso, permissoes)) return true;
+  if (resolvePermissoes(tipoAcesso, permissoes).tipo !== "administrador") {
+    return false;
+  }
+  const keys: PermissaoAdminDetalhadaKey[] = [
+    "crudColaboradores",
+    "rhSalariosBonificacoes",
+    "rhEscalaTrabalho",
+    "rhCalendarioSobreaviso",
+    "rhRecarregarSaldos",
+    "rhRegistrarDespesaOutros",
+  ];
+  return keys.some((key) => temPermissao(tipoAcesso, permissoes, key));
 }
 
 export function isMaster(
   tipoAcesso: TipoAcessoSistema | string | undefined | null,
   permissoes?: PermissoesAdmin | null
 ): boolean {
-  const { permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
-  return p.master;
+  const { tipo, permissoes: p } = resolvePermissoes(tipoAcesso, permissoes);
+  return tipo === "master" || p.master;
 }
 
 /** @deprecated Use isMaster */
@@ -224,10 +263,21 @@ export const isDesenvolvedor = isMaster;
 export function colaboradorAcessoToForm(
   tipoAcesso?: TipoAcessoSistema | string | null,
   permissoesAdmin?: PermissoesAdmin | null
-): { tipoAcesso: "usuario" | "administrador"; permissoesAdmin: PermissoesAdmin } {
+): {
+  tipoAcesso: "usuario" | "administrador" | "master";
+  permissoesAdmin: PermissoesAdmin;
+} {
   const { tipo, permissoes } = resolvePermissoes(tipoAcesso, permissoesAdmin);
+  if (tipo === "master" || permissoes.master) {
+    return { tipoAcesso: "master", permissoesAdmin: emptyPermissoesAdmin() };
+  }
   if (tipo === "administrador") {
-    return { tipoAcesso: "administrador", permissoesAdmin: permissoes };
+    return {
+      tipoAcesso: "administrador",
+      permissoesAdmin: limparFlagsLegadoPermissoes(
+        migrarPermissoesLegadoParaDetalhadas(permissoes)
+      ),
+    };
   }
   return { tipoAcesso: "usuario", permissoesAdmin: emptyPermissoesAdmin() };
 }
@@ -274,21 +324,33 @@ export function labelPermissoesAdmin(
 ): string {
   const { tipo, permissoes } = resolvePermissoes(tipoAcesso, permissoesAdmin);
   if (tipo === "usuario") return "Usuário";
-  const partes = PERMISSOES_ADMIN_OPCOES.filter((o) => permissoes[o.key]).map(
-    (o) => o.label
+  if (tipo === "master" || permissoes.master) return "Master";
+  const partes = resumoPermissoesAdmin(
+    migrarPermissoesLegadoParaDetalhadas(permissoes)
   );
   if (partes.length === 0) return "Administrador (sem permissões)";
-  return `Administrador (${partes.join(", ")})`;
+  if (partes.length <= 3) return `Administrador (${partes.join(", ")})`;
+  return `Administrador (${partes.length} permissões)`;
 }
 
 export function podeEditarPermissoesColaborador(
   editorTipo: TipoAcessoSistema | string | undefined | null,
   editorPerm: PermissoesAdmin | null | undefined,
-  alvoTipo: "usuario" | "administrador" | "" | TipoAcessoSistema,
+  alvoTipo: "usuario" | "administrador" | "master" | "" | TipoAcessoSistema,
   alvoPerm: PermissoesAdmin | null | undefined
 ): boolean {
+  if (alvoTipo === "master") {
+    return isMaster(editorTipo, editorPerm);
+  }
+  if (isMaster(editorTipo, editorPerm)) return true;
   if (alvoTipo !== "administrador") return true;
-  const editorN = nivelHierarquiaUsuario(editorTipo, editorPerm);
-  const alvoN = nivelHierarquiaUsuario("administrador", alvoPerm);
-  return alvoN <= editorN;
+  const editor = migrarPermissoesLegadoParaDetalhadas({
+    ...emptyPermissoesAdmin(),
+    ...(editorPerm ?? {}),
+  });
+  const alvo = migrarPermissoesLegadoParaDetalhadas({
+    ...emptyPermissoesAdmin(),
+    ...(alvoPerm ?? {}),
+  });
+  return permissoesGranularesSubset(editor, alvo);
 }

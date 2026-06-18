@@ -102,7 +102,58 @@ function estadosMultiComChave(
 /** Mensagem de erro SNMP por timeout (ex.: gosnmp). */
 export function isSnmpTimeoutValue(value: unknown): boolean {
   if (typeof value !== "string") return false;
-  return value.toLowerCase().includes("timeout");
+  const lower = value.toLowerCase();
+  return lower.includes("timeout") || lower.includes("timed out");
+}
+
+/** Remove chaves de erro/timeout para exibição de leituras antigas. */
+export function filtrarValoresTimeout(
+  valores?: Record<string, unknown>
+): Record<string, unknown> | undefined {
+  if (!valores) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(valores)) {
+    if (k === "erro" || isSnmpTimeoutValue(v)) continue;
+    out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** Valores a exibir no card: últimos válidos se a unidade estiver offline. */
+export function valoresLeituraParaExibicao(
+  metric: { valores?: Record<string, unknown>; ultimosValores?: Record<string, unknown> } | undefined,
+  unidadeOffline: boolean
+): Record<string, unknown> | undefined {
+  if (!metric) return undefined;
+  if (unidadeOffline) {
+    return metric.ultimosValores ?? filtrarValoresTimeout(metric.valores);
+  }
+  return metric.valores;
+}
+
+/** Usa último valor válido quando a leitura atual falhou por timeout. */
+export function resolverLeituraComFallback(
+  rawAtual: unknown,
+  erroGeral: string | undefined,
+  ultimosValores: Record<string, unknown> | undefined,
+  fallbackDeUltimos: (ultimos: Record<string, unknown>) => unknown
+): { raw: unknown; desatualizada: boolean } {
+  const leituraTimeout =
+    isSnmpTimeoutValue(rawAtual) ||
+    (rawAtual === undefined && isSnmpTimeoutValue(erroGeral));
+
+  if (leituraTimeout && ultimosValores) {
+    const anterior = fallbackDeUltimos(ultimosValores);
+    if (anterior !== undefined && !isSnmpTimeoutValue(anterior)) {
+      return { raw: anterior, desatualizada: true };
+    }
+  }
+
+  if (leituraTimeout) {
+    return { raw: undefined, desatualizada: false };
+  }
+
+  return { raw: rawAtual, desatualizada: false };
 }
 
 /** Texto e estilo para leitura no card da unidade. */
@@ -111,7 +162,7 @@ export function resolveSnmpLeituraDisplay(
   ponto?: SnmpPonto | null
 ): { text: string; isTimeout: boolean; color?: string } {
   if (isSnmpTimeoutValue(value)) {
-    return { text: "timeout", isTimeout: true };
+    return { text: "—", isTimeout: false };
   }
   const display = resolveSnmpMetricDisplay(value, ponto);
   return {

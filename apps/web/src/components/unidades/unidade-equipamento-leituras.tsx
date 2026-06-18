@@ -1,14 +1,19 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import {
+  filtrarValoresTimeout,
   isSnmpTimeoutValue,
+  resolverLeituraComFallback,
   resolveSnmpLeituraDisplay,
+  valoresLeituraParaExibicao,
 } from "@/lib/snmp-display";
 import {
   modbusPontoParaDisplayTipo,
   normalizeModbusPontos,
 } from "@/lib/modbus-presets";
 import { normalizeSnmpPontos } from "@/lib/snmp-presets";
+import type { EquipamentosLayout } from "@/lib/equipamentos-layout";
 import { cn } from "@/lib/utils";
 import type {
   DeviceMetric,
@@ -62,16 +67,87 @@ function chavePontoModbus(ponto: ModbusPonto): string {
   return ponto._localId ?? String(ponto.offset) ?? ponto.nome;
 }
 
+function ultimosValoresEfetivos(metric?: DeviceMetric) {
+  return (
+    metric?.ultimosValores ?? filtrarValoresTimeout(metric?.valores) ?? undefined
+  );
+}
+
+function ValorLeitura({
+  display,
+  semLeitura,
+  desatualizada,
+  title,
+}: {
+  display: { text: string; color?: string };
+  semLeitura: boolean;
+  desatualizada: boolean;
+  title?: string;
+}) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-end gap-1 text-right font-mono font-medium text-foreground"
+      style={!display.color ? undefined : { color: display.color }}
+      title={title}
+    >
+      {desatualizada && !semLeitura ? (
+        <TriangleAlert
+          className="h-3.5 w-3.5 shrink-0 text-amber-500"
+          aria-label="Leitura desatualizada"
+        />
+      ) : null}
+      {semLeitura ? "—" : display.text}
+    </span>
+  );
+}
+
+function leiturasListClass(
+  nested: boolean | undefined,
+  layout: EquipamentosLayout | undefined
+) {
+  const isLista = layout === "lista";
+  if (nested) {
+    return cn(
+      "mt-1",
+      isLista ? "divide-y divide-border/60" : "space-y-1"
+    );
+  }
+  return cn(
+    "mt-2 border-t border-border/60 pt-2",
+    isLista ? "divide-y divide-border/60" : "space-y-1.5"
+  );
+}
+
+function leituraItemClass(layout: EquipamentosLayout | undefined) {
+  return cn(
+    "flex items-center justify-between gap-3 text-xs",
+    layout === "lista" && "py-1.5"
+  );
+}
+
 export function UnidadeEquipamentoLeituras({
   eq,
   metric,
   nested,
+  layout,
+  unidadeOffline = false,
 }: {
   eq?: Equipamento;
   metric?: DeviceMetric;
   nested?: boolean;
+  layout?: EquipamentosLayout;
+  unidadeOffline?: boolean;
 }) {
   if (!eq) return null;
+
+  const ultimos = ultimosValoresEfetivos(metric);
+  const valoresAtuais = metric?.valores;
+  const erroGeralAtual =
+    typeof valoresAtuais?.erro === "string" ? valoresAtuais.erro : undefined;
+  const erroGeralVisivel =
+    erroGeralAtual && !isSnmpTimeoutValue(erroGeralAtual)
+      ? erroGeralAtual
+      : undefined;
 
   if (eq.tipoMonitoramento === "snmp") {
     const pontos = normalizeSnmpPontos(eq.config).filter(
@@ -86,58 +162,50 @@ export function UnidadeEquipamentoLeituras({
       );
     }
 
-    const valores = metric?.valores;
-    const erroGeral =
-      typeof valores?.erro === "string" ? valores.erro : undefined;
+    const valoresOffline = valoresLeituraParaExibicao(metric, true);
 
     return (
-      <ul
-        className={cn(
-          nested
-            ? "mt-1 space-y-1"
-            : "mt-2 space-y-1.5 border-t border-border/60 pt-2"
-        )}
-      >
+      <ul className={leiturasListClass(nested, layout)}>
         {pontos.map((ponto) => {
           const label = ponto.nome.trim() || ponto.oid;
-          const raw = valorDoPonto(valores, ponto);
-          const timeout =
-            isSnmpTimeoutValue(raw) ||
-            (raw === undefined && isSnmpTimeoutValue(erroGeral));
-          const display = timeout
-            ? { text: "timeout", isTimeout: true as const }
-            : resolveSnmpLeituraDisplay(raw, ponto);
-          const semLeitura = raw === undefined && !erroGeral && !timeout;
+
+          let raw: unknown;
+          let desatualizada = false;
+
+          if (unidadeOffline) {
+            raw = valorDoPonto(valoresOffline, ponto);
+            desatualizada = raw !== undefined;
+          } else {
+            const rawAtual = valorDoPonto(valoresAtuais, ponto);
+            const resolvido = resolverLeituraComFallback(
+              rawAtual,
+              erroGeralAtual,
+              ultimos,
+              (u) => valorDoPonto(u, ponto)
+            );
+            raw = resolvido.raw;
+            desatualizada = resolvido.desatualizada;
+          }
+
+          const display = resolveSnmpLeituraDisplay(raw, ponto);
+          const semLeitura = raw === undefined;
 
           return (
-            <li
-              key={chavePonto(ponto)}
-              className="flex items-baseline justify-between gap-3 text-xs"
-            >
+            <li key={chavePonto(ponto)} className={leituraItemClass(layout)}>
               <span className="min-w-0 truncate text-muted-foreground">
                 {label}
               </span>
-              <span
-                className={cn(
-                  "shrink-0 text-right font-mono font-medium",
-                  display.isTimeout
-                    ? "text-destructive"
-                    : "text-foreground"
-                )}
-                style={
-                  display.isTimeout || !display.color
-                    ? undefined
-                    : { color: display.color }
-                }
+              <ValorLeitura
+                display={display}
+                semLeitura={semLeitura}
+                desatualizada={desatualizada}
                 title={ponto.oid}
-              >
-                {semLeitura ? "—" : display.text}
-              </span>
+              />
             </li>
           );
         })}
-        {erroGeral && !isSnmpTimeoutValue(erroGeral) ? (
-          <li className="text-xs text-destructive">{erroGeral}</li>
+        {erroGeralVisivel && !unidadeOffline ? (
+          <li className="text-xs text-destructive">{erroGeralVisivel}</li>
         ) : null}
       </ul>
     );
@@ -156,65 +224,59 @@ export function UnidadeEquipamentoLeituras({
       );
     }
 
-    const valores = metric?.valores;
-    const erroGeral =
-      typeof valores?.erro === "string" ? valores.erro : undefined;
+    const valoresOffline = valoresLeituraParaExibicao(metric, true);
 
     return (
-      <ul
-        className={cn(
-          nested
-            ? "mt-1 space-y-1"
-            : "mt-2 space-y-1.5 border-t border-border/60 pt-2"
-        )}
-      >
+      <ul className={leiturasListClass(nested, layout)}>
         {pontos.map((ponto) => {
           const label = ponto.nome.trim() || `Offset ${ponto.offset}`;
-          const raw = valorDoPontoModbus(valores, ponto);
-          const timeout =
-            isSnmpTimeoutValue(raw) ||
-            (raw === undefined && isSnmpTimeoutValue(erroGeral));
-          const display = timeout
-            ? { text: "timeout", isTimeout: true as const }
-            : resolveSnmpLeituraDisplay(raw, pontoModbusParaDisplay(ponto));
-          const semLeitura = raw === undefined && !erroGeral && !timeout;
+          const pontoDisplay = pontoModbusParaDisplay(ponto);
+
+          let raw: unknown;
+          let desatualizada = false;
+
+          if (unidadeOffline) {
+            raw = valorDoPontoModbus(valoresOffline, ponto);
+            desatualizada = raw !== undefined;
+          } else {
+            const rawAtual = valorDoPontoModbus(valoresAtuais, ponto);
+            const resolvido = resolverLeituraComFallback(
+              rawAtual,
+              erroGeralAtual,
+              ultimos,
+              (u) => valorDoPontoModbus(u, ponto)
+            );
+            raw = resolvido.raw;
+            desatualizada = resolvido.desatualizada;
+          }
+
+          const display = resolveSnmpLeituraDisplay(raw, pontoDisplay);
+          const semLeitura = raw === undefined;
 
           return (
-            <li
-              key={chavePontoModbus(ponto)}
-              className="flex items-baseline justify-between gap-3 text-xs"
-            >
+            <li key={chavePontoModbus(ponto)} className={leituraItemClass(layout)}>
               <span className="min-w-0 truncate text-muted-foreground">
                 {label}
               </span>
-              <span
-                className={cn(
-                  "shrink-0 text-right font-mono font-medium",
-                  display.isTimeout
-                    ? "text-destructive"
-                    : "text-foreground"
-                )}
-                style={
-                  display.isTimeout || !display.color
-                    ? undefined
-                    : { color: display.color }
-                }
+              <ValorLeitura
+                display={display}
+                semLeitura={semLeitura}
+                desatualizada={desatualizada}
                 title={`Offset ${ponto.offset}`}
-              >
-                {semLeitura ? "—" : display.text}
-              </span>
+              />
             </li>
           );
         })}
-        {erroGeral && !isSnmpTimeoutValue(erroGeral) ? (
-          <li className="text-xs text-destructive">{erroGeral}</li>
+        {erroGeralVisivel && !unidadeOffline ? (
+          <li className="text-xs text-destructive">{erroGeralVisivel}</li>
         ) : null}
       </ul>
     );
   }
 
-  const valorEntries = metric?.valores
-    ? Object.entries(metric.valores).filter(([k]) => k !== "erro")
+  const valores = valoresLeituraParaExibicao(metric, unidadeOffline);
+  const valorEntries = valores
+    ? Object.entries(valores).filter(([k]) => k !== "erro")
     : [];
 
   if (valorEntries.length === 0) {
@@ -226,31 +288,36 @@ export function UnidadeEquipamentoLeituras({
   }
 
   return (
-    <ul
-      className={cn(
-        nested
-          ? "mt-1 space-y-1"
-          : "mt-2 space-y-1.5 border-t border-border/60 pt-2"
-      )}
-    >
-      {valorEntries.map(([key, raw]) => {
-        const timeout = isSnmpTimeoutValue(raw);
+    <ul className={leiturasListClass(nested, layout)}>
+      {valorEntries.map(([key, rawAtual]) => {
+        let raw: unknown;
+        let desatualizada = false;
+
+        if (unidadeOffline) {
+          raw = rawAtual;
+          desatualizada = raw !== undefined && raw !== null;
+        } else {
+          const resolvido = resolverLeituraComFallback(
+            rawAtual,
+            erroGeralAtual,
+            ultimos,
+            (u) => u[key]
+          );
+          raw = resolvido.raw;
+          desatualizada = resolvido.desatualizada;
+        }
+
+        const display = resolveSnmpLeituraDisplay(raw);
+        const semLeitura = raw == null || raw === undefined;
+
         return (
-          <li
-            key={key}
-            className="flex items-baseline justify-between gap-3 text-xs"
-          >
-            <span className="min-w-0 truncate text-muted-foreground">
-              {key}
-            </span>
-            <span
-              className={cn(
-                "shrink-0 font-mono font-medium",
-                timeout ? "text-destructive" : "text-foreground"
-              )}
-            >
-              {raw == null ? "—" : timeout ? "timeout" : String(raw)}
-            </span>
+          <li key={key} className={leituraItemClass(layout)}>
+            <span className="min-w-0 truncate text-muted-foreground">{key}</span>
+            <ValorLeitura
+              display={display}
+              semLeitura={semLeitura}
+              desatualizada={desatualizada}
+            />
           </li>
         );
       })}

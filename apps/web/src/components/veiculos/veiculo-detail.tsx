@@ -117,7 +117,12 @@ export function VeiculoDetail({
   colaborador,
   colaboradores,
   isMeuVeiculo,
-  canManage,
+  canCrudVeiculos,
+  canFrotaTrocarVeiculos,
+  canFrotaRegistrarPeriodo,
+  canFrotaRegistrarMulta,
+  canFrotaValoresAlugueis,
+  canFrotaVisualizarContratos,
   meusVeiculos,
   todosVeiculos,
   onChanged,
@@ -127,7 +132,14 @@ export function VeiculoDetail({
   colaborador?: Colaborador | null;
   colaboradores?: Colaborador[];
   isMeuVeiculo: boolean;
-  canManage: boolean;
+  /** @deprecated use permissões granulares */
+  canManage?: boolean;
+  canCrudVeiculos?: boolean;
+  canFrotaTrocarVeiculos?: boolean;
+  canFrotaRegistrarPeriodo?: boolean;
+  canFrotaRegistrarMulta?: boolean;
+  canFrotaValoresAlugueis?: boolean;
+  canFrotaVisualizarContratos?: boolean;
   meusVeiculos: Veiculo[];
   todosVeiculos: Veiculo[];
   onChanged: () => void | Promise<void>;
@@ -141,12 +153,19 @@ export function VeiculoDetail({
   const [adminSwapOpen, setAdminSwapOpen] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<AbaVeiculo>("geral");
 
+  const podeCrudVeiculo = Boolean(canCrudVeiculos);
+  const podeTrocaAdmin = Boolean(canFrotaTrocarVeiculos);
+  const podeRegistrarPeriodo = Boolean(canFrotaRegistrarPeriodo);
+  const podeRegistrarMulta = Boolean(canFrotaRegistrarMulta);
+  const podeVerValoresAluguel = Boolean(canFrotaValoresAlugueis);
+  const podeVerContrato = Boolean(canFrotaVisualizarContratos);
+
   const foto = veiculo.fotoUrl?.trim() || VEICULO_FOTO_PADRAO;
   const usaImgNativo = foto.startsWith("http") || foto.startsWith("/pics/");
   const rotulo = `${veiculo.marca} ${veiculo.modelo}`.trim();
   const podeTrocar = !isMeuVeiculo;
   const motoristaForaAutorizados =
-    canManage && motoristaAtualForaDaListaAutorizados(veiculo);
+    podeTrocaAdmin && motoristaAtualForaDaListaAutorizados(veiculo);
 
   const condutoresAutorizados = useMemo(() => {
     const ids = veiculo.colaboradoresAdicionaisIds ?? [];
@@ -173,7 +192,7 @@ export function VeiculoDetail({
   }
 
   function abrirTroca() {
-    if (canManage) {
+    if (podeTrocaAdmin) {
       setAdminSwapOpen(true);
     } else {
       setSwapOpen(true);
@@ -191,7 +210,7 @@ export function VeiculoDetail({
                   Meu veículo
                 </Badge>
               )}
-              {canManage && veiculo.alertaTrocaNaoAutorizada && (
+              {podeTrocaAdmin && veiculo.alertaTrocaNaoAutorizada && (
                 <Badge className="absolute right-2 top-2 z-10 border-red-300 bg-red-500 font-semibold text-white shadow-sm">
                   Alerta
                 </Badge>
@@ -242,10 +261,10 @@ export function VeiculoDetail({
                   onClick={abrirTroca}
                 >
                   <ArrowLeftRight className="mr-1.5 h-4 w-4" />
-                  {canManage ? "Trocar condutores" : "Solicitar troca"}
+                  {podeTrocaAdmin ? "Trocar condutores" : "Solicitar troca"}
                 </Button>
               )}
-              {canManage && (
+              {podeCrudVeiculo && (
                 <>
                   <Button className="w-full" onClick={() => setEditOpen(true)}>
                     <Pencil className="mr-1.5 h-4 w-4" />
@@ -282,7 +301,7 @@ export function VeiculoDetail({
             </div>
           ) : null}
 
-          {canManage && veiculo.alertaTrocaNaoAutorizada ? (
+          {podeTrocaAdmin && veiculo.alertaTrocaNaoAutorizada ? (
             <div
               role="alert"
               className="flex gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
@@ -378,33 +397,39 @@ export function VeiculoDetail({
                     label="Data da locação"
                     value={formatarDataIso(veiculo.dataLocacao)}
                   />
-                  <InfoRow
-                    label="Número de contrato"
-                    value={valorOuTraco(veiculo.numeroContrato)}
-                  />
-                  <InfoRow
-                    label="Valor do aluguel"
-                    value={formatarMoeda(veiculo.valorAluguel)}
-                  />
-                  <InfoRow
-                    label="Contrato"
-                    value={
-                      veiculo.contratoUrl ? (
-                        <a
-                          href={veiculo.contratoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-primary hover:underline"
-                        >
-                          <FileText className="h-4 w-4 shrink-0" />
-                          Abrir PDF
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                        </a>
-                      ) : (
-                        "—"
-                      )
-                    }
-                  />
+                  {podeVerContrato ? (
+                    <InfoRow
+                      label="Número de contrato"
+                      value={valorOuTraco(veiculo.numeroContrato)}
+                    />
+                  ) : null}
+                  {podeVerValoresAluguel ? (
+                    <InfoRow
+                      label="Valor do aluguel"
+                      value={formatarMoeda(veiculo.valorAluguel)}
+                    />
+                  ) : null}
+                  {podeVerContrato ? (
+                    <InfoRow
+                      label="Contrato"
+                      value={
+                        veiculo.contratoUrl ? (
+                          <a
+                            href={veiculo.contratoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                          >
+                            <FileText className="h-4 w-4 shrink-0" />
+                            Abrir PDF
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                          </a>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
+                  ) : null}
                   {veiculo.dataDevolucao ? (
                     <>
                       <InfoRow
@@ -429,7 +454,7 @@ export function VeiculoDetail({
                   {colaborador ? (
                     <ColaboradorCard
                       colaborador={colaborador}
-                      linkable={canManage}
+                      linkable={podeCrudVeiculo}
                       centered={false}
                     />
                   ) : (
@@ -450,7 +475,7 @@ export function VeiculoDetail({
                         <ColaboradorListItem
                           key={c.id}
                           colaborador={c}
-                          linkable={canManage}
+                          linkable={podeCrudVeiculo}
                         />
                       ))}
                     </div>
@@ -468,7 +493,7 @@ export function VeiculoDetail({
               <VeiculoPeriodosMotoristaPanel
                 veiculoId={veiculo.id}
                 colaboradores={colaboradores ?? []}
-                canManage={canManage}
+                canManage={podeRegistrarPeriodo}
                 refreshKey={veiculo.updatedAt}
               />
             ) : null}
@@ -477,7 +502,7 @@ export function VeiculoDetail({
               <VeiculoMultasPanel
                 veiculoId={veiculo.id}
                 colaboradores={colaboradores ?? []}
-                canManage={canManage}
+                canManage={podeRegistrarMulta}
               />
             ) : null}
           </div>

@@ -77,7 +77,7 @@ function formatarHoras(horas: number): string {
 }
 
 export default function SobreavisoPage() {
-  const { canManageData } = usePermissions();
+  const { canRhCalendarioSobreaviso } = usePermissions();
   const [sobreavisos, setSobreavisos] = useState<Sobreaviso[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [escalas, setEscalas] = useState<EscalaTrabalho[]>([]);
@@ -421,7 +421,7 @@ export default function SobreavisoPage() {
           </Menu.Root>
           )}
 
-          {canManageData && (
+          {canRhCalendarioSobreaviso && (
             <>
               {!definicaoDoMes && (
                 <Button
@@ -521,7 +521,7 @@ export default function SobreavisoPage() {
                     key={dataStr}
                     type="button"
                     title={titleParts.join(" • ") || undefined}
-                    onClick={() => canManageData && abrirNovo(dataStr)}
+                    onClick={() => canRhCalendarioSobreaviso && abrirNovo(dataStr)}
                     className={[
                       "min-h-24 cursor-pointer border-b border-r border-border p-1.5 text-left transition-colors hover:bg-muted/60",
                       fundoDaCelula(weekday, isFeriado),
@@ -664,7 +664,7 @@ export default function SobreavisoPage() {
                         {s.observacao ? ` · ${s.observacao}` : ""}
                       </p>
                     </div>
-                    {canManageData && (
+                    {canRhCalendarioSobreaviso && (
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"

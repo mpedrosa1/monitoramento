@@ -11,13 +11,13 @@ export default function ColaboradoresRhLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { canManageData, isLoading } = usePermissions();
+  const { canCrudColaboradores, isLoading } = usePermissions();
 
   useEffect(() => {
-    if (!isLoading && !canManageData) {
+    if (!isLoading && !canCrudColaboradores) {
       router.replace("/dashboard/recursos-humanos");
     }
-  }, [canManageData, isLoading, router]);
+  }, [canCrudColaboradores, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -27,7 +27,7 @@ export default function ColaboradoresRhLayout({
     );
   }
 
-  if (!canManageData) {
+  if (!canCrudColaboradores) {
     return null;
   }
 

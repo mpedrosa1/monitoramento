@@ -1,13 +1,13 @@
 import { missaoIniciada } from "@/lib/missoes";
 import {
-  canAccessRecursosHumanos as canAccessRH,
-  canManagePadrao,
-  canManageRecargas,
-  canViewFinanceiro,
-  isDesenvolvedor,
   isMaster,
   resolvePermissoes,
 } from "@/lib/acesso";
+import {
+  permissoesEfetivas,
+  temPermissao,
+  type PermissaoAdminDetalhadaKey,
+} from "@/lib/permissoes-admin";
 import type { Chamado, Missao, PermissoesAdmin, TipoAcessoSistema } from "@/lib/types";
 
 type AcessoContext = {
@@ -19,48 +19,220 @@ function ctx(tipoAcesso?: TipoAcessoSistema | string | null, permissoesAdmin?: P
   return { tipoAcesso, permissoesAdmin };
 }
 
-/** Somente administradores com Padrão — CRUD na página Missões. */
-export function canManageMissoes(
+function can(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin: PermissoesAdmin | null | undefined,
+  key: PermissaoAdminDetalhadaKey
+): boolean {
+  return temPermissao(tipoAcesso, permissoesAdmin, key);
+}
+
+export function canCrudColaboradores(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canManagePadrao(tipoAcesso, permissoesAdmin);
+  return can(tipoAcesso, permissoesAdmin, "crudColaboradores");
 }
 
-/** Administradores com Padrão — vincular e editar equipamentos na unidade. */
-export function canManageEquipamentosUnidade(
+export function canCrudUnidades(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canManagePadrao(tipoAcesso, permissoesAdmin);
+  return can(tipoAcesso, permissoesAdmin, "crudUnidades");
 }
 
-/** Administradores com Padrão — podem gerenciar cadastros. */
+export function canCrudVeiculos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "crudVeiculos");
+}
+
+export function canCrudEquipamentos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "crudEquipamentos");
+}
+
+export function canCrudMissoes(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "crudMissoes");
+}
+
+export function canCrudChamados(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "crudChamados");
+}
+
+export function canConcluirMissaoQualquer(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "concluirMissaoQualquer");
+}
+
+export function canEncerrarChamadoQualquer(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "encerrarChamadoQualquer");
+}
+
+export function canFrotaValoresAlugueis(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "frotaValoresAlugueis");
+}
+
+export function canFrotaVisualizarContratos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "frotaVisualizarContratos");
+}
+
+export function canFrotaRegistrarPeriodo(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "frotaRegistrarPeriodo");
+}
+
+export function canFrotaRegistrarMulta(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "frotaRegistrarMulta");
+}
+
+export function canFrotaTrocarVeiculos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "frotaTrocarVeiculos");
+}
+
+export function canRhSalariosBonificacoes(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhSalariosBonificacoes");
+}
+
+export function canRhEscalaTrabalho(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhEscalaTrabalho");
+}
+
+export function canRhCalendarioSobreaviso(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhCalendarioSobreaviso");
+}
+
+export function canRhRecarregarSaldos(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhRecarregarSaldos");
+}
+
+export function canRhRegistrarDespesaOutros(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhRegistrarDespesaOutros");
+}
+
+export function canViewTodasMultasVeiculo(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  if (isMaster(tipoAcesso, permissoesAdmin)) return true;
+  if (tipoAcesso !== "administrador") return false;
+  const p = permissoesEfetivas(tipoAcesso, permissoesAdmin);
+  return p.crudVeiculos || p.frotaRegistrarMulta;
+}
+
+/** Qualquer permissão de CRUD de cadastro. */
 export function canManageData(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canManagePadrao(tipoAcesso, permissoesAdmin);
+  return (
+    canCrudColaboradores(tipoAcesso, permissoesAdmin) ||
+    canCrudUnidades(tipoAcesso, permissoesAdmin) ||
+    canCrudVeiculos(tipoAcesso, permissoesAdmin) ||
+    canCrudEquipamentos(tipoAcesso, permissoesAdmin) ||
+    canCrudMissoes(tipoAcesso, permissoesAdmin) ||
+    canCrudChamados(tipoAcesso, permissoesAdmin)
+  );
 }
 
-/** Página de equipamentos — mesmo critério do Padrão. */
+export function canManageMissoes(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return canCrudMissoes(tipoAcesso, permissoesAdmin);
+}
+
+export function canManageEquipamentosUnidade(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return canCrudEquipamentos(tipoAcesso, permissoesAdmin);
+}
+
 export function canAccessEquipamentos(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canManagePadrao(tipoAcesso, permissoesAdmin);
+  return canCrudEquipamentos(tipoAcesso, permissoesAdmin);
 }
 
 export function canAccessRecursosHumanos(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
-  return canAccessRH(tipoAcesso, permissoesAdmin);
+  if (isMaster(tipoAcesso, permissoesAdmin)) return true;
+  const { tipo } = resolvePermissoes(tipoAcesso, permissoesAdmin);
+  if (tipo !== "administrador") return false;
+  const p = permissoesEfetivas(tipoAcesso, permissoesAdmin);
+  return (
+    p.crudColaboradores ||
+    p.rhSalariosBonificacoes ||
+    p.rhEscalaTrabalho ||
+    p.rhCalendarioSobreaviso ||
+    p.rhRecarregarSaldos ||
+    p.rhRegistrarDespesaOutros
+  );
 }
 
-export { canManageRecargas, canViewFinanceiro, isDesenvolvedor, isMaster, resolvePermissoes };
+export function canManageRecargas(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return canRhRecarregarSaldos(tipoAcesso, permissoesAdmin);
+}
 
-/** Colaborador logado faz parte da missão (registro Missao). */
+export function canViewFinanceiro(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return canRhSalariosBonificacoes(tipoAcesso, permissoesAdmin);
+}
+
+export { isMaster as isDesenvolvedor, isMaster, resolvePermissoes };
+
 export function isAtribuidoMissaoDireta(
   colaboradorId: string | undefined,
   missao: Missao | null | undefined
@@ -69,7 +241,6 @@ export function isAtribuidoMissaoDireta(
   return missao.colaboradorIds.includes(colaboradorId);
 }
 
-/** Colaborador atribuído pode iniciar missão planejada. */
 export function canIniciarMissao(
   colaboradorId: string | undefined,
   missao: Missao | null | undefined
@@ -78,10 +249,6 @@ export function canIniciarMissao(
   return isAtribuidoMissaoDireta(colaboradorId, missao);
 }
 
-/**
- * Concluir missão em andamento: administradores ou
- * colaborador atribuído à missão.
- */
 export function canConcluirMissao(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   colaboradorId: string | undefined,
@@ -90,11 +257,10 @@ export function canConcluirMissao(
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
   if (!missao || !missaoIniciada(missao, chamado)) return false;
-  if (canManagePadrao(tipoAcesso, permissoesAdmin)) return true;
+  if (canConcluirMissaoQualquer(tipoAcesso, permissoesAdmin)) return true;
   return isAtribuidoMissaoDireta(colaboradorId, missao);
 }
 
-/** Colaborador logado faz parte da missão do chamado. */
 export function isAtribuidoMissao(
   colaboradorId: string | undefined,
   chamado: Chamado | null | undefined
@@ -103,10 +269,6 @@ export function isAtribuidoMissao(
   return chamado.colaboradorIds.includes(colaboradorId);
 }
 
-/**
- * Encerrar chamado em andamento: administradores ou
- * colaborador atribuído à missão.
- */
 export function canEncerrarChamado(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   colaboradorId: string | undefined,
@@ -114,7 +276,7 @@ export function canEncerrarChamado(
   permissoesAdmin?: PermissoesAdmin | null
 ): boolean {
   if (!chamado || chamado.status !== "em_andamento") return false;
-  if (canManagePadrao(tipoAcesso, permissoesAdmin)) return true;
+  if (canEncerrarChamadoQualquer(tipoAcesso, permissoesAdmin)) return true;
   return isAtribuidoMissao(colaboradorId, chamado);
 }
 

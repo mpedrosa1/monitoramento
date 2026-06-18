@@ -18,8 +18,7 @@ import {
   PainelMonitoramentoSubheader,
   type PainelMonitoramentoTab,
 } from "@/components/painel/painel-monitoramento-subheader";
-import { PainelMapaOfflineSound } from "@/components/painel/painel-mapa-offline-sound";
-import { PainelUnidadesMap } from "@/components/painel/painel-unidades-map";
+import { PainelMapaView } from "@/components/painel/painel-mapa-view";
 import { buildMetricMap } from "@/components/unidades/unidade-detail-panel";
 import { UnidadeEquipamentosSection } from "@/components/unidades/unidade-equipamentos-section";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -61,6 +60,7 @@ export function PainelMonitoramentoView() {
   const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mapHudUnidadeId, setMapHudUnidadeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] =
     useState<PainelMonitoramentoTab>("equipamentos");
 
@@ -173,7 +173,10 @@ export function PainelMonitoramentoView() {
         <DashboardHeader title={PAINEL_MONITORAMENTO_NOME} socketStatus={status} />
         <PainelMonitoramentoSubheader
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            if (tab !== "mapa") setMapHudUnidadeId(null);
+          }}
         />
         <main className="min-h-0 flex-1 overflow-hidden">
           {activeTab === "equipamentos" ? (
@@ -198,6 +201,7 @@ export function PainelMonitoramentoView() {
                     catalogo={catalogo}
                     metricMap={metricMap}
                     canManage={canManageEquipamentosUnidade}
+                    showLayoutToggle
                     onUnidadeUpdated={(updated) => {
                       setUnidades((prev) =>
                         prev.map((u) => (u.id === updated.id ? updated : u))
@@ -208,22 +212,19 @@ export function PainelMonitoramentoView() {
               ) : null}
             </div>
           ) : (
-            <>
-              <PainelMapaOfflineSound
-                active
-                unidades={sortedUnidades}
-                metricMap={metricMap}
-              />
-              <PainelUnidadesMap
-                unidades={sortedUnidades}
-                metricMap={metricMap}
-                selectedId={selectedId}
-                onSelectUnidade={(id) => {
-                  setSelectedId(id);
-                  setActiveTab("equipamentos");
-                }}
-              />
-            </>
+            <PainelMapaView
+              unidades={sortedUnidades}
+              catalogo={catalogo}
+              metricMap={metricMap}
+              socketStatus={status}
+              mapHudUnidadeId={mapHudUnidadeId}
+              onMapHudUnidadeIdChange={setMapHudUnidadeId}
+              onIrParaAbaEquipamentos={(unidade) => {
+                setSelectedId(unidade.id);
+                setMapHudUnidadeId(null);
+                setActiveTab("equipamentos");
+              }}
+            />
           )}
         </main>
       </div>

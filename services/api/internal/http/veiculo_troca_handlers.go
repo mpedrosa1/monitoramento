@@ -517,7 +517,7 @@ func (a *API) notificarAdminsTrocaNaoAutorizada(
 	}
 
 	for _, colab := range colabs {
-		if !domain.CanManagePadrao(colab.TipoAcesso, colab.PermissoesAdmin) {
+		if !domain.CanFrotaTrocarVeiculos(colab.TipoAcesso, colab.PermissoesAdmin) {
 			continue
 		}
 		a.criarENotificar(ctx, domain.Notificacao{

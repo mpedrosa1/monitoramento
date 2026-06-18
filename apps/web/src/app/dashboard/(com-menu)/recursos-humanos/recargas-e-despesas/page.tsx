@@ -65,7 +65,7 @@ function formatarAtualizadoEm(value: string): string {
 
 export default function RecargasDespesasPage() {
   const searchParams = useSearchParams();
-  const { canManageData, canManageRecargas } = usePermissions();
+  const { canRhRegistrarDespesaOutros, canManageRecargas } = usePermissions();
   const { ano, mes, competencia } = useRecargasDespesasPeriodo();
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [colaboradorId, setColaboradorId] = useState("");
@@ -348,7 +348,7 @@ export default function RecargasDespesasPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Despesas registradas</h3>
               <div className="flex flex-wrap items-center gap-2">
-                {canManageData ? (
+                {canRhRegistrarDespesaOutros ? (
                   <Button size="sm" onClick={abrirNovaDespesa}>
                     <Plus className="mr-1.5 h-4 w-4" />
                     Nova despesa
@@ -437,7 +437,7 @@ export default function RecargasDespesasPage() {
                           {formatarMoeda(d.valor)}
                         </TableCell>
                         <TableCell>
-                          {canManageData ? (
+                          {canRhRegistrarDespesaOutros ? (
                             <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"

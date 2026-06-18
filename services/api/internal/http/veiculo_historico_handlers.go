@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/mmrtec/monitoramento/api/internal/auth"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -190,6 +191,22 @@ func (a *API) ListVeiculoMultas(w http.ResponseWriter, r *http.Request, veiculoI
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		if !domain.CanViewTodasMultasVeiculo(claims.TipoAcesso, claims.PermissoesAdmin) {
+			cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
+			if err != nil {
+				writeError(w, http.StatusForbidden, "sem permissão para visualizar multas")
+				return
+			}
+			filtered := make([]domain.VeiculoMulta, 0, len(list))
+			for _, m := range list {
+				if m.ColaboradorID == cid {
+					filtered = append(filtered, m)
+				}
+			}
+			list = filtered
+		}
 	}
 	writeJSONList(w, http.StatusOK, list)
 }

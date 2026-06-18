@@ -25,7 +25,7 @@ function pieSlicePath(
   return `M ${cx} ${cy} L ${p0.x} ${p0.y} A ${r} ${r} 0 ${large} 1 ${p1.x} ${p1.y} Z`;
 }
 
-function clusterPieSvg(points: UnidadeMapPoint[], selected: boolean): string {
+function clusterPieSvg(points: UnidadeMapPoint[]): string {
   const size = 44;
   const cx = size / 2;
   const cy = size / 2;
@@ -44,39 +44,29 @@ function clusterPieSvg(points: UnidadeMapPoint[], selected: boolean): string {
     })
     .join("");
 
-  const selectionRing = selected
-    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#1074b8" stroke-width="2.5" />`
-    : "";
-
   const border = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#ffffff" stroke-width="2" />`;
   const label = `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="13" font-weight="700" font-family="system-ui,sans-serif" paint-order="stroke" stroke="#00000055" stroke-width="2">${n}</text>`;
 
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${selectionRing}${slices}${border}${label}</svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${slices}${border}${label}</svg>`;
 }
 
-function singleUnitSvg(online: boolean, selected: boolean): string {
+function singleUnitSvg(online: boolean): string {
   const size = 28;
   const cx = size / 2;
   const cy = size / 2;
   const r = 11;
   const fill = online ? COLOR_ONLINE : COLOR_OFFLINE;
-  const selectionRing = selected
-    ? `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#1074b8" stroke-width="2.5" />`
-    : "";
   const dot = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="#ffffff" stroke-width="2" />`;
 
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${selectionRing}${dot}</svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))">${dot}</svg>`;
 }
 
-export function unidadeClusterMapIcon(
-  points: UnidadeMapPoint[],
-  selected: boolean
-): L.DivIcon {
+export function unidadeClusterMapIcon(points: UnidadeMapPoint[]): L.DivIcon {
   const count = points.length;
   const html =
     count > 1
-      ? clusterPieSvg(points, selected)
-      : singleUnitSvg(points[0]?.online ?? false, selected);
+      ? clusterPieSvg(points)
+      : singleUnitSvg(points[0]?.online ?? false);
   const size = count > 1 ? 44 : 28;
 
   return L.divIcon({

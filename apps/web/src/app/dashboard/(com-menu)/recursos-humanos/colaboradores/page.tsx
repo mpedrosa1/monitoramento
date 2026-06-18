@@ -13,7 +13,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Input } from "@/components/ui/input";
 
 export default function ColaboradoresRhPage() {
-  const { canManageData } = usePermissions();
+  const { canCrudColaboradores } = usePermissions();
   const [list, setList] = useState<Colaborador[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Colaborador | null>(null);
@@ -100,7 +100,7 @@ export default function ColaboradoresRhPage() {
               aria-label="Buscar colaboradores"
             />
           </div>
-          {canManageData && <AdicionarColaboradorDialog onSuccess={load} />}
+          {canCrudColaboradores && <AdicionarColaboradorDialog onSuccess={load} />}
         </div>
         {list.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -116,8 +116,8 @@ export default function ColaboradoresRhPage() {
               <ColaboradorCard
                 key={c.id}
                 colaborador={c}
-                onEdit={canManageData ? openEdit : undefined}
-                onDelete={canManageData ? requestDelete : undefined}
+                onEdit={canCrudColaboradores ? openEdit : undefined}
+                onDelete={canCrudColaboradores ? requestDelete : undefined}
                 deleting={deleting}
               />
             ))}

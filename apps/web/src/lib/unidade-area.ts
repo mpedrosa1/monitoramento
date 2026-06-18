@@ -135,6 +135,13 @@ export function unidadeAreaVertices(unidade: Unidade): LatLng[] {
   return verticesToLatLng(asArray(unidade.areaVertices));
 }
 
+export const UNIDADE_AREA_POLYGON_PATH_OPTIONS = {
+  color: "#0b3e7b",
+  weight: 2,
+  fillColor: "#7eb5e0",
+  fillOpacity: 0.22,
+} as const;
+
 export function unidadeTemAreaDefinida(unidade: Unidade): boolean {
   const vertices = unidadeAreaVertices(unidade);
   return vertices.length >= 3 && (unidade.areaM2 ?? 0) > 0;

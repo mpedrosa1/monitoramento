@@ -28,6 +28,7 @@ import { EquipamentoFormFields } from "@/components/equipamentos/equipamento-for
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,6 +152,7 @@ const emptyForm = {
 
 export default function EquipamentosPage() {
   const { status: socketStatus } = useMonitoring();
+  const { canCrudEquipamentos } = usePermissions();
   const [list, setList] = useState<Equipamento[]>([]);
   const [createForm, setCreateForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
@@ -264,6 +266,7 @@ export default function EquipamentosPage() {
           um item da lista para editar.
         </p>
         <div className="flex justify-end">
+          {canCrudEquipamentos ? (
           <EntityFormDialog
             title="Novo equipamento"
             triggerLabel="Adicionar equipamento"
@@ -320,6 +323,7 @@ export default function EquipamentosPage() {
               }}
             />
           </EntityFormDialog>
+          ) : null}
         </div>
 
         <Table>
@@ -330,14 +334,16 @@ export default function EquipamentosPage() {
               <TableHead>Tipo</TableHead>
               <TableHead>Protocolo</TableHead>
               <TableHead>Pontos</TableHead>
-              <TableHead className="w-[132px] text-right">Ações</TableHead>
+              {canCrudEquipamentos ? (
+                <TableHead className="w-[132px] text-right">Ações</TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {list.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={canCrudEquipamentos ? 6 : 5}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Nenhum equipamento no catálogo.
@@ -347,8 +353,12 @@ export default function EquipamentosPage() {
               list.map((eq) => (
                 <TableRow
                   key={eq.id}
-                  className="cursor-pointer hover:bg-muted/40"
-                  onClick={() => openEdit(eq)}
+                  className={
+                    canCrudEquipamentos
+                      ? "cursor-pointer hover:bg-muted/40"
+                      : undefined
+                  }
+                  onClick={canCrudEquipamentos ? () => openEdit(eq) : undefined}
                 >
                   <TableCell className="font-medium">{eq.marca || "—"}</TableCell>
                   <TableCell>{eq.nome || "—"}</TableCell>
@@ -384,6 +394,7 @@ export default function EquipamentosPage() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  {canCrudEquipamentos ? (
                   <TableCell className="text-right">
                     <div
                       className="flex justify-end gap-1"
@@ -421,6 +432,7 @@ export default function EquipamentosPage() {
                       </Button>
                     </div>
                   </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}

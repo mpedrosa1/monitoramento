@@ -19,7 +19,7 @@ func bearerToken(r *http.Request) string {
 	return strings.TrimSpace(h[len(prefix):])
 }
 
-func AuthMiddleware(secret string) func(http.Handler) http.Handler {
+func (a *API) AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := bearerToken(r)
@@ -27,8 +27,16 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				writeError(w, http.StatusUnauthorized, "autenticação necessária")
 				return
 			}
-			claims, err := auth.ParseToken(secret, token)
+			claims, err := auth.ParseToken(a.JWTSecret, token)
 			if err != nil {
+				writeError(w, http.StatusUnauthorized, "sessão inválida ou expirada")
+				return
+			}
+			if err := a.syncClaimsFromColaborador(r.Context(), claims); err != nil {
+				if isSessionRevoked(err) {
+					writeError(w, http.StatusUnauthorized, "sessão encerrada por alteração de permissões. Faça login novamente.")
+					return
+				}
 				writeError(w, http.StatusUnauthorized, "sessão inválida ou expirada")
 				return
 			}
@@ -38,7 +46,7 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 	}
 }
 
-func AuthWebSocket(secret string, next http.Handler) http.HandlerFunc {
+func (a *API) AuthWebSocket(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
 		if token == "" {
@@ -48,8 +56,16 @@ func AuthWebSocket(secret string, next http.Handler) http.HandlerFunc {
 			http.Error(w, "autenticação necessária", http.StatusUnauthorized)
 			return
 		}
-		claims, err := auth.ParseToken(secret, token)
+		claims, err := auth.ParseToken(a.JWTSecret, token)
 		if err != nil {
+			http.Error(w, "sessão inválida ou expirada", http.StatusUnauthorized)
+			return
+		}
+		if err := a.syncClaimsFromColaborador(r.Context(), claims); err != nil {
+			if isSessionRevoked(err) {
+				http.Error(w, "sessão encerrada por alteração de permissões", http.StatusUnauthorized)
+				return
+			}
 			http.Error(w, "sessão inválida ou expirada", http.StatusUnauthorized)
 			return
 		}

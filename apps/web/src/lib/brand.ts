@@ -5,4 +5,4 @@ export const SISTEMA_NOME = "MMRTEC";
 export const PAINEL_MONITORAMENTO_NOME = "MMRTEC Monitoramento";
 
 export const SISTEMA_DESCRICAO =
-  "Plataforma operacional para unidades prisionais";
+  "Plataforma operacional";

@@ -7,13 +7,13 @@ import {
   deleteVeiculoContratoByUrl,
   processAndSaveVeiculoContrato,
 } from "@/lib/veiculo-contrato-process";
-import { assertCanUploadColaboradorFoto } from "@/lib/upload-auth";
+import { assertCanUploadVeiculoContrato } from "@/lib/upload-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    await assertCanUploadColaboradorFoto(request);
+    await assertCanUploadVeiculoContrato(request);
   } catch (res) {
     return res as Response;
   }

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function EscalasPage() {
-  const { canManageData } = usePermissions();
+  const { canRhEscalaTrabalho } = usePermissions();
   const [escalas, setEscalas] = useState<EscalaTrabalho[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,7 @@ export default function EscalasPage() {
             Crie e configure escalas por turnos fixos e atribua colaboradores.
           </p>
         </div>
-        {canManageData && (
+        {canRhEscalaTrabalho && (
           <Button onClick={novaEscala}>
             <Plus className="mr-1.5 h-4 w-4" />
             Nova escala
@@ -102,7 +102,7 @@ export default function EscalasPage() {
           <p className="text-sm text-muted-foreground">
             Nenhuma escala cadastrada ainda.
           </p>
-          {canManageData && (
+          {canRhEscalaTrabalho && (
             <Button className="mt-4" variant="outline" onClick={novaEscala}>
               <Plus className="mr-1.5 h-4 w-4" />
               Criar a primeira escala
@@ -177,7 +177,7 @@ export default function EscalasPage() {
                 </div>
               )}
 
-              {canManageData && (
+              {canRhEscalaTrabalho && (
                 <div className="mt-4 flex justify-end gap-1 border-t border-border pt-3">
                   <Button
                     variant="ghost"

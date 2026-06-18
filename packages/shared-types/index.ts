@@ -195,17 +195,40 @@ export type LocalTrabalho =
 export type TipoAcessoSistema =
   | "usuario"
   | "administrador"
+  | "master"
   | "admin_com_financeiro"
   | "admin_sem_financeiro"
   | "desenvolvedor";
 
 export interface PermissoesAdmin {
+  /** @deprecated legado — será substituído pelas permissões granulares */
   padrao: boolean;
+  /** @deprecated legado */
   gestaoRecargas: boolean;
+  /** @deprecated legado */
   financeiro: boolean;
+  /** @deprecated legado — preferir tipo de acesso master */
   master: boolean;
   /** @deprecated legado — use master */
   desenvolvedor?: boolean;
+  crudColaboradores?: boolean;
+  crudUnidades?: boolean;
+  crudVeiculos?: boolean;
+  crudEquipamentos?: boolean;
+  crudMissoes?: boolean;
+  crudChamados?: boolean;
+  concluirMissaoQualquer?: boolean;
+  encerrarChamadoQualquer?: boolean;
+  frotaValoresAlugueis?: boolean;
+  frotaVisualizarContratos?: boolean;
+  frotaRegistrarPeriodo?: boolean;
+  frotaRegistrarMulta?: boolean;
+  frotaTrocarVeiculos?: boolean;
+  rhSalariosBonificacoes?: boolean;
+  rhEscalaTrabalho?: boolean;
+  rhCalendarioSobreaviso?: boolean;
+  rhRecarregarSaldos?: boolean;
+  rhRegistrarDespesaOutros?: boolean;
 }
 
 export interface ColaboradorEndereco {
@@ -510,6 +533,7 @@ export interface DeviceMetric {
   online: boolean;
   latenciaMs?: number;
   valores?: Record<string, unknown>;
+  ultimosValores?: Record<string, unknown>;
   updatedAt: string;
   dispositivoId: string;
 }

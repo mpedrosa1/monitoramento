@@ -23,6 +23,7 @@ type authUserResponse struct {
 	Email           string                  `json:"email"`
 	TipoAcesso      string                  `json:"tipoAcesso"`
 	PermissoesAdmin *domain.PermissoesAdmin `json:"permissoesAdmin,omitempty"`
+	AuthVersion     int64                   `json:"authVersion,omitempty"`
 	Cpf             string                  `json:"cpf,omitempty"`
 	DataAdmissao    string                  `json:"dataAdmissao,omitempty"`
 }
@@ -80,6 +81,7 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 			Email:           loginEmail,
 			TipoAcesso:      string(colab.TipoAcesso),
 			PermissoesAdmin: colab.PermissoesAdmin,
+			AuthVersion:     colab.AuthVersion,
 			Cpf:             colab.CPF,
 			DataAdmissao:    colab.DataAdmissao,
 		},
@@ -116,6 +118,7 @@ func (a *API) Me(w http.ResponseWriter, r *http.Request) {
 		Email:           email,
 		TipoAcesso:      string(colab.TipoAcesso),
 		PermissoesAdmin: colab.PermissoesAdmin,
+		AuthVersion:     colab.AuthVersion,
 		Cpf:             colab.CPF,
 		DataAdmissao:    colab.DataAdmissao,
 	})

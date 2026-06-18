@@ -20,14 +20,17 @@ const tabs = [
   {
     href: "/dashboard/recursos-humanos/escalas",
     label: "Escalas de trabalho",
+    permission: "rhEscalaTrabalho" as const,
   },
   {
     href: "/dashboard/recursos-humanos/sobreaviso",
     label: "Calendário de sobreaviso",
+    permission: "rhCalendarioSobreaviso" as const,
   },
   {
     href: "/dashboard/recursos-humanos/recargas-e-despesas",
     label: "Recargas e despesas",
+    permission: "rhRecargasDespesas" as const,
   },
 ];
 
@@ -39,7 +42,16 @@ export default function RecursosHumanosLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { status } = useMonitoring();
-  const { canAccessRecursosHumanos, canManageData, isLoading } = usePermissions();
+  const {
+    canAccessRecursosHumanos,
+    canCrudColaboradores,
+    canRhEscalaTrabalho,
+    canRhCalendarioSobreaviso,
+    canRhRegistrarDespesaOutros,
+    canManageRecargas,
+    canViewFinanceiro,
+    isLoading,
+  } = usePermissions();
 
   useEffect(() => {
     if (!isLoading && !canAccessRecursosHumanos) {
@@ -59,7 +71,25 @@ export default function RecursosHumanosLayout({
     return null;
   }
 
-  const visibleTabs = tabs.filter((t) => !t.manageOnly || canManageData);
+  const apenasRecargasDespesas =
+    (canRhRegistrarDespesaOutros || canManageRecargas) &&
+    !canRhCalendarioSobreaviso &&
+    !canViewFinanceiro &&
+    !canRhEscalaTrabalho &&
+    !canCrudColaboradores;
+
+  const visibleTabs = tabs.filter((t) => {
+    if (t.exact && apenasRecargasDespesas) return false;
+    if (t.manageOnly && !canCrudColaboradores) return false;
+    if (t.permission === "rhEscalaTrabalho") return canRhEscalaTrabalho;
+    if (t.permission === "rhCalendarioSobreaviso") {
+      return canRhCalendarioSobreaviso;
+    }
+    if (t.permission === "rhRecargasDespesas") {
+      return canRhRegistrarDespesaOutros || canManageRecargas;
+    }
+    return true;
+  });
 
   return (
     <>

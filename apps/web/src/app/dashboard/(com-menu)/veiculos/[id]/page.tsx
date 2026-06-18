@@ -16,7 +16,14 @@ export default function VeiculoDetailPage() {
   const id = typeof params.id === "string" ? params.id : "";
   const { status: socketStatus } = useMonitoring();
   const { user } = useAuth();
-  const { canManageData } = usePermissions();
+  const {
+    canCrudVeiculos,
+    canFrotaTrocarVeiculos,
+    canFrotaRegistrarPeriodo,
+    canFrotaRegistrarMulta,
+    canFrotaValoresAlugueis,
+    canFrotaVisualizarContratos,
+  } = usePermissions();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +91,12 @@ export default function VeiculoDetailPage() {
             colaborador={colaborador}
             colaboradores={colaboradores}
             isMeuVeiculo={veiculo.colaboradorId === user?.id}
-            canManage={canManageData}
+            canCrudVeiculos={canCrudVeiculos}
+            canFrotaTrocarVeiculos={canFrotaTrocarVeiculos}
+            canFrotaRegistrarPeriodo={canFrotaRegistrarPeriodo}
+            canFrotaRegistrarMulta={canFrotaRegistrarMulta}
+            canFrotaValoresAlugueis={canFrotaValoresAlugueis}
+            canFrotaVisualizarContratos={canFrotaVisualizarContratos}
             meusVeiculos={meusVeiculos}
             todosVeiculos={veiculos}
             onChanged={load}

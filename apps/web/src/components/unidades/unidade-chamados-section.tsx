@@ -12,7 +12,7 @@ import { ChamadosTable } from "@/components/dashboard/chamados-table";
 import { usePermissions } from "@/hooks/use-permissions";
 
 export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
-  const { canManageData } = usePermissions();
+  const { canCrudChamados } = usePermissions();
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -89,7 +89,7 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Chamados</h3>
-        {canManageData && (
+        {canCrudChamados && (
           <AbrirChamadoDialog
             unidades={unidadesDialogo}
             chamados={chamados}
@@ -109,8 +109,8 @@ export function UnidadeChamadosSection({ unidade }: { unidade: Unidade }) {
         <ChamadosTable
           chamados={ultimos}
           onRowClick={openDetail}
-          onEdit={canManageData ? openEdit : undefined}
-          onDelete={canManageData ? remove : undefined}
+          onEdit={canCrudChamados ? openEdit : undefined}
+          onDelete={canCrudChamados ? remove : undefined}
           deleting={deleting}
         />
       )}

@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 
 export default function ChamadosPage() {
   const { status: socketStatus } = useMonitoring();
-  const { canManageData } = usePermissions();
+  const { canCrudChamados } = usePermissions();
   const [list, setList] = useState<Chamado[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [editOpen, setEditOpen] = useState(false);
@@ -33,10 +33,7 @@ export default function ChamadosPage() {
   );
 
   const unidadeLabel = useCallback(
-    (id: string) => {
-      const u = unidadePorId.get(id);
-      return u ? `${u.codigo} — ${u.nome}` : "—";
-    },
+    (id: string) => unidadePorId.get(id)?.nome ?? "—",
     [unidadePorId]
   );
 
@@ -129,7 +126,7 @@ export default function ChamadosPage() {
               aria-label="Buscar chamados"
             />
           </div>
-          {canManageData && (
+          {canCrudChamados && (
             <AbrirChamadoDialog
               unidades={unidades}
               chamados={list}
@@ -140,8 +137,8 @@ export default function ChamadosPage() {
         <ChamadosTable
           chamados={filteredList}
           onRowClick={openDetail}
-          onEdit={canManageData ? openEdit : undefined}
-          onDelete={canManageData ? remove : undefined}
+          onEdit={canCrudChamados ? openEdit : undefined}
+          onDelete={canCrudChamados ? remove : undefined}
           deleting={deleting}
           unidadeLabel={unidadeLabel}
           emptyMessage={

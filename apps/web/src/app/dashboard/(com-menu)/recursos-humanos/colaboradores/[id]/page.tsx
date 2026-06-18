@@ -10,7 +10,7 @@ import { ColaboradorDetail } from "@/components/colaboradores/colaborador-detail
 export default function ColaboradorRhDetailPage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
-  const { canManageData } = usePermissions();
+  const { canCrudColaboradores } = usePermissions();
   const [colaborador, setColaborador] = useState<Colaborador | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -48,7 +48,7 @@ export default function ColaboradorRhDetailPage() {
       {colaborador && !loading && (
         <ColaboradorDetail
           colaborador={colaborador}
-          canManage={canManageData}
+          canManage={canCrudColaboradores}
           onChanged={load}
         />
       )}

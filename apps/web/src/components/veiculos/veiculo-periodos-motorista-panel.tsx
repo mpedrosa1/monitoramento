@@ -43,6 +43,7 @@ export function VeiculoPeriodosMotoristaPanel({
 }) {
   const [periodos, setPeriodos] = useState<VeiculoPeriodoMotorista[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<VeiculoPeriodoMotorista | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export function VeiculoPeriodosMotoristaPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
+    setErro(null);
     try {
       const res = await apiFetch<VeiculoPeriodoMotorista[] | null>(
         `/api/v1/veiculos/${veiculoId}/periodos-motorista`
@@ -63,6 +65,13 @@ export function VeiculoPeriodosMotoristaPanel({
         b.dataInicio.localeCompare(a.dataInicio)
       );
       setPeriodos(lista);
+    } catch (e) {
+      setPeriodos([]);
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível carregar o histórico de motoristas."
+      );
     } finally {
       setLoading(false);
     }
@@ -123,6 +132,8 @@ export function VeiculoPeriodosMotoristaPanel({
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : erro ? (
+        <p className="text-sm text-destructive">{erro}</p>
       ) : periodos.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Nenhum período registrado. As trocas de motorista e alterações no

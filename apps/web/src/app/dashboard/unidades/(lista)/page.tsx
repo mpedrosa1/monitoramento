@@ -47,7 +47,7 @@ function openUnidadeDetailTab(id: string) {
 
 export default function UnidadesPage() {
   const { status, metrics } = useMonitoring();
-  const { canManageData } = usePermissions();
+  const { canCrudUnidades } = usePermissions();
   const [list, setList] = useState<Unidade[]>([]);
   const [createForm, setCreateForm] = useState<UnidadeFormState>(emptyUnidadeForm);
 
@@ -176,7 +176,7 @@ export default function UnidadesPage() {
       <DashboardHeader title="Unidades Prisionais" socketStatus={status} />
       <div className="space-y-4 p-6">
         <p className="text-sm text-muted-foreground">
-          {canManageData
+          {canCrudUnidades
             ? "Cadastre unidades com identificação, contatos, endereço e IP. Clique na linha para abrir os detalhes e vincular equipamentos; use o ícone de lápis para editar."
             : "Clique na linha para abrir os detalhes da unidade em uma nova aba."}
         </p>
@@ -191,7 +191,7 @@ export default function UnidadesPage() {
               aria-label="Buscar unidades"
             />
           </div>
-          {canManageData && (
+          {canCrudUnidades && (
             <EntityFormDialog
               title="Nova unidade"
               triggerLabel="Adicionar unidade"
@@ -213,7 +213,7 @@ export default function UnidadesPage() {
               <TableHead>Intervalo (s)</TableHead>
               <TableHead>Equip.</TableHead>
               <TableHead>Status</TableHead>
-              {canManageData && (
+              {canCrudUnidades && (
                 <TableHead className="w-[100px] text-right">Ações</TableHead>
               )}
             </TableRow>
@@ -222,7 +222,7 @@ export default function UnidadesPage() {
             {filteredList.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={canManageData ? 8 : 7}
+                  colSpan={canCrudUnidades ? 8 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {sortedList.length === 0
@@ -254,7 +254,7 @@ export default function UnidadesPage() {
                       {hostOnline ? "ONLINE" : "OFFLINE"}
                     </Badge>
                   </TableCell>
-                  {canManageData && (
+                  {canCrudUnidades && (
                     <TableCell className="text-right">
                       <div
                         className="flex justify-end gap-1"

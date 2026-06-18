@@ -13,11 +13,12 @@ import (
 const defaultJWTExpiry = 8 * time.Hour
 
 type Claims struct {
-	ColaboradorID  string                   `json:"sub"`
-	Email          string                   `json:"email"`
-	Nome           string                   `json:"nome"`
-	TipoAcesso     domain.TipoAcessoSistema `json:"tipoAcesso"`
-	PermissoesAdmin *domain.PermissoesAdmin `json:"permissoesAdmin,omitempty"`
+	ColaboradorID   string                   `json:"sub"`
+	Email           string                   `json:"email"`
+	Nome            string                   `json:"nome"`
+	TipoAcesso      domain.TipoAcessoSistema `json:"tipoAcesso"`
+	PermissoesAdmin *domain.PermissoesAdmin  `json:"permissoesAdmin,omitempty"`
+	AuthVersion     int64                    `json:"authVersion,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -48,6 +49,7 @@ func IssueToken(
 		Nome:            colab.Nome,
 		TipoAcesso:      colab.TipoAcesso,
 		PermissoesAdmin: colab.PermissoesAdmin,
+		AuthVersion:     colab.AuthVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   colab.ID.Hex(),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),

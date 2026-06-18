@@ -17,6 +17,7 @@ import {
   jwtExpiresAtMs,
   loadAuthSession,
   saveAuthSession,
+  sessaoCompativelComAuthVersion,
   type AuthSession,
   type AuthUser,
   type LoginResponse,
@@ -33,6 +34,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const SESSION_CHECK_MS = 30_000;
+const SESSION_ME_POLL_MS = 60_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -72,9 +74,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const session = loadAuthSession();
-    setUser(session?.user ?? null);
-    setIsLoading(false);
-  }, []);
+    if (!session) {
+      setIsLoading(false);
+      return;
+    }
+    setUser(session.user);
+    apiFetch<AuthUser>("/api/v1/auth/me")
+      .then((fresh) => {
+        if (!sessaoCompativelComAuthVersion(session.token, fresh.authVersion)) {
+          logout();
+          return;
+        }
+        const updatedUser = { ...session.user, ...fresh };
+        const updatedSession: AuthSession = {
+          ...session,
+          user: updatedUser,
+        };
+        saveAuthSession(updatedSession);
+        setUser(updatedUser);
+      })
+      .catch(() => {
+        if (!loadAuthSession()) {
+          setUser(null);
+          if (pathname.startsWith("/dashboard")) {
+            router.replace("/");
+          }
+        }
+      })
+      .finally(() => setIsLoading(false));
+  }, [logout, pathname, router]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -82,6 +110,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const id = window.setInterval(ensureSessionValid, SESSION_CHECK_MS);
     return () => window.clearInterval(id);
   }, [ensureSessionValid, isLoading]);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const pollMe = () => {
+      const session = loadAuthSession();
+      if (!session) return;
+      void apiFetch<AuthUser>("/api/v1/auth/me")
+        .then((fresh) => {
+          if (!sessaoCompativelComAuthVersion(session.token, fresh.authVersion)) {
+            logout();
+          }
+        })
+        .catch(() => {
+          if (!loadAuthSession()) {
+            logout();
+          }
+        });
+    };
+    const id = window.setInterval(pollMe, SESSION_ME_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [isLoading, logout, user]);
 
   useEffect(() => {
     const session = loadAuthSession();

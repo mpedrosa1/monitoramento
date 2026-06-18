@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
+import type { MapaUnidadeFocus } from "@/lib/mapa-unidade-focus";
 import type { DeviceMetric, Unidade } from "@/lib/types";
 
 const MapInner = dynamic(
@@ -19,21 +20,31 @@ const MapInner = dynamic(
 export function PainelUnidadesMap({
   unidades,
   metricMap,
-  selectedId,
   onSelectUnidade,
+  onMapBackgroundClick,
+  layoutKey,
+  mapFocus,
+  areaUnidadeId,
 }: {
   unidades: Unidade[];
   metricMap: Map<string, DeviceMetric>;
-  selectedId: string | null;
   onSelectUnidade?: (id: string) => void;
+  onMapBackgroundClick?: () => void;
+  /** Altera quando o layout do mapa muda (ex.: tela cheia) para recalcular tamanho. */
+  layoutKey?: unknown;
+  mapFocus?: MapaUnidadeFocus | null;
+  areaUnidadeId?: string | null;
 }) {
   return (
     <div className="h-full min-h-0 w-full">
       <MapInner
         unidades={unidades}
         metricMap={metricMap}
-        selectedId={selectedId}
         onSelectUnidade={onSelectUnidade}
+        onMapBackgroundClick={onMapBackgroundClick}
+        layoutKey={layoutKey}
+        mapFocus={mapFocus}
+        areaUnidadeId={areaUnidadeId}
       />
     </div>
   );

@@ -113,16 +113,16 @@ export function ChamadoDetailDialog({
     emptyMissaoForm()
   );
   const { user } = useAuth();
-  const { canManageData } = usePermissions();
+  const { canCrudChamados } = usePermissions();
 
   const unidadeNome = chamado
     ? unidadeNomePorId(unidades, chamado.unidadeId)
     : "";
 
   const podeAtribuirMissao =
-    chamado?.status === "aberto" && canManageData;
+    chamado?.status === "aberto" && canCrudChamados;
   const aguardandoMissao =
-    chamado?.status === "aberto" && !canManageData;
+    chamado?.status === "aberto" && !canCrudChamados;
   const podeEncerrar = canEncerrarChamado(
     user?.tipoAcesso,
     user?.id,

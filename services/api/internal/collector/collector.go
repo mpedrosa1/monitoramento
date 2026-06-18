@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"github.com/mmrtec/monitoramento/api/internal/ws"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const pingFailuresForOffline = 3
@@ -210,6 +212,9 @@ func (c *Collector) monitorTarget(ctx context.Context, t domain.MonitorTarget) {
 			metric = ping.MetricFromTarget(t, reportedOnline, lat)
 			logPingResult(t, probeOK, reportedOnline, consecutiveFailures, lat)
 		case domain.DispositivoSNMP:
+			if !c.unidadeHostOnline(t.UnidadeID) {
+				return
+			}
 			online, vals := snmp.Probe(t)
 			metric = snmp.MetricFromTarget(t, online, vals)
 		default:
@@ -240,6 +245,9 @@ func (c *Collector) monitorModbusEndpoint(ctx context.Context, targets []domain.
 	defer ticker.Stop()
 
 	run := func() {
+		if !c.unidadeHostOnline(targets[0].UnidadeID) {
+			return
+		}
 		results := modbus.ProbeEndpoint(ctx, targets)
 		for _, r := range results {
 			metric := modbus.MetricFromTarget(r.Target, r.Online, r.Valores)
@@ -275,6 +283,20 @@ func (c *Collector) targetInterval(t domain.MonitorTarget) time.Duration {
 
 func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, metric domain.DeviceMetric) {
 	prev, had := c.cache.Get(metric.TargetID)
+	if t.Tipo == domain.DispositivoSNMP || t.Tipo == domain.DispositivoModbus {
+		base := prev.UltimosValores
+		if base == nil && had {
+			base = prev.Valores
+		}
+		if c.unidadeHostOnline(t.UnidadeID) && metric.Online {
+			merged := mergeUltimosValores(base, metric.Valores)
+			if len(merged) > 0 {
+				metric.UltimosValores = merged
+			}
+		} else if had && len(prev.UltimosValores) > 0 {
+			metric.UltimosValores = prev.UltimosValores
+		}
+	}
 	c.cache.Set(metric)
 	c.hub.BroadcastUpdate(metric)
 
@@ -320,6 +342,37 @@ func (c *Collector) pushOfflineAlert(nome, targetID string) {
 		"targetId": targetID,
 	}
 	push.SendMobile(ctx, tokens, title, body, data)
+}
+
+func (c *Collector) unidadeHostOnline(unidadeID primitive.ObjectID) bool {
+	m, ok := c.cache.Get(domain.MonitorUnidadeHostTargetID(unidadeID))
+	return ok && m.Online
+}
+
+func isTimeoutValue(v any) bool {
+	s, ok := v.(string)
+	if !ok {
+		return false
+	}
+	lower := strings.ToLower(s)
+	return strings.Contains(lower, "timeout") || strings.Contains(lower, "timed out")
+}
+
+func mergeUltimosValores(prev, novos map[string]any) map[string]any {
+	out := make(map[string]any)
+	for k, v := range prev {
+		if k == "erro" || isTimeoutValue(v) {
+			continue
+		}
+		out[k] = v
+	}
+	for k, v := range novos {
+		if k == "erro" || isTimeoutValue(v) {
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 func pingReportedOnline(probeOK bool, failures *int, threshold int) bool {

@@ -28,7 +28,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 	r.Get("/health", api.Health)
 
-	r.Get("/ws", AuthWebSocket(cfg.JWTSecret, hub))
+	r.Get("/ws", api.AuthWebSocket(hub))
 
 	r.Route("/api/v1", func(r chi.Router) {
 
@@ -38,7 +38,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 		r.Group(func(r chi.Router) {
 
-			r.Use(AuthMiddleware(cfg.JWTSecret))
+			r.Use(api.AuthMiddleware())
 
 			r.Get("/auth/me", api.Me)
 
@@ -60,7 +60,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/", api.ListChamados)
 
-				r.With(RequireManageData).Post("/", api.CreateChamado)
+				r.With(RequireCrudChamados).Post("/", api.CreateChamado)
 
 				r.Get("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
@@ -74,7 +74,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				})
 
-				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireCrudChamados).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
 					api.DeleteChamado(w, req, chi.URLParam(req, "id"))
 
@@ -86,17 +86,17 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/", api.ListUnidades)
 
-				r.With(RequireManageData).Post("/", api.CreateUnidade)
+				r.With(RequireCrudUnidades).Post("/", api.CreateUnidade)
 
 				r.Route("/{id}", func(r chi.Router) {
 
-					r.With(RequireManageData).Put("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudUnidades).Put("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.UpdateUnidade(w, req, chi.URLParam(req, "id"))
 
 					})
 
-					r.With(RequireManageData).Delete("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudUnidades).Delete("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.DeleteUnidade(w, req, chi.URLParam(req, "id"))
 
@@ -112,17 +112,17 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/me", api.GetColaboradorMe)
 
-				r.With(RequireManageData).Post("/", api.CreateColaborador)
+				r.With(RequireCrudColaboradores).Post("/", api.CreateColaborador)
 
 				r.Route("/{id}", func(r chi.Router) {
 
-					r.With(RequireManageData).Put("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudColaboradores).Put("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.UpdateColaborador(w, req, chi.URLParam(req, "id"))
 
 					})
 
-					r.With(RequireManageData).Delete("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudColaboradores).Delete("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.DeleteColaborador(w, req, chi.URLParam(req, "id"))
 
@@ -138,15 +138,15 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/", api.ListEscalas)
 
-				r.With(RequireManageData).Post("/", api.CreateEscala)
+				r.With(RequireRhEscalaTrabalho).Post("/", api.CreateEscala)
 
-				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhEscalaTrabalho).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
 					api.UpdateEscala(w, req, chi.URLParam(req, "id"))
 
 				})
 
-				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhEscalaTrabalho).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
 					api.DeleteEscala(w, req, chi.URLParam(req, "id"))
 
@@ -166,17 +166,17 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/definicoes", api.ListDefinicoesSobreaviso)
 
-				r.With(RequireManageData).Post("/definir", api.DefinirSobreaviso)
+				r.With(RequireRhCalendarioSobreaviso).Post("/definir", api.DefinirSobreaviso)
 
-				r.With(RequireManageData).Post("/", api.CreateSobreaviso)
+				r.With(RequireRhCalendarioSobreaviso).Post("/", api.CreateSobreaviso)
 
-				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhCalendarioSobreaviso).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
 					api.UpdateSobreaviso(w, req, chi.URLParam(req, "id"))
 
 				})
 
-				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhCalendarioSobreaviso).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
 
 					api.DeleteSobreaviso(w, req, chi.URLParam(req, "id"))
 
@@ -211,36 +211,36 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 				r.Post("/trocas/{id}/responder", func(w http.ResponseWriter, req *http.Request) {
 					api.ResponderTrocaVeiculo(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Post("/trocas/admin", api.TrocaAdminVeiculos)
+				r.With(RequireFrotaTrocarVeiculos).Post("/trocas/admin", api.TrocaAdminVeiculos)
 				r.Get("/{id}/periodos-motorista", func(w http.ResponseWriter, req *http.Request) {
 					api.ListVeiculoPeriodosMotorista(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Post("/{id}/periodos-motorista", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarPeriodo).Post("/{id}/periodos-motorista", func(w http.ResponseWriter, req *http.Request) {
 					api.CreateVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Put("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarPeriodo).Put("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "periodoId"))
 				})
-				r.With(RequireManageData).Delete("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarPeriodo).Delete("/{id}/periodos-motorista/{periodoId}", func(w http.ResponseWriter, req *http.Request) {
 					api.DeleteVeiculoPeriodoMotorista(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "periodoId"))
 				})
 				r.Get("/{id}/multas", func(w http.ResponseWriter, req *http.Request) {
 					api.ListVeiculoMultas(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Post("/{id}/multas", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarMulta).Post("/{id}/multas", func(w http.ResponseWriter, req *http.Request) {
 					api.CreateVeiculoMulta(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Put("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarMulta).Put("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateVeiculoMulta(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "multaId"))
 				})
-				r.With(RequireManageData).Delete("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireFrotaRegistrarMulta).Delete("/{id}/multas/{multaId}", func(w http.ResponseWriter, req *http.Request) {
 					api.DeleteVeiculoMulta(w, req, chi.URLParam(req, "id"), chi.URLParam(req, "multaId"))
 				})
-				r.With(RequireManageData).Post("/", api.CreateVeiculo)
-				r.With(RequireManageData).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireCrudVeiculos).Post("/", api.CreateVeiculo)
+				r.With(RequireCrudVeiculos).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateVeiculo(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireCrudVeiculos).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.DeleteVeiculo(w, req, chi.URLParam(req, "id"))
 				})
 			})
@@ -249,21 +249,21 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 				r.Get("/", api.ListEquipamentos)
 
-				r.With(RequireManageData).Post("/snmp/test-oid", api.TestSnmpOID)
+				r.With(RequireCrudEquipamentos).Post("/snmp/test-oid", api.TestSnmpOID)
 
-				r.With(RequireManageData).Post("/modbus/test-offset", api.TestModbusOffset)
+				r.With(RequireCrudEquipamentos).Post("/modbus/test-offset", api.TestModbusOffset)
 
-				r.With(RequireManageData).Post("/", api.CreateEquipamento)
+				r.With(RequireCrudEquipamentos).Post("/", api.CreateEquipamento)
 
 				r.Route("/{id}", func(r chi.Router) {
 
-					r.With(RequireManageData).Put("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudEquipamentos).Put("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.UpdateEquipamento(w, req, chi.URLParam(req, "id"))
 
 					})
 
-					r.With(RequireManageData).Delete("/", func(w http.ResponseWriter, req *http.Request) {
+					r.With(RequireCrudEquipamentos).Delete("/", func(w http.ResponseWriter, req *http.Request) {
 
 						api.DeleteEquipamento(w, req, chi.URLParam(req, "id"))
 
@@ -282,16 +282,16 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 				r.Delete("/me/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.DeleteDespesaMe(w, req, chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Post("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhRegistrarDespesaOutros).Post("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
 					api.CreateDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"))
 				})
-				r.With(RequireManageData).Put("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhRegistrarDespesaOutros).Put("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.UpdateDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"), chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Delete("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhRegistrarDespesaOutros).Delete("/colaboradores/{colaboradorId}/{id}", func(w http.ResponseWriter, req *http.Request) {
 					api.DeleteDespesaColaborador(w, req, chi.URLParam(req, "colaboradorId"), chi.URLParam(req, "id"))
 				})
-				r.With(RequireManageData).Get("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
+				r.With(RequireRhRegistrarDespesaOutros).Get("/colaboradores/{colaboradorId}", func(w http.ResponseWriter, req *http.Request) {
 					api.GetDespesasColaborador(w, req, chi.URLParam(req, "colaboradorId"))
 				})
 				r.With(RequireAccessRH).Get("/resumo", api.GetDespesasResumoColaboradores)

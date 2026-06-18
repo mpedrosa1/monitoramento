@@ -146,18 +146,38 @@ type TipoAcessoSistema string
 const (
 	TipoAcessoUsuario            TipoAcessoSistema = "usuario"
 	TipoAcessoAdministrador      TipoAcessoSistema = "administrador"
+	TipoAcessoMaster             TipoAcessoSistema = "master"
 	TipoAcessoAdminComFinanceiro TipoAcessoSistema = "admin_com_financeiro" // legado
 	TipoAcessoAdminSemFinanceiro TipoAcessoSistema = "admin_sem_financeiro" // legado
 	TipoAcessoDesenvolvedor      TipoAcessoSistema = "desenvolvedor"         // legado
 )
 
-// PermissoesAdmin flags cumulativas para administradores.
+// PermissoesAdmin — flags legadas + permissões granulares do administrador.
 type PermissoesAdmin struct {
 	Padrao         bool `json:"padrao" bson:"padrao"`
 	GestaoRecargas bool `json:"gestaoRecargas" bson:"gestaoRecargas"`
 	Financeiro     bool `json:"financeiro" bson:"financeiro"`
 	Master         bool `json:"master" bson:"master"`
 	Desenvolvedor  bool `json:"desenvolvedor,omitempty" bson:"desenvolvedor,omitempty"` // legado → master
+
+	CrudColaboradores       bool `json:"crudColaboradores,omitempty" bson:"crudColaboradores,omitempty"`
+	CrudUnidades            bool `json:"crudUnidades,omitempty" bson:"crudUnidades,omitempty"`
+	CrudVeiculos            bool `json:"crudVeiculos,omitempty" bson:"crudVeiculos,omitempty"`
+	CrudEquipamentos        bool `json:"crudEquipamentos,omitempty" bson:"crudEquipamentos,omitempty"`
+	CrudMissoes             bool `json:"crudMissoes,omitempty" bson:"crudMissoes,omitempty"`
+	CrudChamados            bool `json:"crudChamados,omitempty" bson:"crudChamados,omitempty"`
+	ConcluirMissaoQualquer  bool `json:"concluirMissaoQualquer,omitempty" bson:"concluirMissaoQualquer,omitempty"`
+	EncerrarChamadoQualquer bool `json:"encerrarChamadoQualquer,omitempty" bson:"encerrarChamadoQualquer,omitempty"`
+	FrotaValoresAlugueis    bool `json:"frotaValoresAlugueis,omitempty" bson:"frotaValoresAlugueis,omitempty"`
+	FrotaVisualizarContratos bool `json:"frotaVisualizarContratos,omitempty" bson:"frotaVisualizarContratos,omitempty"`
+	FrotaRegistrarPeriodo   bool `json:"frotaRegistrarPeriodo,omitempty" bson:"frotaRegistrarPeriodo,omitempty"`
+	FrotaRegistrarMulta     bool `json:"frotaRegistrarMulta,omitempty" bson:"frotaRegistrarMulta,omitempty"`
+	FrotaTrocarVeiculos     bool `json:"frotaTrocarVeiculos,omitempty" bson:"frotaTrocarVeiculos,omitempty"`
+	RhSalariosBonificacoes  bool `json:"rhSalariosBonificacoes,omitempty" bson:"rhSalariosBonificacoes,omitempty"`
+	RhEscalaTrabalho        bool `json:"rhEscalaTrabalho,omitempty" bson:"rhEscalaTrabalho,omitempty"`
+	RhCalendarioSobreaviso  bool `json:"rhCalendarioSobreaviso,omitempty" bson:"rhCalendarioSobreaviso,omitempty"`
+	RhRecarregarSaldos      bool `json:"rhRecarregarSaldos,omitempty" bson:"rhRecarregarSaldos,omitempty"`
+	RhRegistrarDespesaOutros bool `json:"rhRegistrarDespesaOutros,omitempty" bson:"rhRegistrarDespesaOutros,omitempty"`
 }
 
 const ColaboradorFotoURLPadrao = "/avatar-placeholder.svg"
@@ -195,6 +215,7 @@ type Colaborador struct {
 	Salario               float64                 `json:"salario,omitempty" bson:"salario,omitempty"`
 	TipoAcesso            TipoAcessoSistema       `json:"tipoAcesso,omitempty" bson:"tipoAcesso,omitempty"`
 	PermissoesAdmin       *PermissoesAdmin        `json:"permissoesAdmin,omitempty" bson:"permissoesAdmin,omitempty"`
+	AuthVersion           int64                   `json:"authVersion,omitempty" bson:"authVersion,omitempty"`
 	SenhaHash             string                  `json:"-" bson:"senhaHash,omitempty"`
 	Status                ColaboradorStatus       `json:"status" bson:"status"`
 	UnidadeID             primitive.ObjectID      `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
@@ -433,6 +454,7 @@ type DeviceMetric struct {
 	Online        bool            `json:"online"`
 	LatenciaMs    float64         `json:"latenciaMs,omitempty"`
 	Valores       map[string]any  `json:"valores,omitempty"`
+	UltimosValores map[string]any `json:"ultimosValores,omitempty"`
 	UpdatedAt     time.Time       `json:"updatedAt"`
 	// DispositivoID legado para clientes antigos (igual a targetId).
 	DispositivoID string `json:"dispositivoId"`

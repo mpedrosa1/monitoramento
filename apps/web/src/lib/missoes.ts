@@ -94,6 +94,34 @@ export function labelChamadoVinculadoMissao(
   return c.numero ? formatNumeroExibicao(c.numero) : c.titulo;
 }
 
+export type TipoMissao = "corretiva" | "preventiva";
+
+export const tipoMissaoLabel: Record<TipoMissao, string> = {
+  corretiva: "Corretiva",
+  preventiva: "Preventiva",
+};
+
+/** Corretiva = com chamado vinculado; preventiva = sem chamado. */
+export function tipoMissao(
+  missao: Pick<Missao, "chamadoId">,
+  chamados: Chamado[]
+): TipoMissao {
+  return chamadoVinculadoDaMissao(missao as Missao, chamados)
+    ? "corretiva"
+    : "preventiva";
+}
+
+/** Coluna Chamado na listagem: número do chamado ou S/N. */
+export function labelChamadoMissaoTabela(
+  chamadoId: string | undefined,
+  chamados: Chamado[]
+): string {
+  if (!chamadoIdEfetivo(chamadoId)) return "S/N";
+  const c = chamados.find((ch) => ch.id === chamadoId);
+  if (!c) return "S/N";
+  return c.numero ? formatNumeroExibicao(c.numero) : c.titulo;
+}
+
 /** Data e hora de início da missão (com fallback ao chamado vinculado). */
 export function formatInicioMissao(
   missao: Missao,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BriefcaseBusiness,
   CakeSlice,
@@ -122,29 +123,56 @@ function MetricCard({
 }
 
 export default function RecursosHumanosPage() {
-  const { canManageData } = usePermissions();
+  const router = useRouter();
+  const {
+    canViewFinanceiro,
+    canRhCalendarioSobreaviso,
+    canRhRegistrarDespesaOutros,
+    canManageRecargas,
+    canRhEscalaTrabalho,
+    canCrudColaboradores,
+  } = usePermissions();
   const [list, setList] = useState<Colaborador[]>([]);
   const [sobreavisos, setSobreavisos] = useState<Sobreaviso[]>([]);
   const [definicoes, setDefinicoes] = useState<EscalaSobreavisoDefinida[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const apenasRecargasDespesas =
+    (canRhRegistrarDespesaOutros || canManageRecargas) &&
+    !canRhCalendarioSobreaviso &&
+    !canViewFinanceiro &&
+    !canRhEscalaTrabalho &&
+    !canCrudColaboradores;
+
+  useEffect(() => {
+    if (apenasRecargasDespesas) {
+      router.replace("/dashboard/recursos-humanos/recargas-e-despesas");
+    }
+  }, [apenasRecargasDespesas, router]);
+
   const load = useCallback(async () => {
+    if (apenasRecargasDespesas) return;
     setLoading(true);
     try {
-      const [cols, sob, defs] = await Promise.all([
-        apiFetch<Colaborador[] | null>("/api/v1/colaboradores"),
-        apiFetch<Sobreaviso[] | null>("/api/v1/sobreavisos"),
-        apiFetch<EscalaSobreavisoDefinida[] | null>(
-          "/api/v1/sobreavisos/definicoes"
-        ),
-      ]);
+      const cols = await apiFetch<Colaborador[] | null>("/api/v1/colaboradores");
       setList(asArray(cols));
-      setSobreavisos(asArray(sob));
-      setDefinicoes(asArray(defs));
+      if (canRhCalendarioSobreaviso) {
+        const [sob, defs] = await Promise.all([
+          apiFetch<Sobreaviso[] | null>("/api/v1/sobreavisos"),
+          apiFetch<EscalaSobreavisoDefinida[] | null>(
+            "/api/v1/sobreavisos/definicoes"
+          ),
+        ]);
+        setSobreavisos(asArray(sob));
+        setDefinicoes(asArray(defs));
+      } else {
+        setSobreavisos([]);
+        setDefinicoes([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apenasRecargasDespesas, canRhCalendarioSobreaviso]);
 
   useEffect(() => {
     void load();
@@ -243,7 +271,7 @@ export default function RecursosHumanosPage() {
                 value={totalDependentes}
                 icon={BriefcaseBusiness}
               />
-              {canManageData && (
+              {canViewFinanceiro && (
                 <MetricCard
                   title="Folha salarial mensal"
                   value={`R$ ${salarioNumeroParaInput(folhaSalarial) || "0,00"}`}
@@ -254,6 +282,7 @@ export default function RecursosHumanosPage() {
             </div>
 
             {/* Status da escala de sobreaviso do mês */}
+            {canRhCalendarioSobreaviso ? (
             <Link
               href="/dashboard/recursos-humanos/sobreaviso"
               className={[
@@ -297,6 +326,7 @@ export default function RecursosHumanosPage() {
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </Link>
+            ) : null}
 
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Aniversariantes do mês */}

@@ -14,12 +14,11 @@ import {
   type DependenteForm,
 } from "@/lib/colaborador-form";
 import {
-  NIVEL_PERMISSAO_ADMIN,
-  PERMISSOES_ADMIN_OPCOES,
-  nivelHierarquiaUsuario,
+  emptyPermissoesAdmin,
+  isMaster,
   podeEditarPermissoesColaborador,
-  togglePermissaoAdmin,
 } from "@/lib/acesso";
+import { TIPO_ACESSO_DESCRICOES, permissoesEfetivas } from "@/lib/permissoes-admin";
 import { resolveAuthUserPermissoes, resolveAuthUserTipoAcesso } from "@/lib/auth-session";
 import { useAuth } from "@/components/auth-provider";
 import {
@@ -43,6 +42,7 @@ import {
   ColaboradorFormLegend,
 } from "@/components/colaboradores/colaborador-form-ui";
 import { ColaboradorFotoUpload } from "@/components/colaboradores/colaborador-foto-upload";
+import { PermissoesAdminFields } from "@/components/colaboradores/permissoes-admin-fields";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,10 +65,10 @@ export function ColaboradorFormFields({
   errors?: ColaboradorFormErrors;
 }) {
   const { user } = useAuth();
-  const { canViewFinanceiro } = usePermissions();
   const editorTipo = resolveAuthUserTipoAcesso(user);
   const editorPerm = resolveAuthUserPermissoes(user);
-  const editorNivel = nivelHierarquiaUsuario(editorTipo, editorPerm);
+  const { canViewFinanceiro, isMaster: isMasterHook } = usePermissions();
+  const editorIsMaster = isMasterHook || isMaster(editorTipo, editorPerm);
   const permissoesBloqueadas = !podeEditarPermissoesColaborador(
     editorTipo,
     editorPerm,
@@ -92,7 +92,9 @@ export function ColaboradorFormFields({
     value: o.value,
     label: o.label,
   }));
-  const acessoItems = TIPO_ACESSO_OPCOES.map((o) => ({
+  const acessoItems = TIPO_ACESSO_OPCOES.filter(
+    (o) => o.value !== "master" || editorIsMaster
+  ).map((o) => ({
     value: o.value,
     label: o.label,
   }));
@@ -831,15 +833,8 @@ export function ColaboradorFormFields({
                 const tipo = (v ?? "") as ColaboradorFormState["tipoAcesso"];
                 onChange({
                   tipoAcesso: tipo,
-                  ...(tipo === "usuario"
-                    ? {
-                        permissoesAdmin: {
-                          padrao: false,
-                          gestaoRecargas: false,
-                          financeiro: false,
-                          master: false,
-                        },
-                      }
+                  ...(tipo === "usuario" || tipo === "master"
+                    ? { permissoesAdmin: emptyPermissoesAdmin() }
                     : {}),
                 });
               }}
@@ -864,59 +859,28 @@ export function ColaboradorFormFields({
               required
               error={errors.permissoesAdmin}
             >
-              <div className="grid gap-3 rounded-lg border border-border p-4">
-                {permissoesBloqueadas ? (
-                  <p className="text-xs text-muted-foreground">
-                    As permissões deste colaborador estão acima da sua hierarquia
-                    e não podem ser alteradas.
-                  </p>
-                ) : null}
-                {PERMISSOES_ADMIN_OPCOES.map((opcao) => {
-                  const checkboxDesabilitada =
-                    permissoesBloqueadas ||
-                    NIVEL_PERMISSAO_ADMIN[opcao.key] > editorNivel;
-                  return (
-                  <label
-                    key={opcao.key}
-                    className={`flex items-start gap-3 rounded-md p-2 ${
-                      checkboxDesabilitada
-                        ? "cursor-not-allowed opacity-60"
-                        : "cursor-pointer hover:bg-muted/50"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 shrink-0 rounded border-input"
-                      checked={form.permissoesAdmin[opcao.key]}
-                      disabled={checkboxDesabilitada}
-                      onChange={(e) =>
-                        onChange({
-                          permissoesAdmin: togglePermissaoAdmin(
-                            form.permissoesAdmin,
-                            opcao.key,
-                            e.target.checked,
-                            editorNivel
-                          ),
-                        })
-                      }
-                    />
-                    <span className="grid gap-0.5">
-                      <span className="text-sm font-medium">{opcao.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {opcao.descricao}
-                      </span>
-                    </span>
-                  </label>
-                  );
-                })}
-              </div>
+              {permissoesBloqueadas ? (
+                <p className="mb-3 text-xs text-muted-foreground">
+                  As permissões deste colaborador estão acima da sua hierarquia
+                  e não podem ser alteradas.
+                </p>
+              ) : null}
+              <PermissoesAdminFields
+                value={form.permissoesAdmin}
+                onChange={(permissoesAdmin) => onChange({ permissoesAdmin })}
+                disabled={permissoesBloqueadas}
+                editorPermissoes={
+                  editorIsMaster
+                    ? undefined
+                    : permissoesEfetivas(editorTipo, editorPerm)
+                }
+              />
             </ColaboradorField>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Usuários podem registrar apenas as próprias despesas e não têm
-              acesso às páginas Colaboradores, Equipamentos e Recursos Humanos.
+          ) : form.tipoAcesso ? (
+            <p className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              {TIPO_ACESSO_DESCRICOES[form.tipoAcesso]}
             </p>
-          )}
+          ) : null}
         </section>
       ) : null}
       </div>

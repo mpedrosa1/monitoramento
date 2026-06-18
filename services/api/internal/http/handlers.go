@@ -155,8 +155,8 @@ func (a *API) UpdateChamado(w http.ResponseWriter, r *http.Request, id string) {
 	c.ID = oid
 	c.CreatedAt = existing.CreatedAt
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
-		if domain.CanManageData(claims.TipoAcesso, claims.PermissoesAdmin) {
-			// administradores: qualquer atualização permitida
+		if domain.CanCrudChamados(claims.TipoAcesso, claims.PermissoesAdmin) {
+			// administradores com permissão de chamados: qualquer atualização permitida
 		} else if domain.IsEncerramentoChamado(*existing, c) {
 			cid, err := primitive.ObjectIDFromHex(claims.ColaboradorID)
 			if err != nil || !domain.CanEncerrarChamado(claims.TipoAcesso, claims.PermissoesAdmin, cid, *existing) {
@@ -356,8 +356,9 @@ func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.SenhaHash = senhaHash
-	if c.PermissoesAdmin != nil {
-		domain.NormalizePermissoesAdmin(c.PermissoesAdmin)
+	if err := domain.NormalizarAcessoColaborador(&c); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
 		if !domain.PermissoesAtribuicaoPermitida(
@@ -367,6 +368,7 @@ func (a *API) CreateColaborador(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	c.AuthVersion = 1
 	if err := a.Store.CreateColaborador(r.Context(), &c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -397,8 +399,9 @@ func (a *API) UpdateColaborador(w http.ResponseWriter, r *http.Request, id strin
 	c.ID = oid
 	c.CreatedAt = existing.CreatedAt
 	c.SenhaHash = existing.SenhaHash
-	if c.PermissoesAdmin != nil {
-		domain.NormalizePermissoesAdmin(c.PermissoesAdmin)
+	if err := domain.NormalizarAcessoColaborador(&c); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
 		if !domain.PermissoesAtribuicaoPermitida(
@@ -408,6 +411,7 @@ func (a *API) UpdateColaborador(w http.ResponseWriter, r *http.Request, id strin
 			return
 		}
 	}
+	domain.AplicarAuthVersionAposAcesso(existing, &c)
 	if err := a.Store.UpdateColaborador(r.Context(), &c); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -893,7 +897,7 @@ func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
-		if domain.CanManagePadrao(claims.TipoAcesso, claims.PermissoesAdmin) {
+		if domain.CanFrotaTrocarVeiculos(claims.TipoAcesso, claims.PermissoesAdmin) {
 			alertIDs, err := a.Store.VeiculoIDsComTrocaNaoAutorizadaPendente(r.Context())
 			if err == nil {
 				alertSet := make(map[primitive.ObjectID]bool, len(alertIDs))
@@ -906,6 +910,9 @@ func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+		}
+		for i := range out {
+			sanitizarVeiculoCamposFrota(&out[i].Veiculo, claims.TipoAcesso, claims.PermissoesAdmin)
 		}
 	}
 
@@ -947,6 +954,9 @@ func (a *API) CreateVeiculo(w http.ResponseWriter, r *http.Request) {
 		v.FotoURL = domain.VeiculoFotoURLPadrao
 	}
 	normalizarVeiculoLocacao(&v)
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		sanitizarVeiculoCamposFrota(&v, claims.TipoAcesso, claims.PermissoesAdmin)
+	}
 	if err := a.validarColaboradoresAdicionaisVeiculo(r.Context(), v.ColaboradorID, v.ColaboradoresAdicionaisIDs); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusBadRequest, "condutor adicional não encontrado")
@@ -1032,6 +1042,9 @@ func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		aplicarRestricoesFrotaVeiculo(&v, existing, claims.TipoAcesso, claims.PermissoesAdmin)
+	}
 	if err := a.Store.UpdateVeiculo(r.Context(), &v); err != nil {
 		if store.IsNotFound(err) {
 			writeError(w, http.StatusNotFound, "não encontrado")
@@ -1049,6 +1062,9 @@ func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 			"",
 			"",
 		)
+	}
+	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
+		sanitizarVeiculoCamposFrota(&v, claims.TipoAcesso, claims.PermissoesAdmin)
 	}
 	writeJSON(w, http.StatusOK, v)
 }
@@ -1090,6 +1106,26 @@ func normalizarVeiculoLocacao(v *domain.Veiculo) {
 		unique = append(unique, id)
 	}
 	v.ColaboradoresAdicionaisIDs = unique
+}
+
+func sanitizarVeiculoCamposFrota(v *domain.Veiculo, t domain.TipoAcessoSistema, p *domain.PermissoesAdmin) {
+	if !domain.CanFrotaValoresAlugueis(t, p) {
+		v.ValorAluguel = 0
+	}
+	if !domain.CanFrotaVisualizarContratos(t, p) {
+		v.ContratoURL = ""
+		v.NumeroContrato = ""
+	}
+}
+
+func aplicarRestricoesFrotaVeiculo(novo, existente *domain.Veiculo, t domain.TipoAcessoSistema, p *domain.PermissoesAdmin) {
+	if !domain.CanFrotaValoresAlugueis(t, p) {
+		novo.ValorAluguel = existente.ValorAluguel
+	}
+	if !domain.CanFrotaVisualizarContratos(t, p) {
+		novo.ContratoURL = existente.ContratoURL
+		novo.NumeroContrato = existente.NumeroContrato
+	}
 }
 
 func (a *API) validarColaboradoresAdicionaisVeiculo(ctx context.Context, primario primitive.ObjectID, adicionais []primitive.ObjectID) error {

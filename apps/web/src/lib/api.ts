@@ -30,7 +30,9 @@ export async function apiFetch<T>(
     if (typeof window !== "undefined") {
       window.location.href = "/";
     }
-    throw new Error("Sessão expirada. Faça login novamente.");
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    const message = (err as { error?: string }).error ?? "Sessão expirada. Faça login novamente.";
+    throw new Error(message);
   }
 
   if (!res.ok) {

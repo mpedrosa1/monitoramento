@@ -85,7 +85,7 @@ function MissaoResumoCard({
 
 export function UnidadeMissoesSection({ unidade }: { unidade: Unidade }) {
   const { user } = useAuth();
-  const { canManageData } = usePermissions();
+  const { canCrudMissoes } = usePermissions();
   const [missoes, setMissoes] = useState<Missao[]>([]);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [chamados, setChamados] = useState<Chamado[]>([]);
@@ -133,7 +133,7 @@ export function UnidadeMissoesSection({ unidade }: { unidade: Unidade }) {
     <>
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Missões</h3>
-        {canManageData && (
+        {canCrudMissoes && (
           <PlanejarMissaoDialog unidade={unidade} onSuccess={load} />
         )}
 

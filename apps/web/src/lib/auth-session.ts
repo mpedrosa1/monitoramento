@@ -10,6 +10,7 @@ export type AuthUser = {
   email: string;
   tipoAcesso: TipoAcessoSistema;
   permissoesAdmin?: PermissoesAdmin;
+  authVersion?: number;
   cpf?: string;
   dataAdmissao?: string;
 };
@@ -105,6 +106,7 @@ export function jwtExpiresAtMs(token: string): number | null {
 const TIPOS_ACESSO: TipoAcessoSistema[] = [
   "usuario",
   "administrador",
+  "master",
   "admin_com_financeiro",
   "admin_sem_financeiro",
   "desenvolvedor",
@@ -123,17 +125,50 @@ export function jwtTipoAcesso(token: string): TipoAcessoSistema | null {
 function parsePermissoesAdmin(value: unknown): PermissoesAdmin | null {
   if (!value || typeof value !== "object") return null;
   const p = value as Record<string, unknown>;
+  const bool = (key: string) => p[key] === true;
   return {
-    padrao: p.padrao === true,
-    gestaoRecargas: p.gestaoRecargas === true,
-    financeiro: p.financeiro === true,
-    master: p.master === true || p.desenvolvedor === true,
+    padrao: bool("padrao"),
+    gestaoRecargas: bool("gestaoRecargas"),
+    financeiro: bool("financeiro"),
+    master: bool("master") || bool("desenvolvedor"),
+    crudColaboradores: bool("crudColaboradores"),
+    crudUnidades: bool("crudUnidades"),
+    crudVeiculos: bool("crudVeiculos"),
+    crudEquipamentos: bool("crudEquipamentos"),
+    crudMissoes: bool("crudMissoes"),
+    crudChamados: bool("crudChamados"),
+    concluirMissaoQualquer: bool("concluirMissaoQualquer"),
+    encerrarChamadoQualquer: bool("encerrarChamadoQualquer"),
+    frotaValoresAlugueis: bool("frotaValoresAlugueis"),
+    frotaVisualizarContratos: bool("frotaVisualizarContratos"),
+    frotaRegistrarPeriodo: bool("frotaRegistrarPeriodo"),
+    frotaRegistrarMulta: bool("frotaRegistrarMulta"),
+    frotaTrocarVeiculos: bool("frotaTrocarVeiculos"),
+    rhSalariosBonificacoes: bool("rhSalariosBonificacoes"),
+    rhEscalaTrabalho: bool("rhEscalaTrabalho"),
+    rhCalendarioSobreaviso: bool("rhCalendarioSobreaviso"),
+    rhRecarregarSaldos: bool("rhRecarregarSaldos"),
+    rhRegistrarDespesaOutros: bool("rhRegistrarDespesaOutros"),
   };
 }
 
 export function jwtPermissoesAdmin(token: string): PermissoesAdmin | null {
   const data = decodeJwtPayload(token);
   return parsePermissoesAdmin(data?.permissoesAdmin);
+}
+
+export function jwtAuthVersion(token: string): number {
+  const data = decodeJwtPayload(token);
+  const version = data?.authVersion;
+  return typeof version === "number" ? version : 0;
+}
+
+export function sessaoCompativelComAuthVersion(
+  token: string,
+  authVersion?: number
+): boolean {
+  if (authVersion === undefined) return true;
+  return jwtAuthVersion(token) === authVersion;
 }
 
 export function resolveAuthUserTipoAcesso(
@@ -148,8 +183,11 @@ export function resolveAuthUserTipoAcesso(
 export function resolveAuthUserPermissoes(
   user: AuthUser | null | undefined
 ): PermissoesAdmin | undefined {
-  if (user?.permissoesAdmin) return user.permissoesAdmin;
   const token = getAuthToken();
-  if (!token) return undefined;
-  return jwtPermissoesAdmin(token) ?? undefined;
+  const fromJwt = token ? jwtPermissoesAdmin(token) : undefined;
+  const fromUser = user?.permissoesAdmin;
+  if (fromJwt && fromUser) {
+    return { ...fromJwt, ...fromUser };
+  }
+  return fromUser ?? fromJwt ?? undefined;
 }

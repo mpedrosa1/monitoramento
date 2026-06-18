@@ -4,6 +4,7 @@ import {
   emptyPermissoesAdmin,
   permissoesAtribuicaoPermitida,
 } from "./acesso";
+import { temPermissaoAdminDetalhada, limparFlagsLegadoPermissoes } from "./permissoes-admin";
 import {
   cnhDigits,
   cpfDigits,
@@ -47,11 +48,14 @@ export const LOCAL_TRABALHO_OPCOES: { value: LocalTrabalho; label: string }[] =
     { value: "laboratorio", label: "Laboratório" },
   ];
 
-export const TIPO_ACESSO_OPCOES: { value: "usuario" | "administrador"; label: string }[] =
-  [
-    { value: "usuario", label: "Usuário" },
-    { value: "administrador", label: "Administrador" },
-  ];
+export const TIPO_ACESSO_OPCOES: {
+  value: "usuario" | "administrador" | "master";
+  label: string;
+}[] = [
+  { value: "usuario", label: "Usuário" },
+  { value: "administrador", label: "Administrador" },
+  { value: "master", label: "Master" },
+];
 
 export type DependenteForm = {
   localId: string;
@@ -83,7 +87,7 @@ export type ColaboradorFormState = {
   telefoneCorporativo: string;
   emailCorporativo: string;
   salario: string;
-  tipoAcesso: "usuario" | "administrador" | "";
+  tipoAcesso: "usuario" | "administrador" | "master" | "";
   permissoesAdmin: PermissoesAdmin;
 };
 
@@ -350,10 +354,24 @@ export function validateColaboradorForm(
     errors.tipoAcesso = "Selecione o tipo de acesso ao sistema.";
   }
   if (form.tipoAcesso === "administrador") {
-    const p = form.permissoesAdmin;
-    if (!p.padrao && !p.gestaoRecargas && !p.financeiro && !p.master) {
+    if (!temPermissaoAdminDetalhada(form.permissoesAdmin)) {
       errors.permissoesAdmin =
         "Selecione ao menos uma permissão para o administrador.";
+    }
+  }
+
+  if (form.tipoAcesso === "master" && opts?.editorTipoAcesso) {
+    if (
+      !permissoesAtribuicaoPermitida(
+        opts.editorTipoAcesso,
+        opts.editorPermissoesAdmin,
+        "master",
+        undefined,
+        opts.colaboradorExistente?.permissoesAdmin
+      )
+    ) {
+      errors.tipoAcesso =
+        "Somente usuários Master podem atribuir o acesso Master.";
     }
   }
 
@@ -432,7 +450,7 @@ export function formToColaboradorBody(
     tipoAcesso: form.tipoAcesso as TipoAcessoSistema,
     permissoesAdmin:
       form.tipoAcesso === "administrador"
-        ? form.permissoesAdmin
+        ? limparFlagsLegadoPermissoes(form.permissoesAdmin)
         : undefined,
     fotoUrl: form.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO,
     status: existing?.status ?? ("escritorio" as ColaboradorStatus),

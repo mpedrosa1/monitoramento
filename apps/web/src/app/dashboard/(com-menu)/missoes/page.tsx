@@ -12,7 +12,7 @@ import {
   type MissaoFormState,
 } from "@/lib/missao-form";
 import { missaoStatusLabel, missaoStatusVariant } from "@/lib/labels";
-import { formatInicioMissao, labelChamadoVinculadoMissao, statusEfetivoMissao } from "@/lib/missoes";
+import { formatInicioMissao, labelChamadoMissaoTabela, statusEfetivoMissao, tipoMissao, tipoMissaoLabel } from "@/lib/missoes";
 import { formatDateTimeBR } from "@/lib/time";
 import type { Chamado, Colaborador, Missao, Unidade } from "@/lib/types";
 import { EntityFormDialog } from "@/components/crud/entity-form-dialog";
@@ -86,7 +86,7 @@ export default function MissoesPage() {
   }, [colaboradores]);
 
   const chamadoLabel = useMemo(() => {
-    return (id?: string) => labelChamadoVinculadoMissao(id, chamados);
+    return (id?: string) => labelChamadoMissaoTabela(id, chamados);
   }, [chamados]);
 
   const filteredList = useMemo(() => {
@@ -98,8 +98,9 @@ export default function MissoesPage() {
         : null;
       const status = statusEfetivoMissao(m, chamadoVinculado);
       const statusTexto = missaoStatusLabel[status] ?? status;
+      const tipo = tipoMissaoLabel[tipoMissao(m, chamados)];
       return (
-        m.titulo.toLowerCase().includes(termo) ||
+        tipo.toLowerCase().includes(termo) ||
         unidadeNome(m.unidadeId).toLowerCase().includes(termo) ||
         colaboradorNomes(m.colaboradorIds).toLowerCase().includes(termo) ||
         chamadoLabel(m.chamadoId).toLowerCase().includes(termo) ||
@@ -220,7 +221,7 @@ export default function MissoesPage() {
             <Input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por título, unidade, colaborador ou chamado…"
+              placeholder="Buscar por tipo, unidade, colaborador ou chamado…"
               className="pl-8"
               aria-label="Buscar missões"
             />
@@ -246,7 +247,7 @@ export default function MissoesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Título</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Unidade</TableHead>
               <TableHead>Colaboradores</TableHead>
@@ -277,8 +278,8 @@ export default function MissoesPage() {
                   className="cursor-pointer hover:bg-muted/40"
                   onClick={() => openDetail(m)}
                 >
-                  <TableCell className="max-w-[220px] font-medium">
-                    <span className="line-clamp-2">{m.titulo}</span>
+                  <TableCell className="font-medium">
+                    {tipoMissaoLabel[tipoMissao(m, chamados)]}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -306,7 +307,9 @@ export default function MissoesPage() {
                   <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                     {colaboradorNomes(m.colaboradorIds)}
                   </TableCell>
-                  <TableCell>{chamadoLabel(m.chamadoId)}</TableCell>
+                  <TableCell className="tabular-nums text-muted-foreground">
+                    {chamadoLabel(m.chamadoId)}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatInicioMissao(
                       m,

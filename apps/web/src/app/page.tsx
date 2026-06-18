@@ -69,7 +69,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="corporativo ou pessoal"
+                placeholder="Corporativo"
                 autoComplete="username"
                 disabled={loading}
               />

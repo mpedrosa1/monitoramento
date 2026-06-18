@@ -6,6 +6,7 @@ import type { VeiculoFormState } from "@/lib/veiculo-form";
 import type { VeiculoFormTab } from "@/lib/veiculo-form-tabs";
 import { LOCADORAS_VEICULO } from "@/lib/veiculo-locadora";
 import { formatSalarioInput } from "@/lib/masks";
+import { usePermissions } from "@/hooks/use-permissions";
 import { VeiculoFotoUpload } from "@/components/veiculos/veiculo-foto-upload";
 import { VeiculoContratoUpload } from "@/components/veiculos/veiculo-contrato-upload";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,10 @@ export function VeiculoFormFields({
   focusTab?: VeiculoFormTab | null;
 }) {
   const [tab, setTab] = useState<VeiculoFormTab>("identificacao");
+  const {
+    canFrotaValoresAlugueis,
+    canFrotaVisualizarContratos,
+  } = usePermissions();
 
   useEffect(() => {
     if (focusTab) setTab(focusTab);
@@ -271,29 +276,37 @@ export function VeiculoFormFields({
                   onChange={(e) => onChange({ dataLocacao: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="veiculo-numero-contrato">
-                  Número de contrato
-                </Label>
-                <Input
-                  id="veiculo-numero-contrato"
-                  value={form.numeroContrato}
-                  onChange={(e) => onChange({ numeroContrato: e.target.value })}
-                  placeholder="Opcional"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="veiculo-valor-aluguel">Valor do aluguel</Label>
-                <Input
-                  id="veiculo-valor-aluguel"
-                  value={form.valorAluguel}
-                  onChange={(e) =>
-                    onChange({ valorAluguel: formatSalarioInput(e.target.value) })
-                  }
-                  inputMode="decimal"
-                  placeholder="R$ 0,00"
-                />
-              </div>
+              {canFrotaVisualizarContratos ? (
+                <div className="space-y-2">
+                  <Label htmlFor="veiculo-numero-contrato">
+                    Número de contrato
+                  </Label>
+                  <Input
+                    id="veiculo-numero-contrato"
+                    value={form.numeroContrato}
+                    onChange={(e) =>
+                      onChange({ numeroContrato: e.target.value })
+                    }
+                    placeholder="Opcional"
+                  />
+                </div>
+              ) : null}
+              {canFrotaValoresAlugueis ? (
+                <div className="space-y-2">
+                  <Label htmlFor="veiculo-valor-aluguel">Valor do aluguel</Label>
+                  <Input
+                    id="veiculo-valor-aluguel"
+                    value={form.valorAluguel}
+                    onChange={(e) =>
+                      onChange({
+                        valorAluguel: formatSalarioInput(e.target.value),
+                      })
+                    }
+                    inputMode="decimal"
+                    placeholder="R$ 0,00"
+                  />
+                </div>
+              ) : null}
               {form.locadora === "outra" ? (
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="veiculo-locadora-outra">
@@ -309,10 +322,12 @@ export function VeiculoFormFields({
               ) : null}
             </div>
 
-            <VeiculoContratoUpload
-              contratoUrl={form.contratoUrl}
-              onChange={(contratoUrl) => onChange({ contratoUrl })}
-            />
+            {canFrotaVisualizarContratos ? (
+              <VeiculoContratoUpload
+                contratoUrl={form.contratoUrl}
+                onChange={(contratoUrl) => onChange({ contratoUrl })}
+              />
+            ) : null}
 
             <div className="rounded-lg border border-border p-4">
               {!form.mostrarDevolucao ? (
