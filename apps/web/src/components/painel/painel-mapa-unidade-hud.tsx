@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { contarEquipamentosUnidade } from "@/components/unidades/unidade-equipamentos-grid";
 import { PainelMapaHudEquipamentosFlutuantes } from "@/components/painel/painel-mapa-hud-equipamentos-flutuantes";
 import { PainelMapaHudControlesFullscreen } from "@/components/painel/painel-mapa-hud-controls";
+import type { MapaTileVisao } from "@/lib/mapa-tile-layers";
 import { formatCoord } from "@/lib/geocode";
 import {
   climaWeatherLabel,
@@ -40,12 +41,19 @@ import {
   MAPA_HUD_CONTROLS_RAIL_CLASS,
 } from "@/lib/mapa-hud-layout";
 import { useMapaHudScale } from "@/hooks/use-mapa-hud-scale";
+import { veiculoCardStorageKeyUnidade } from "@/lib/mapa-hud-layout-storage";
 import { cn } from "@/lib/utils";
 import type { DeviceMetric, Equipamento, Unidade } from "@/lib/types";
 import { monitorTargetId, monitorUnidadeHostTargetId } from "@/lib/types";
 import { coordsFromUnidade } from "@/components/unidades/unidade-detail-panel";
 import { useUnidadeClima } from "@/hooks/use-unidade-clima";
 import { PainelMapaHudGlass } from "@/components/painel/painel-mapa-hud-glass";
+import { PainelMapaHudPresencaColaboradores } from "@/components/painel/painel-mapa-hud-presenca-colaboradores";
+import {
+  PainelMapaHudVeiculoCard,
+  type VeiculoHudSelecao,
+} from "@/components/painel/painel-mapa-hud-veiculo-card";
+import type { PresencaColaboradorHud } from "@/lib/veiculo-presenca-unidade";
 
 const MAPA_HUD_ROUND_BTN_CLASS =
   "pointer-events-auto h-9 w-9 rounded-full border border-white/15 bg-background/70 shadow-lg backdrop-blur-xl";
@@ -207,16 +215,28 @@ export function PainelMapaUnidadeHud({
   unidade,
   catalogo,
   metricMap,
+  presencasColaboradores = [],
   fullscreen = false,
   onClose,
   onIrParaAbaEquipamentos,
   onExitFullscreen,
   onVoltarHudGeral,
   onZoomParaLocalizacao,
+  plotsAgrupados,
+  onPlotsAgrupadosChange,
+  mapTileVisao,
+  onMapTileVisaoChange,
+  linhasCoordenadasVisiveis,
+  onLinhasCoordenadasVisiveisChange,
+  veiculosInfoVisiveis,
+  onVeiculosInfoVisiveisChange,
+  veiculoSelecionado,
+  onFecharVeiculoSelecionado,
 }: {
   unidade: Unidade;
   catalogo: Equipamento[];
   metricMap: Map<string, DeviceMetric>;
+  presencasColaboradores?: PresencaColaboradorHud[];
   fullscreen?: boolean;
   onClose: () => void;
   /** Fora da tela cheia: abre a aba Equipamentos. */
@@ -225,6 +245,16 @@ export function PainelMapaUnidadeHud({
   onVoltarHudGeral?: () => void;
   /** Aproxima o zoom do mapa na localização da unidade. */
   onZoomParaLocalizacao?: () => void;
+  plotsAgrupados: boolean;
+  onPlotsAgrupadosChange: (agrupados: boolean) => void;
+  mapTileVisao: MapaTileVisao;
+  onMapTileVisaoChange: (visao: MapaTileVisao) => void;
+  linhasCoordenadasVisiveis: boolean;
+  onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
+  veiculosInfoVisiveis: boolean;
+  onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
+  veiculoSelecionado: VeiculoHudSelecao | null;
+  onFecharVeiculoSelecionado: () => void;
 }) {
   const [hudScale, setHudScale] = useMapaHudScale();
   const [dockEquipamentosAberta, setDockEquipamentosAberta] = useState(false);
@@ -403,6 +433,11 @@ export function PainelMapaUnidadeHud({
     </div>
   );
 
+  const painelPresenca =
+    presencasColaboradores.length > 0 ? (
+      <PainelMapaHudPresencaColaboradores presencas={presencasColaboradores} />
+    ) : null;
+
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[1000]"
@@ -424,6 +459,14 @@ export function PainelMapaUnidadeHud({
           onHudScaleChange={setHudScale}
           onExitFullscreen={onExitFullscreen}
           onVoltarHudGeral={onVoltarHudGeral}
+          plotsAgrupados={plotsAgrupados}
+          onPlotsAgrupadosChange={onPlotsAgrupadosChange}
+          mapTileVisao={mapTileVisao}
+          onMapTileVisaoChange={onMapTileVisaoChange}
+          linhasCoordenadasVisiveis={linhasCoordenadasVisiveis}
+          onLinhasCoordenadasVisiveisChange={onLinhasCoordenadasVisiveisChange}
+          veiculosInfoVisiveis={veiculosInfoVisiveis}
+          onVeiculosInfoVisiveisChange={onVeiculosInfoVisiveisChange}
         />
       ) : null}
 
@@ -435,6 +478,7 @@ export function PainelMapaUnidadeHud({
           metricMap={metricMap}
           dockAberta={dockEquipamentosAberta}
           hudScale={fullscreen ? hudScale : 1}
+          linhasCoordenadasVisiveis={linhasCoordenadasVisiveis}
         />
       ) : null}
 
@@ -442,10 +486,11 @@ export function PainelMapaUnidadeHud({
         {fullscreen ? (
           <>
             <div
-              className="pointer-events-auto absolute top-0 left-0"
+              className="pointer-events-auto absolute top-0 left-0 flex max-h-[calc(100%-1rem)] flex-col gap-3 overflow-y-auto pr-1"
               style={mapaHudCornerScaleStyle(escala, "top left")}
             >
               {painelIdentidade}
+              {painelPresenca}
             </div>
 
             {coords ? (
@@ -481,7 +526,10 @@ export function PainelMapaUnidadeHud({
         ) : (
           <div className="flex h-full min-h-0 flex-col gap-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
-              {painelIdentidade}
+              <div className="flex min-w-0 flex-col gap-3">
+                {painelIdentidade}
+                {painelPresenca}
+              </div>
               <div className="flex min-w-0 shrink items-start justify-end gap-2">
                 {coords ? (
                   <PainelMapaClimaHud
@@ -513,6 +561,16 @@ export function PainelMapaUnidadeHud({
           </div>
         )}
       </div>
+
+      {veiculoSelecionado ? (
+        <PainelMapaHudVeiculoCard
+          selecao={veiculoSelecionado}
+          hudScale={escala}
+          paddingRight={fullscreen ? 56 : 8}
+          positionStorageKey={veiculoCardStorageKeyUnidade(unidade.id)}
+          onClose={onFecharVeiculoSelecionado}
+        />
+      ) : null}
     </div>
   );
 }

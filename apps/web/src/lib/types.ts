@@ -3,6 +3,7 @@ export type ChamadoStatus = "aberto" | "em_andamento" | "encerrado";
 export type ColaboradorStatus =
   | "atrasado"
   | "em_missao"
+  | "em_deslocamento"
   | "escritorio"
   | "almoco"
   | "ferias"
@@ -276,6 +277,7 @@ export interface Colaborador {
   permissoesAdmin?: PermissoesAdmin;
   /** Status operacional (presença / missão) — não exibido no cadastro. */
   status: ColaboradorStatus;
+  rotaExataMotoristaId?: number;
   unidadeId?: string;
   createdAt: string;
   updatedAt: string;
@@ -427,8 +429,29 @@ export interface Veiculo {
   horaDevolucao?: string;
   colaboradoresAdicionaisIds?: string[];
   alertaTrocaNaoAutorizada?: boolean;
+  alertaCondutorRotaExataPendente?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VeiculoPosicao {
+  veiculoId: string;
+  placa: string;
+  lat: number;
+  lng: number;
+  velocidadeKm?: number;
+  odometroKm?: number;
+  dataHora?: string;
+  endereco?: string;
+}
+
+export interface VeiculoProximidadeAlerta {
+  veiculoId: string;
+  placa: string;
+  unidadeId: string;
+  unidadeNome: string;
+  distanciaKm: number;
+  raioKm: number;
 }
 
 export type VeiculoMultaStatus = "pendente" | "paga";
@@ -459,11 +482,44 @@ export interface VeiculoMulta {
   updatedAt: string;
 }
 
+export type CondutorRotaExataDivergenciaStatus =
+  | "pendente"
+  | "aprovada"
+  | "recusada";
+
+export interface CondutorRotaExataDivergencia {
+  id: string;
+  veiculoId: string;
+  motoristaAtualId: string;
+  motoristaSugeridoId?: string;
+  rotaExataMotoristaId: number;
+  rotaExataMotoristaNome: string;
+  rotaExataMotoristaEmail?: string;
+  rotaExataMotoristaCpf?: string;
+  rotaExataMotoristaCnh?: string;
+  status: CondutorRotaExataDivergenciaStatus;
+  detectadoEm: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvidoEm?: string;
+  resolvidoPorColaboradorId?: string;
+}
+
+export interface VerificarCondutoresRotaExataResult {
+  configured: boolean;
+  verificado: boolean;
+  erro?: string;
+  divergenciasPendentes: CondutorRotaExataDivergencia[];
+  novas: number;
+}
+
 export type NotificacaoTipo =
   | "troca_veiculo_solicitacao"
   | "troca_veiculo_resposta"
   | "troca_veiculo_admin"
-  | "troca_veiculo_nao_autorizada";
+  | "troca_veiculo_nao_autorizada"
+  | "condutor_rota_exata_divergencia"
+  | "veiculo_proximo_unidade";
 
 export interface NotificacaoPayload {
   trocaId?: string;
@@ -474,6 +530,12 @@ export interface NotificacaoPayload {
   veiculoAlvoPlaca?: string;
   veiculoOfertadoPlaca?: string;
   aceita?: boolean;
+  veiculoId?: string;
+  unidadeId?: string;
+  unidadeNome?: string;
+  distanciaKm?: number;
+  divergenciaCondutorId?: string;
+  rotaExataMotoristaNome?: string;
 }
 
 export interface Notificacao {
@@ -624,7 +686,12 @@ export interface DashboardSummary {
 }
 
 export interface WSMessage<T = unknown> {
-  type: "snapshot" | "update" | "notification";
+  type:
+    | "snapshot"
+    | "update"
+    | "notification"
+    | "veiculo_posicoes_snapshot"
+    | "veiculo_posicoes_update";
   payload: T;
 }
 

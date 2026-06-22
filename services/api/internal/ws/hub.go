@@ -39,6 +39,7 @@ type Hub struct {
 	unregister chan *client
 	broadcast  chan []byte
 	cache      *cache.StateCache
+	posicoes   *cache.VeiculoPosicoesCache
 	mu         sync.RWMutex
 }
 
@@ -89,6 +90,34 @@ func (h *Hub) Run() {
 	}
 }
 
+func (h *Hub) SetVeiculoPosicoesCache(c *cache.VeiculoPosicoesCache) {
+	h.posicoes = c
+}
+
+func (h *Hub) Broadcast(msg Message) {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	select {
+	case h.broadcast <- data:
+	default:
+		log.Println("ws: broadcast channel full")
+	}
+}
+
+func (h *Hub) BroadcastVeiculoPosicoes(list []domain.VeiculoPosicao) {
+	msg, err := json.Marshal(Message{Type: "veiculo_posicoes_update", Payload: list})
+	if err != nil {
+		return
+	}
+	select {
+	case h.broadcast <- msg:
+	default:
+		log.Println("ws: broadcast veiculo_posicoes channel full")
+	}
+}
+
 func (h *Hub) BroadcastUpdate(metric domain.DeviceMetric) {
 	msg, err := json.Marshal(Message{Type: "update", Payload: metric})
 	if err != nil {
@@ -131,6 +160,17 @@ func (h *Hub) sendSnapshot(c *client) {
 	select {
 	case c.send <- msg:
 	default:
+	}
+	if h.posicoes != nil {
+		pos := h.posicoes.Snapshot()
+		posMsg, err := json.Marshal(Message{Type: "veiculo_posicoes_snapshot", Payload: pos})
+		if err != nil {
+			return
+		}
+		select {
+		case c.send <- posMsg:
+		default:
+		}
 	}
 }
 

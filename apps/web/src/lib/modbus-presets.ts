@@ -4,6 +4,7 @@ import type {
   ModbusTipoDado,
   SnmpTipoDado,
 } from "./types";
+import { randomId } from "./random-id";
 
 export const MODBUS_REGISTROS: ModbusRegistro[] = [
   "coil_status",
@@ -173,7 +174,7 @@ export function newModbusPonto(partial?: Partial<ModbusPonto>): ModbusPonto {
     : undefined;
 
   return {
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     nome: "",
     offset: 0,
     unidade: "",
@@ -207,7 +208,7 @@ export function normalizeModbusPontos(
       const estadosNormalizados = p.estadosMulti?.length
         ? p.estadosMulti.map((e) => ({
             ...e,
-            _localId: e._localId ?? crypto.randomUUID(),
+            _localId: e._localId ?? randomId(),
           }))
         : comEstados
           ? []
@@ -215,7 +216,7 @@ export function normalizeModbusPontos(
 
       return {
         ...p,
-        _localId: p._localId ?? crypto.randomUUID(),
+        _localId: p._localId ?? randomId(),
         offset: Number.isFinite(p.offset) ? p.offset : 0,
         registro,
         tipoDado,

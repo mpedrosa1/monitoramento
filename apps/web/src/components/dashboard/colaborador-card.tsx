@@ -14,6 +14,7 @@ import {
 import { rhColaboradorDetailPath } from "@/lib/dashboard-paths";
 import type { Colaborador } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useColaboradorStatusEfetivo } from "@/components/dashboard/colaborador-rastreamento-context";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function colaboradorIniciais(nome: string): string {
@@ -45,6 +46,7 @@ export function ColaboradorCard({
   const showActions = Boolean(onEdit || onDelete);
   const { isMaster, isLoading } = usePermissions();
   const showStatusBadge = !isLoading && isMaster;
+  const status = useColaboradorStatusEfetivo(colaborador);
   const foto = colaborador.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO;
   const cargo = colaborador.cargo?.trim() || "Colaborador";
 
@@ -135,10 +137,10 @@ export function ColaboradorCard({
 
         {showStatusBadge ? (
           <Badge
-            variant={colaboradorStatusVariant[colaborador.status]}
+            variant={colaboradorStatusVariant[status]}
             className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
           >
-            {colaboradorStatusLabel[colaborador.status]}
+            {colaboradorStatusLabel[status]}
           </Badge>
         ) : null}
       </div>

@@ -14,6 +14,7 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/collector"
 	"github.com/mmrtec/monitoramento/api/internal/domain"
 	"github.com/mmrtec/monitoramento/api/internal/modbus"
+	"github.com/mmrtec/monitoramento/api/internal/rastreamento"
 	"github.com/mmrtec/monitoramento/api/internal/snmp"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"github.com/mmrtec/monitoramento/api/internal/ws"
@@ -21,13 +22,14 @@ import (
 )
 
 type API struct {
-	Store     store.Store
-	Cache     *cache.StateCache
-	Collector *collector.Collector
-	Antenas   *antenas.Store
-	Hub       *ws.Hub
-	JWTSecret string
-	JWTExpiry time.Duration
+	Store        store.Store
+	Cache        *cache.StateCache
+	Collector    *collector.Collector
+	Antenas      *antenas.Store
+	Hub          *ws.Hub
+	Rastreamento *rastreamento.Service
+	JWTSecret    string
+	JWTExpiry    time.Duration
 }
 
 func (a *API) refreshCollector() {
@@ -888,7 +890,8 @@ func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
 
 	type veiculoComAlerta struct {
 		domain.Veiculo
-		AlertaTrocaNaoAutorizada bool `json:"alertaTrocaNaoAutorizada,omitempty"`
+		AlertaTrocaNaoAutorizada      bool `json:"alertaTrocaNaoAutorizada,omitempty"`
+		AlertaCondutorRotaExataPendente bool `json:"alertaCondutorRotaExataPendente,omitempty"`
 	}
 
 	out := make([]veiculoComAlerta, len(list))
@@ -907,6 +910,18 @@ func (a *API) ListVeiculos(w http.ResponseWriter, r *http.Request) {
 				for i := range out {
 					if alertSet[out[i].ID] {
 						out[i].AlertaTrocaNaoAutorizada = true
+					}
+				}
+			}
+			condutorAlertIDs, err := a.Store.VeiculoIDsComCondutorRotaExataDivergenciaPendente(r.Context())
+			if err == nil {
+				condutorSet := make(map[primitive.ObjectID]bool, len(condutorAlertIDs))
+				for _, id := range condutorAlertIDs {
+					condutorSet[id] = true
+				}
+				for i := range out {
+					if condutorSet[out[i].ID] {
+						out[i].AlertaCondutorRotaExataPendente = true
 					}
 				}
 			}
@@ -973,15 +988,18 @@ func (a *API) CreateVeiculo(w http.ResponseWriter, r *http.Request) {
 	if dataInicio == "" {
 		dataInicio = domain.DataHojeISO()
 	}
-	_ = a.registrarTrocaMotoristaVeiculo(
+	warning := a.aplicarMudancaMotoristaVeiculo(
 		r.Context(),
-		v.ID,
+		&v,
 		primitive.NilObjectID,
 		v.ColaboradorID,
 		dataInicio,
 		"",
 	)
-	writeJSON(w, http.StatusCreated, v)
+	writeJSON(w, http.StatusCreated, veiculoSaveResponse{
+		Veiculo:              v,
+		RotaExataSyncWarning: warning,
+	})
 }
 
 func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
@@ -1053,20 +1071,26 @@ func (a *API) UpdateVeiculo(w http.ResponseWriter, r *http.Request, id string) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	var syncWarning string
 	if existing.ColaboradorID != v.ColaboradorID {
-		_ = a.registrarTrocaMotoristaVeiculo(
+		syncWarning = a.aplicarMudancaMotoristaVeiculo(
 			r.Context(),
-			v.ID,
+			&v,
 			existing.ColaboradorID,
 			v.ColaboradorID,
 			"",
 			"",
 		)
+	} else if existing.Placa != v.Placa && !v.ColaboradorID.IsZero() {
+		syncWarning = a.sincronizarCondutorVeiculoRotaExata(r.Context(), &v)
 	}
 	if claims, ok := auth.ClaimsFromContext(r.Context()); ok {
 		sanitizarVeiculoCamposFrota(&v, claims.TipoAcesso, claims.PermissoesAdmin)
 	}
-	writeJSON(w, http.StatusOK, v)
+	writeJSON(w, http.StatusOK, veiculoSaveResponse{
+		Veiculo:              v,
+		RotaExataSyncWarning: syncWarning,
+	})
 }
 
 func (a *API) DeleteVeiculo(w http.ResponseWriter, r *http.Request, id string) {

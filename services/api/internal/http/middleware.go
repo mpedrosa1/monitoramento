@@ -1,11 +1,29 @@
 package httpapi
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
-func CORSMiddleware(origins []string) func(http.Handler) http.Handler {
+func isPrivateLanOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() || ip.IsPrivate()
+}
+
+func CORSMiddleware(origins []string, allowLan bool) func(http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(origins))
 	for _, o := range origins {
 		allowed[o] = struct{}{}
@@ -14,7 +32,8 @@ func CORSMiddleware(origins []string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
 			if origin != "" {
-				if _, ok := allowed[origin]; ok || len(allowed) == 0 {
+				_, explicit := allowed[origin]
+				if explicit || (allowLan && isPrivateLanOrigin(origin)) || len(allowed) == 0 {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
 					w.Header().Set("Access-Control-Allow-Credentials", "true")
 					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatPlaca } from "@/lib/veiculo-placa";
 import { trocaAdminVeiculos } from "@/lib/notificacoes";
+import { alertaAvisoSyncRotaExata } from "@/lib/veiculo-rotaexata-sync";
 import type { Veiculo } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,10 +77,11 @@ export function TrocaAdminVeiculosDialog({
 
     setLoading(true);
     try {
-      await trocaAdminVeiculos({ veiculoAId, veiculoBId });
+      const result = await trocaAdminVeiculos({ veiculoAId, veiculoBId });
       onOpenChange(false);
       onSuccess?.();
-      window.alert(
+      alertaAvisoSyncRotaExata(
+        result.rotaExataSyncWarnings,
         "Troca realizada. Os condutores envolvidos foram notificados."
       );
     } catch (e) {

@@ -36,6 +36,7 @@ import type {
   Unidade,
   Veiculo,
 } from "@/lib/types";
+import { useColaboradorRastreamento } from "@/components/dashboard/colaborador-rastreamento-context";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useMonitoring } from "@/components/dashboard/monitoring-context";
 import { Badge } from "@/components/ui/badge";
@@ -237,9 +238,11 @@ export function DashboardOperacionalHome() {
     return { planejada, emAndamento };
   }, [missoes]);
 
+  const { withStatusEfetivoList } = useColaboradorRastreamento();
+
   const colaboradores = useMemo(
-    () => asArray(summary?.colaboradores),
-    [summary?.colaboradores]
+    () => withStatusEfetivoList(asArray(summary?.colaboradores)),
+    [summary?.colaboradores, withStatusEfetivoList]
   );
 
   const colaboradoresPorStatus = useMemo(() => {
@@ -253,6 +256,7 @@ export function DashboardOperacionalHome() {
   const colaboradoresDestaque = useMemo(() => {
     const prioridade: ColaboradorStatus[] = [
       "em_missao",
+      "em_deslocamento",
       "atrasado",
       "escritorio",
       "almoco",

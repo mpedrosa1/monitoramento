@@ -10,6 +10,7 @@ import {
 import { rhColaboradorDetailPath } from "@/lib/dashboard-paths";
 import type { Colaborador } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useColaboradorStatusEfetivo } from "@/components/dashboard/colaborador-rastreamento-context";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function colaboradorIniciais(nome: string): string {
@@ -30,6 +31,7 @@ export function ColaboradorListItem({
 }) {
   const { isMaster, isLoading } = usePermissions();
   const showStatusBadge = !isLoading && isMaster;
+  const status = useColaboradorStatusEfetivo(colaborador);
 
   const content = (
     <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
@@ -49,10 +51,10 @@ export function ColaboradorListItem({
           </p>
           {showStatusBadge ? (
             <Badge
-              variant={colaboradorStatusVariant[colaborador.status]}
+              variant={colaboradorStatusVariant[status]}
               className="shrink-0 text-[10px]"
             >
-              {colaboradorStatusLabel[colaborador.status]}
+              {colaboradorStatusLabel[status]}
             </Badge>
           ) : null}
         </div>

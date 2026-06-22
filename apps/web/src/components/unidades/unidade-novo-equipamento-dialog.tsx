@@ -11,6 +11,7 @@ import {
   parseSlaveIdInput,
   portaEquipamentoEmUso,
 } from "@/lib/unidade-form";
+import { randomId } from "@/lib/random-id";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,7 +55,7 @@ function catalogoNobreaks(catalogo: Equipamento[]): Equipamento[] {
 function newSensorDraft(catalogo: Equipamento[]): SensorMaquinaDraft {
   const first = catalogoSensores(catalogo)[0];
   return {
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     equipamentoId: first?.id ?? "",
     slaveId: "1",
   };

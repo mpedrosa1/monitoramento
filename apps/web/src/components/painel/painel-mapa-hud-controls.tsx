@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, Minimize2 } from "lucide-react";
+import { ArrowLeft, Car, Combine, Map, Minimize2, Route, Satellite, Ungroup } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PainelMapaHudGlass } from "@/components/painel/painel-mapa-hud-glass";
+import type { MapaTileVisao } from "@/lib/mapa-tile-layers";
 import {
   MAPA_HUD_SCALE_MAX,
   MAPA_HUD_SCALE_MIN,
@@ -69,11 +70,27 @@ export function PainelMapaHudControlesColuna({
   onHudScaleChange,
   onExitFullscreen,
   onVoltarHudGeral,
+  plotsAgrupados,
+  onPlotsAgrupadosChange,
+  mapTileVisao,
+  onMapTileVisaoChange,
+  linhasCoordenadasVisiveis,
+  onLinhasCoordenadasVisiveisChange,
+  veiculosInfoVisiveis,
+  onVeiculosInfoVisiveisChange,
 }: {
   hudScale: number;
   onHudScaleChange: (scale: number) => void;
   onExitFullscreen: () => void;
   onVoltarHudGeral?: () => void;
+  plotsAgrupados: boolean;
+  onPlotsAgrupadosChange: (agrupados: boolean) => void;
+  mapTileVisao: MapaTileVisao;
+  onMapTileVisaoChange: (visao: MapaTileVisao) => void;
+  linhasCoordenadasVisiveis: boolean;
+  onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
+  veiculosInfoVisiveis: boolean;
+  onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
 }) {
   return (
     <div className="flex w-10 shrink-0 flex-col items-center gap-2">
@@ -101,6 +118,98 @@ export function PainelMapaHudControlesColuna({
           <ArrowLeft className="h-4 w-4" />
         </Button>
       ) : null}
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon-sm"
+        className={cn(
+          MAPA_HUD_ROUND_BTN_CLASS,
+          plotsAgrupados && "ring-2 ring-primary/55"
+        )}
+        onClick={() => onPlotsAgrupadosChange(!plotsAgrupados)}
+        aria-label={
+          plotsAgrupados
+            ? "Desagrupar plots no mapa"
+            : "Agrupar plots próximos no mapa"
+        }
+        title={plotsAgrupados ? "Desagrupar plots" : "Agrupar plots"}
+      >
+        {plotsAgrupados ? (
+          <Combine className="h-4 w-4" />
+        ) : (
+          <Ungroup className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon-sm"
+        className={cn(
+          MAPA_HUD_ROUND_BTN_CLASS,
+          mapTileVisao === "satelite" && "ring-2 ring-primary/55"
+        )}
+        onClick={() =>
+          onMapTileVisaoChange(mapTileVisao === "rua" ? "satelite" : "rua")
+        }
+        aria-label={
+          mapTileVisao === "rua"
+            ? "Alternar para visão satélite"
+            : "Alternar para visão de mapa"
+        }
+        title={mapTileVisao === "rua" ? "Visão satélite" : "Visão mapa"}
+      >
+        {mapTileVisao === "rua" ? (
+          <Satellite className="h-4 w-4" />
+        ) : (
+          <Map className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon-sm"
+        className={cn(
+          MAPA_HUD_ROUND_BTN_CLASS,
+          linhasCoordenadasVisiveis && "ring-2 ring-primary/55"
+        )}
+        onClick={() =>
+          onLinhasCoordenadasVisiveisChange(!linhasCoordenadasVisiveis)
+        }
+        aria-label={
+          linhasCoordenadasVisiveis
+            ? "Ocultar linhas até as coordenadas"
+            : "Exibir linhas até as coordenadas"
+        }
+        title={
+          linhasCoordenadasVisiveis
+            ? "Ocultar linhas"
+            : "Exibir linhas"
+        }
+      >
+        <Route className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon-sm"
+        className={cn(
+          MAPA_HUD_ROUND_BTN_CLASS,
+          veiculosInfoVisiveis && "ring-2 ring-primary/55"
+        )}
+        onClick={() => onVeiculosInfoVisiveisChange(!veiculosInfoVisiveis)}
+        aria-label={
+          veiculosInfoVisiveis
+            ? "Ocultar dados dos veículos no mapa"
+            : "Exibir dados dos veículos no mapa"
+        }
+        title={
+          veiculosInfoVisiveis
+            ? "Ocultar dados dos veículos"
+            : "Exibir dados dos veículos"
+        }
+      >
+        <Car className="h-4 w-4" />
+      </Button>
       <PainelMapaHudEscalaTrilha value={hudScale} onChange={onHudScaleChange} />
     </div>
   );
@@ -111,11 +220,27 @@ export function PainelMapaHudControlesFullscreen({
   onHudScaleChange,
   onExitFullscreen,
   onVoltarHudGeral,
+  plotsAgrupados,
+  onPlotsAgrupadosChange,
+  mapTileVisao,
+  onMapTileVisaoChange,
+  linhasCoordenadasVisiveis,
+  onLinhasCoordenadasVisiveisChange,
+  veiculosInfoVisiveis,
+  onVeiculosInfoVisiveisChange,
 }: {
   hudScale: number;
   onHudScaleChange: (scale: number) => void;
   onExitFullscreen: () => void;
   onVoltarHudGeral?: () => void;
+  plotsAgrupados: boolean;
+  onPlotsAgrupadosChange: (agrupados: boolean) => void;
+  mapTileVisao: MapaTileVisao;
+  onMapTileVisaoChange: (visao: MapaTileVisao) => void;
+  linhasCoordenadasVisiveis: boolean;
+  onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
+  veiculosInfoVisiveis: boolean;
+  onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
 }) {
   return (
     <div className="pointer-events-auto absolute right-3 top-3 z-[1200] flex w-10 flex-col items-center gap-2 sm:right-4 sm:top-4">
@@ -124,6 +249,14 @@ export function PainelMapaHudControlesFullscreen({
         onHudScaleChange={onHudScaleChange}
         onExitFullscreen={onExitFullscreen}
         onVoltarHudGeral={onVoltarHudGeral}
+        plotsAgrupados={plotsAgrupados}
+        onPlotsAgrupadosChange={onPlotsAgrupadosChange}
+        mapTileVisao={mapTileVisao}
+        onMapTileVisaoChange={onMapTileVisaoChange}
+        linhasCoordenadasVisiveis={linhasCoordenadasVisiveis}
+        onLinhasCoordenadasVisiveisChange={onLinhasCoordenadasVisiveisChange}
+        veiculosInfoVisiveis={veiculosInfoVisiveis}
+        onVeiculosInfoVisiveisChange={onVeiculosInfoVisiveisChange}
       />
     </div>
   );

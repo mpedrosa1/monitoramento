@@ -24,6 +24,7 @@ type MemoryStore struct {
 	veiculoPeriodosMotorista []domain.VeiculoPeriodoMotorista
 	veiculoMultas        []domain.VeiculoMulta
 	trocasVeiculo        []domain.TrocaVeiculo
+	condutorRotaExataDivergencias []domain.CondutorRotaExataDivergencia
 	notificacoes         []domain.Notificacao
 	pushTokens           []domain.PushToken
 	eventos              []domain.EventoMonitoramento

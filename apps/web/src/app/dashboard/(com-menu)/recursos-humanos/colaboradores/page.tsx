@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
+import { useColaboradorRastreamento } from "@/components/dashboard/colaborador-rastreamento-context";
 import { colaboradorStatusLabel } from "@/lib/labels";
 import type { Colaborador } from "@/lib/types";
 import { AdicionarColaboradorDialog } from "@/components/colaboradores/adicionar-colaborador-dialog";
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 
 export default function ColaboradoresRhPage() {
   const { canCrudColaboradores } = usePermissions();
+  const { getStatusEfetivo } = useColaboradorRastreamento();
   const [list, setList] = useState<Colaborador[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Colaborador | null>(null);
@@ -28,7 +30,7 @@ export default function ColaboradoresRhPage() {
     const termo = busca.trim().toLowerCase();
     if (!termo) return list;
     return list.filter((c) => {
-      const status = colaboradorStatusLabel[c.status] ?? c.status;
+      const status = colaboradorStatusLabel[getStatusEfetivo(c)] ?? c.status;
       return (
         c.nome.toLowerCase().includes(termo) ||
         (c.cargo ?? "").toLowerCase().includes(termo) ||
@@ -38,7 +40,7 @@ export default function ColaboradoresRhPage() {
         status.toLowerCase().includes(termo)
       );
     });
-  }, [list, busca]);
+  }, [list, busca, getStatusEfetivo]);
 
   const load = useCallback(async () => {
     const cols = await apiFetch<Colaborador[] | null>("/api/v1/colaboradores");

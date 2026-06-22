@@ -4,6 +4,7 @@ import type {
   SnmpTipoDado,
   SnmpTipoSelecao,
 } from "./types";
+import { randomId } from "./random-id";
 
 export const SNMP_MULTI_ESTADO_COR_PADRAO = "#64748b";
 
@@ -11,7 +12,7 @@ export function newSnmpMultiEstadoItem(
   partial?: Partial<SnmpMultiEstadoItem>
 ): SnmpMultiEstadoItem {
   return {
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     chave: "",
     exibicao: "",
     cor: SNMP_MULTI_ESTADO_COR_PADRAO,
@@ -25,7 +26,7 @@ function normalizeEstadosMulti(
   if (!items?.length) return undefined;
   return items.map((e) => ({
     ...e,
-    _localId: e._localId ?? crypto.randomUUID(),
+    _localId: e._localId ?? randomId(),
     chave: e.chave ?? "",
     exibicao: e.exibicao ?? "",
     cor: e.cor?.trim() || SNMP_MULTI_ESTADO_COR_PADRAO,
@@ -92,7 +93,7 @@ export function normalizeSnmpTipoSelecao(
 
 export function newSnmpPonto(partial?: Partial<SnmpPonto>): SnmpPonto {
   return {
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     nome: "",
     oid: "",
     tipoSnmp: "nao_selecionado",
@@ -117,7 +118,7 @@ export function normalizeSnmpPontos(
 
       return {
         ...p,
-        _localId: p._localId ?? crypto.randomUUID(),
+        _localId: p._localId ?? randomId(),
         tipoSnmp: normalizeSnmpTipoSelecao(p.tipoSnmp) ?? "nao_selecionado",
         tipoDado: usaMultiEstado ? "multi_estado" : tipoDado,
         multiplicador:

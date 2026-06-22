@@ -1,6 +1,5 @@
 import { clearAuthSession, getAuthToken } from "@/lib/auth-session";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export type ApiFetchOptions = RequestInit & {
   skipAuth?: boolean;
@@ -23,7 +22,7 @@ export async function apiFetch<T>(
     }
   }
 
-  const res = await fetch(`${API_URL}${path}`, { ...requestInit, headers });
+  const res = await fetch(`${getApiBaseUrl()}${path}`, { ...requestInit, headers });
 
   if (res.status === 401 && !skipAuth) {
     clearAuthSession();
@@ -58,4 +57,4 @@ export function asArray<T>(data: T[] | null | undefined): T[] {
   return Array.isArray(data) ? data : [];
 }
 
-export { API_URL };
+export { getApiBaseUrl } from "@/lib/api-base-url";

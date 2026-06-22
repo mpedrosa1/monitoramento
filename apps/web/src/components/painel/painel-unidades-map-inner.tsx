@@ -25,14 +25,21 @@ import { UnidadeAreaLabelOverlay } from "@/components/unidades/unidade-area-labe
 import {
   clusterUnidadeMapPointsByPixels,
   clustersStructureSignature,
+  unidadeMapPointsIndividuais,
   type UnidadeMapCluster,
   type UnidadeMapPoint,
 } from "@/lib/unidade-map-cluster";
 import { unidadeConnectivityLabel, unidadeConnectivityStatus } from "@/lib/unidade-form";
 import { cn } from "@/lib/utils";
-import type { DeviceMetric, Unidade } from "@/lib/types";
+import type { Colaborador, DeviceMetric, Unidade, Veiculo, VeiculoPosicao } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
 import { coordsFromUnidade } from "@/components/unidades/unidade-detail-panel";
+import { MapHudMapProjectionBridge } from "@/components/painel/mapa-hud-projection";
+import { PainelVeiculosMapMarkers } from "@/components/painel/painel-veiculos-map-markers";
+import {
+  mapaTileLayerConfig,
+  type MapaTileVisao,
+} from "@/lib/mapa-tile-layers";
 
 import "leaflet/dist/leaflet.css";
 
@@ -84,15 +91,15 @@ function MapFitClustersOnce({
   points: { lat: number; lng: number }[];
 }) {
   const map = useMap();
-  const fittedKeyRef = useRef<string | null>(null);
+  const hasFittedRef = useRef(false);
   const key = points
     .map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`)
     .sort()
     .join("|");
 
   useEffect(() => {
-    if (!key || fittedKeyRef.current === key) return;
-    fittedKeyRef.current = key;
+    if (!key || hasFittedRef.current) return;
+    hasFittedRef.current = true;
 
     if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 12, { animate: false });
@@ -280,10 +287,12 @@ function DynamicClusterMarkers({
   points,
   pointCoordsKey,
   onSelectUnidade,
+  plotsAgrupados,
 }: {
   points: UnidadeMapPoint[];
   pointCoordsKey: string;
   onSelectUnidade?: (id: string) => void;
+  plotsAgrupados: boolean;
 }) {
   const map = useMap();
   const [clusters, setClusters] = useState<UnidadeMapCluster[]>([]);
@@ -302,14 +311,16 @@ function DynamicClusterMarkers({
       setClusters((prev) => (prev.length === 0 ? prev : []));
       return;
     }
-    const project = (lat: number, lng: number) =>
-      map.latLngToContainerPoint(L.latLng(lat, lng));
-    const next = clusterUnidadeMapPointsByPixels(current, project);
+    const next = plotsAgrupados
+      ? clusterUnidadeMapPointsByPixels(current, (lat, lng) =>
+          map.latLngToContainerPoint(L.latLng(lat, lng))
+        )
+      : unidadeMapPointsIndividuais(current);
     const sig = clustersStructureSignature(next);
     setClusters((prev) =>
       clustersStructureSignature(prev) === sig ? prev : next
     );
-  }, [map]);
+  }, [map, plotsAgrupados]);
 
   const scheduleRecluster = useCallback(() => {
     if (rafRef.current != null) return;
@@ -321,6 +332,7 @@ function DynamicClusterMarkers({
 
   useEffect(() => {
     recluster();
+    if (!plotsAgrupados) return;
     map.on("zoom", scheduleRecluster);
     map.on("zoomend", recluster);
     map.on("moveend", recluster);
@@ -335,11 +347,11 @@ function DynamicClusterMarkers({
         rafRef.current = null;
       }
     };
-  }, [map, recluster, scheduleRecluster]);
+  }, [map, plotsAgrupados, recluster, scheduleRecluster]);
 
   useEffect(() => {
     recluster();
-  }, [pointCoordsKey, recluster]);
+  }, [pointCoordsKey, plotsAgrupados, recluster]);
 
   return (
     <>
@@ -366,20 +378,36 @@ function DynamicClusterMarkers({
 
 export default function PainelUnidadesMapInner({
   unidades,
+  veiculos,
+  colaboradores,
+  veiculoPosicoes,
   metricMap,
   onSelectUnidade,
   onMapBackgroundClick,
   layoutKey,
   mapFocus,
   areaUnidadeId,
+  plotsAgrupados = true,
+  mapTileVisao = "rua",
+  mostrarInfoVeiculos = true,
+  veiculoSelecionadoId = null,
+  onSelecionarVeiculo,
 }: {
   unidades: Unidade[];
+  veiculos: Veiculo[];
+  colaboradores: Colaborador[];
+  veiculoPosicoes: VeiculoPosicao[];
   metricMap: Map<string, DeviceMetric>;
   onSelectUnidade?: (id: string) => void;
   onMapBackgroundClick?: () => void;
   layoutKey?: unknown;
   mapFocus?: MapaUnidadeFocus | null;
   areaUnidadeId?: string | null;
+  plotsAgrupados?: boolean;
+  mapTileVisao?: MapaTileVisao;
+  mostrarInfoVeiculos?: boolean;
+  veiculoSelecionadoId?: string | null;
+  onSelecionarVeiculo?: (veiculoId: string) => void;
 }) {
   const mapPoints = useMemo((): UnidadeMapPoint[] => {
     const pts: UnidadeMapPoint[] = [];
@@ -415,7 +443,12 @@ export default function PainelUnidadesMapInner({
     [unidades, areaUnidadeId]
   );
 
-  if (mapPoints.length === 0) {
+  const tileLayer = useMemo(
+    () => mapaTileLayerConfig(mapTileVisao),
+    [mapTileVisao]
+  );
+
+  if (mapPoints.length === 0 && veiculoPosicoes.length === 0) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center border-t border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
         Nenhuma unidade com coordenadas cadastradas para exibir no mapa.
@@ -437,10 +470,13 @@ export default function PainelUnidadesMapInner({
       zoomControl
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        key={mapTileVisao}
+        attribution={tileLayer.attribution}
+        url={tileLayer.url}
+        maxZoom={tileLayer.maxZoom}
       />
       <MapInvalidateSize layoutKey={layoutKey} />
+      <MapHudMapProjectionBridge />
       <MapAudioUnlock />
       <MapBackgroundClick onBackgroundClick={onMapBackgroundClick} />
       <MapFitClustersOnce points={fitPoints} />
@@ -450,6 +486,15 @@ export default function PainelUnidadesMapInner({
         points={mapPoints}
         pointCoordsKey={pointCoordsKey}
         onSelectUnidade={onSelectUnidade}
+        plotsAgrupados={plotsAgrupados}
+      />
+      <PainelVeiculosMapMarkers
+        posicoes={veiculoPosicoes}
+        veiculos={veiculos}
+        colaboradores={colaboradores}
+        mostrarInfoVeiculos={mostrarInfoVeiculos}
+        veiculoSelecionadoId={veiculoSelecionadoId}
+        onSelecionarVeiculo={onSelecionarVeiculo}
       />
     </MapContainer>
   );

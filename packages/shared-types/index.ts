@@ -3,6 +3,7 @@ export type ChamadoStatus = "aberto" | "em_andamento" | "encerrado";
 export type ColaboradorStatus =
   | "atrasado"
   | "em_missao"
+  | "em_deslocamento"
   | "escritorio"
   | "almoco"
   | "ferias"

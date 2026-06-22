@@ -33,3 +33,36 @@ export function clientToContainerPos(
     y: clientY - rect.top - offsetY,
   };
 }
+
+const GLOBAL_EQUIPAMENTO_KEY_SEP = "|";
+
+export function globalEquipamentoKey(
+  unidadeId: string,
+  grupoKey: string
+): string {
+  return `${unidadeId}${GLOBAL_EQUIPAMENTO_KEY_SEP}${grupoKey}`;
+}
+
+export function parseGlobalEquipamentoKey(
+  key: string
+): { unidadeId: string; grupoKey: string } | null {
+  const sep = key.indexOf(GLOBAL_EQUIPAMENTO_KEY_SEP);
+  if (sep <= 0) return null;
+  return {
+    unidadeId: key.slice(0, sep),
+    grupoKey: key.slice(sep + 1),
+  };
+}
+
+/** Ponto inferior central do card (considerando escala do HUD). */
+export function hudEquipamentoCardAnchorBottom(
+  pos: HudEquipamentoPos,
+  cardWidth: number,
+  cardHeight: number,
+  scale = 1
+): HudEquipamentoPos {
+  return {
+    x: pos.x + (cardWidth * scale) / 2,
+    y: pos.y + cardHeight * scale,
+  };
+}

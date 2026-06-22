@@ -43,6 +43,8 @@ export function VeiculoCard({
     showAlertasAdmin && motoristaAtualForaDaListaAutorizados(veiculo);
   const trocaNaoAutorizadaPendente =
     showAlertasAdmin && Boolean(veiculo.alertaTrocaNaoAutorizada);
+  const condutorRotaExataPendente =
+    showAlertasAdmin && Boolean(veiculo.alertaCondutorRotaExataPendente);
 
   return (
     <Link
@@ -165,6 +167,14 @@ export function VeiculoCard({
               title="Há solicitação de troca pendente por colaborador não autorizado"
             >
               Troca não autorizada pendente
+            </Badge>
+          ) : null}
+          {condutorRotaExataPendente ? (
+            <Badge
+              className="w-full justify-center border-orange-300 bg-orange-500 font-semibold text-white shadow-sm ring-1 ring-orange-400/80"
+              title="Condutor na Rota Exata difere do cadastro local — aguardando aprovação"
+            >
+              Condutor Rota Exata pendente
             </Badge>
           ) : null}
           {numeroContrato ? (

@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import type { Notificacao, TrocaVeiculo, Veiculo } from "@/lib/types";
+import type { Notificacao, TrocaVeiculo } from "@/lib/types";
 
 export async function listNotificacoes(): Promise<Notificacao[]> {
   const data = await apiFetch<Notificacao[] | null>("/api/v1/notificacoes");
@@ -30,11 +30,13 @@ export async function responderTrocaVeiculo(
   });
 }
 
+import type { TrocaAdminComSyncRotaExata } from "@/lib/veiculo-rotaexata-sync";
+
 export async function trocaAdminVeiculos(body: {
   veiculoAId: string;
   veiculoBId: string;
-}): Promise<{ veiculoA: Veiculo; veiculoB: Veiculo }> {
-  return apiFetch<{ veiculoA: Veiculo; veiculoB: Veiculo }>(
+}): Promise<TrocaAdminComSyncRotaExata> {
+  return apiFetch<TrocaAdminComSyncRotaExata>(
     "/api/v1/veiculos/trocas/admin",
     {
       method: "POST",

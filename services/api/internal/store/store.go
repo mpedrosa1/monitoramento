@@ -83,6 +83,15 @@ type Store interface {
 	FindTrocaVeiculoPendente(ctx context.Context, solicitanteID, veiculoAlvoID primitive.ObjectID) (*domain.TrocaVeiculo, error)
 	VeiculoIDsComTrocaNaoAutorizadaPendente(ctx context.Context) ([]primitive.ObjectID, error)
 
+	ListCondutorRotaExataDivergencias(ctx context.Context, status *domain.CondutorRotaExataDivergenciaStatus) ([]domain.CondutorRotaExataDivergencia, error)
+	GetCondutorRotaExataDivergencia(ctx context.Context, id primitive.ObjectID) (*domain.CondutorRotaExataDivergencia, error)
+	FindCondutorRotaExataDivergenciaPendenteByVeiculo(ctx context.Context, veiculoID primitive.ObjectID) (*domain.CondutorRotaExataDivergencia, error)
+	ExistsCondutorRotaExataDivergenciaRecusada(ctx context.Context, veiculoID primitive.ObjectID, rotaExataMotoristaID int) (bool, error)
+	CreateCondutorRotaExataDivergencia(ctx context.Context, d *domain.CondutorRotaExataDivergencia) error
+	UpdateCondutorRotaExataDivergencia(ctx context.Context, d *domain.CondutorRotaExataDivergencia) error
+	DeleteCondutorRotaExataDivergencia(ctx context.Context, id primitive.ObjectID) error
+	VeiculoIDsComCondutorRotaExataDivergenciaPendente(ctx context.Context) ([]primitive.ObjectID, error)
+
 	ListNotificacoes(ctx context.Context, colaboradorID primitive.ObjectID, limit int) ([]domain.Notificacao, error)
 	CreateNotificacao(ctx context.Context, n *domain.Notificacao) error
 	GetNotificacao(ctx context.Context, id primitive.ObjectID) (*domain.Notificacao, error)

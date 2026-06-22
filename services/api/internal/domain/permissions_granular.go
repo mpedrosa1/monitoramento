@@ -78,6 +78,12 @@ func IsMaster(t TipoAcessoSistema, p *PermissoesAdmin) bool {
 	return perm.Master
 }
 
+// IsColaboradorAdministrador indica master ou administrador do sistema.
+func IsColaboradorAdministrador(c Colaborador) bool {
+	t, _ := ResolvePermissoes(c.TipoAcesso, c.PermissoesAdmin)
+	return t == TipoAcessoAdministrador || t == TipoAcessoMaster
+}
+
 // PermissoesEfetivas aplica migração legado → granular.
 func PermissoesEfetivas(t TipoAcessoSistema, p *PermissoesAdmin) PermissoesAdmin {
 	if IsMaster(t, p) {

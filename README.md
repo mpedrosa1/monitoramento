@@ -30,10 +30,20 @@ MONGODB_DATABASE=monitoramento
 CORS_ORIGINS=http://localhost:3000
 COLLECTOR_ENABLED=true
 
-# apps/web/.env.local
+# apps/web/.env.local (opcional — sem isso, o front usa o mesmo host do navegador na porta 8081)
 NEXT_PUBLIC_API_URL=http://localhost:8081
 NEXT_PUBLIC_WS_URL=ws://localhost:8081/ws
 ```
+
+### Acesso na rede local (LAN)
+
+Com o front em `http://192.168.x.x:3000`, o login falhava porque a API apontava para `localhost` e o CORS bloqueava a origem LAN. Por padrão agora:
+
+- O **front** chama a API em `http://<mesmo-host>:8081` (ex.: `http://192.168.3.56:8081`)
+- A **API** aceita origens de rede privada (`CORS_ALLOW_LAN=true`)
+- `npm run dev` escuta em **0.0.0.0** (acessível na LAN)
+
+Reinicie **API** e **front** após alterações. No `.env` da raiz, confirme `CORS_ALLOW_LAN=true` (padrão no `env.sample`).
 
 ### MongoDB Atlas
 

@@ -4,8 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { apiFetch, asArray } from "@/lib/api";
 import { formatPlaca } from "@/lib/veiculo-placa";
-import type { Colaborador, Veiculo } from "@/lib/types";
+import type { Colaborador, CondutorRotaExataDivergencia, Veiculo } from "@/lib/types";
 import { AdicionarVeiculoDialog } from "@/components/veiculos/adicionar-veiculo-dialog";
+import {
+  CondutorRotaExataPanel,
+  verificarCondutoresRotaExata,
+} from "@/components/veiculos/condutor-rotaexata-panel";
 import { EditarVeiculoDialog } from "@/components/veiculos/editar-veiculo-dialog";
 import { ExcluirVeiculoDialog } from "@/components/veiculos/excluir-veiculo-dialog";
 import { SolicitarTrocaVeiculoDialog } from "@/components/veiculos/solicitar-troca-veiculo-dialog";
@@ -36,6 +40,13 @@ export default function VeiculosPage() {
   const [swapTarget, setSwapTarget] = useState<Veiculo | null>(null);
   const [adminSwapOpen, setAdminSwapOpen] = useState(false);
   const [adminSwapTarget, setAdminSwapTarget] = useState<Veiculo | null>(null);
+  const [divergenciasCondutor, setDivergenciasCondutor] = useState<
+    CondutorRotaExataDivergencia[]
+  >([]);
+  const [verificandoCondutores, setVerificandoCondutores] = useState(false);
+  const [erroVerificacaoCondutores, setErroVerificacaoCondutores] = useState<
+    string | undefined
+  >();
 
   const colaboradorPorId = useMemo(() => {
     const map = new Map<string, Colaborador>();
@@ -46,17 +57,49 @@ export default function VeiculosPage() {
   }, [colaboradores]);
 
   const load = useCallback(async () => {
-    const [veiculosRes, colsRes] = await Promise.all([
+    const [veiculosRes, colsRes, divergenciasRes] = await Promise.all([
       apiFetch<Veiculo[] | null>("/api/v1/veiculos"),
       apiFetch<Colaborador[] | null>("/api/v1/colaboradores"),
+      canFrotaTrocarVeiculos
+        ? apiFetch<CondutorRotaExataDivergencia[] | null>(
+            "/api/v1/veiculos/condutor-divergencias?status=pendente"
+          ).catch(() => null)
+        : Promise.resolve(null),
     ]);
     setVeiculos(asArray(veiculosRes));
     setColaboradores(asArray(colsRes));
-  }, []);
+    if (canFrotaTrocarVeiculos && divergenciasRes !== null) {
+      setDivergenciasCondutor(asArray(divergenciasRes));
+    }
+  }, [canFrotaTrocarVeiculos]);
+
+  const verificarCondutores = useCallback(async () => {
+    setVerificandoCondutores(true);
+    setErroVerificacaoCondutores(undefined);
+    try {
+      const result = await verificarCondutoresRotaExata();
+      if (result.erro && !result.verificado) {
+        setErroVerificacaoCondutores(result.erro);
+        setDivergenciasCondutor([]);
+      } else {
+        setDivergenciasCondutor(result.divergenciasPendentes ?? []);
+        if (result.erro) {
+          setErroVerificacaoCondutores(result.erro);
+        }
+      }
+      await load();
+    } catch (e) {
+      setErroVerificacaoCondutores(
+        e instanceof Error ? e.message : "Erro ao verificar condutores"
+      );
+    } finally {
+      setVerificandoCondutores(false);
+    }
+  }, [load]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void verificarCondutores();
+  }, [verificarCondutores]);
 
   function openEdit(veiculo: Veiculo) {
     setEditing(veiculo);
@@ -157,6 +200,17 @@ export default function VeiculosPage() {
           </div>
           {canCrudVeiculos ? <AdicionarVeiculoDialog onSuccess={load} /> : null}
         </div>
+
+        {canFrotaTrocarVeiculos ? (
+          <CondutorRotaExataPanel
+            divergencias={divergenciasCondutor}
+            veiculos={veiculos}
+            colaboradores={colaboradores}
+            verificando={verificandoCondutores}
+            erroVerificacao={erroVerificacaoCondutores}
+            onRefresh={() => void verificarCondutores()}
+          />
+        ) : null}
 
         {veiculos.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">

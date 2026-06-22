@@ -17,6 +17,8 @@ import (
 	"github.com/mmrtec/monitoramento/api/internal/config"
 	httpapi "github.com/mmrtec/monitoramento/api/internal/http"
 	"github.com/mmrtec/monitoramento/api/internal/push"
+	"github.com/mmrtec/monitoramento/api/internal/rastreamento"
+	"github.com/mmrtec/monitoramento/api/internal/rotaexata"
 	"github.com/mmrtec/monitoramento/api/internal/store"
 	"github.com/mmrtec/monitoramento/api/internal/ws"
 )
@@ -65,6 +67,14 @@ func main() {
 	colCtx, colCancel := context.WithCancel(context.Background())
 	col.Start(colCtx)
 
+	rastreamentoSvc := rastreamento.NewService(rotaexata.Config{
+		BaseURL:      cfg.RotaExataBaseURL,
+		Email:        cfg.RotaExataEmail,
+		Password:     cfg.RotaExataPassword,
+		TokenExpires: 86400,
+	}, st, hub, cfg.RotaExataSyncSec)
+	rastreamentoSvc.Start(colCtx)
+
 	var antenasStore *antenas.Store
 	if antenasPath := config.ResolveAntenasDBPath(); antenasPath != "" {
 		as, err := antenas.Open(antenasPath)
@@ -79,14 +89,17 @@ func main() {
 	}
 
 	api := &httpapi.API{
-		Store:     st,
-		Cache:     stateCache,
-		Collector: col,
-		Antenas:   antenasStore,
-		Hub:       hub,
-		JWTSecret: cfg.JWTSecret,
-		JWTExpiry: cfg.JWTExpiry,
+		Store:        st,
+		Cache:        stateCache,
+		Collector:    col,
+		Antenas:      antenasStore,
+		Hub:          hub,
+		Rastreamento: rastreamentoSvc,
+		JWTSecret:    cfg.JWTSecret,
+		JWTExpiry:    cfg.JWTExpiry,
 	}
+	rastreamentoSvc.SetProximityNotifier(api)
+	rastreamentoSvc.SetCondutorNotifier(api)
 	router := httpapi.NewRouter(cfg, api, hub)
 
 	addr := ":" + cfg.Port
@@ -102,7 +115,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("API ouvindo em http://localhost:%s", cfg.Port)
+		log.Printf("API ouvindo em http://0.0.0.0:%s (LAN: use o IP da máquina)", cfg.Port)
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server: %v", err)
 		}

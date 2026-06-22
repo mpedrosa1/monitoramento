@@ -24,7 +24,7 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 	r.Use(middleware.Recoverer)
 
-	r.Use(CORSMiddleware(cfg.CORSOrigins))
+	r.Use(CORSMiddleware(cfg.CORSOrigins, cfg.CORSAllowLAN))
 
 	r.Get("/health", api.Health)
 
@@ -45,6 +45,9 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 			r.Get("/dashboard/summary", api.DashboardSummary)
 
 			r.Get("/monitoring/live", api.MonitoringLive)
+
+			r.Get("/rastreamento/posicoes", api.ListRastreamentoPosicoes)
+			r.Get("/rastreamento/status", api.RastreamentoStatus)
 
 			r.Get("/eventos", api.ListEventos)
 
@@ -207,6 +210,14 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 
 			r.Route("/veiculos", func(r chi.Router) {
 				r.Get("/", api.ListVeiculos)
+				r.Post("/condutor-divergencias/verificar", api.VerificarCondutoresRotaExata)
+				r.Get("/condutor-divergencias", api.ListCondutorRotaExataDivergencias)
+				r.With(RequireFrotaTrocarVeiculos).Post("/condutor-divergencias/{id}/aprovar", func(w http.ResponseWriter, req *http.Request) {
+					api.AprovarCondutorRotaExataDivergencia(w, req, chi.URLParam(req, "id"))
+				})
+				r.With(RequireFrotaTrocarVeiculos).Post("/condutor-divergencias/{id}/recusar", func(w http.ResponseWriter, req *http.Request) {
+					api.RecusarCondutorRotaExataDivergencia(w, req, chi.URLParam(req, "id"))
+				})
 				r.Post("/trocas/solicitar", api.SolicitarTrocaVeiculo)
 				r.Post("/trocas/{id}/responder", func(w http.ResponseWriter, req *http.Request) {
 					api.ResponderTrocaVeiculo(w, req, chi.URLParam(req, "id"))

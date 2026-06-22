@@ -29,6 +29,7 @@ import type {
   Sobreaviso,
 } from "@/lib/types";
 import { COLABORADOR_AVATAR_PADRAO } from "@/lib/colaborador-avatar";
+import { useColaboradorRastreamento } from "@/components/dashboard/colaborador-rastreamento-context";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -132,6 +133,7 @@ export default function RecursosHumanosPage() {
     canRhEscalaTrabalho,
     canCrudColaboradores,
   } = usePermissions();
+  const { withStatusEfetivoList } = useColaboradorRastreamento();
   const [list, setList] = useState<Colaborador[]>([]);
   const [sobreavisos, setSobreavisos] = useState<Sobreaviso[]>([]);
   const [definicoes, setDefinicoes] = useState<EscalaSobreavisoDefinida[]>([]);
@@ -182,13 +184,18 @@ export default function RecursosHumanosPage() {
   const anoAtual = agora.getFullYear();
   const mesAtual = agora.getMonth() + 1;
 
+  const listComStatus = useMemo(
+    () => withStatusEfetivoList(list),
+    [list, withStatusEfetivoList]
+  );
+
   const porStatus = useMemo(() => {
     const acc = {} as Record<ColaboradorStatus, number>;
-    for (const c of list) {
+    for (const c of listComStatus) {
       acc[c.status] = (acc[c.status] ?? 0) + 1;
     }
     return acc;
-  }, [list]);
+  }, [listComStatus]);
 
   const porLocal = useMemo(() => {
     return LOCAL_TRABALHO_OPCOES.map((o) => ({

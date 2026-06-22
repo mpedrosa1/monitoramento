@@ -42,6 +42,7 @@ export const missaoStatusVariant: Record<
 export const colaboradorStatusLabel: Record<ColaboradorStatus, string> = {
   atrasado: "Atrasado",
   em_missao: "Em missão",
+  em_deslocamento: "Em deslocamento",
   escritorio: "Escritório",
   almoco: "Horário de almoço",
   ferias: "Férias",
@@ -63,6 +64,7 @@ export const colaboradorStatusVariant: Record<
 > = {
   atrasado: "destructive",
   em_missao: "default",
+  em_deslocamento: "default",
   escritorio: "secondary",
   almoco: "outline",
   ferias: "secondary",

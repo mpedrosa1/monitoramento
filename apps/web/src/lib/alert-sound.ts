@@ -54,3 +54,37 @@ export function playOfflineAlertSound() {
   }
   play();
 }
+
+/** Alerta sonoro para veículo entrando no raio de uma unidade. */
+export function playProximityAlertSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const play = () => {
+    const t0 = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+
+    for (let i = 0; i < notes.length; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = notes[i];
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const start = t0 + i * 0.16;
+      const end = start + 0.14;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      osc.start(start);
+      osc.stop(end);
+    }
+  };
+
+  if (ctx.state === "suspended") {
+    void ctx.resume().then(play).catch(() => {});
+    return;
+  }
+  play();
+}

@@ -20,8 +20,9 @@ type ColaboradorStatus string
 
 const (
 	ColaboradorAtrasado   ColaboradorStatus = "atrasado"
-	ColaboradorEmMissao   ColaboradorStatus = "em_missao"
-	ColaboradorEscritorio ColaboradorStatus = "escritorio"
+	ColaboradorEmMissao      ColaboradorStatus = "em_missao"
+	ColaboradorEmDeslocamento ColaboradorStatus = "em_deslocamento"
+	ColaboradorEscritorio    ColaboradorStatus = "escritorio"
 	ColaboradorAlmoco     ColaboradorStatus = "almoco"
 	ColaboradorFerias     ColaboradorStatus = "ferias"
 	ColaboradorAtestado   ColaboradorStatus = "atestado"
@@ -218,6 +219,7 @@ type Colaborador struct {
 	AuthVersion           int64                   `json:"authVersion,omitempty" bson:"authVersion,omitempty"`
 	SenhaHash             string                  `json:"-" bson:"senhaHash,omitempty"`
 	Status                ColaboradorStatus       `json:"status" bson:"status"`
+	RotaExataMotoristaID  *int                    `json:"rotaExataMotoristaId,omitempty" bson:"rotaExataMotoristaId,omitempty"`
 	UnidadeID             primitive.ObjectID      `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
 	CreatedAt             time.Time               `json:"createdAt" bson:"createdAt"`
 	UpdatedAt             time.Time               `json:"updatedAt" bson:"updatedAt"`
@@ -248,9 +250,11 @@ const (
 	NotificacaoTrocaResposta           NotificacaoTipo = "troca_veiculo_resposta"
 	NotificacaoTrocaAdmin              NotificacaoTipo = "troca_veiculo_admin"
 	NotificacaoTrocaNaoAutorizada      NotificacaoTipo = "troca_veiculo_nao_autorizada"
+	NotificacaoCondutorRotaExata       NotificacaoTipo = "condutor_rota_exata_divergencia"
 	NotificacaoChamadoAberto           NotificacaoTipo = "chamado_aberto"
 	NotificacaoMissaoAgendada     NotificacaoTipo = "missao_agendada"
-	NotificacaoSobreavisoDefinido NotificacaoTipo = "sobreaviso_definido"
+	NotificacaoSobreavisoDefinido      NotificacaoTipo = "sobreaviso_definido"
+	NotificacaoVeiculoProximoUnidade   NotificacaoTipo = "veiculo_proximo_unidade"
 )
 
 type NotificacaoPayload struct {
@@ -267,8 +271,13 @@ type NotificacaoPayload struct {
 	MissaoID                 string `json:"missaoId,omitempty" bson:"missaoId,omitempty"`
 	UnidadeID                string `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
 	DataInicio               string `json:"dataInicio,omitempty" bson:"dataInicio,omitempty"`
-	HoraInicio               string `json:"horaInicio,omitempty" bson:"horaInicio,omitempty"`
-	Competencia              string `json:"competencia,omitempty" bson:"competencia,omitempty"`
+	HoraInicio               string  `json:"horaInicio,omitempty" bson:"horaInicio,omitempty"`
+	Competencia              string  `json:"competencia,omitempty" bson:"competencia,omitempty"`
+	VeiculoID                string  `json:"veiculoId,omitempty" bson:"veiculoId,omitempty"`
+	UnidadeNome              string  `json:"unidadeNome,omitempty" bson:"unidadeNome,omitempty"`
+	DistanciaKm              float64 `json:"distanciaKm,omitempty" bson:"distanciaKm,omitempty"`
+	DivergenciaCondutorID    string  `json:"divergenciaCondutorId,omitempty" bson:"divergenciaCondutorId,omitempty"`
+	RotaExataMotoristaNome   string  `json:"rotaExataMotoristaNome,omitempty" bson:"rotaExataMotoristaNome,omitempty"`
 }
 
 type Notificacao struct {

@@ -12,6 +12,7 @@ type Config struct {
 	MongoURI          string
 	MongoDatabase     string
 	CORSOrigins       []string
+	CORSAllowLAN      bool
 	CollectorEnabled  bool
 	PingIntervalSec   int
 	ModbusIntervalSec int
@@ -21,6 +22,10 @@ type Config struct {
 	JWTSecret         string
 	JWTExpiry         time.Duration
 	FCMCredentialsFile string
+	RotaExataBaseURL   string
+	RotaExataEmail     string
+	RotaExataPassword  string
+	RotaExataSyncSec   int
 }
 
 func Load() Config {
@@ -33,6 +38,7 @@ func Load() Config {
 		MongoURI:          os.Getenv("MONGODB_URI"),
 		MongoDatabase:     getEnv("MONGODB_DATABASE", "monitoramento"),
 		CORSOrigins:       splitCSV(getEnv("CORS_ORIGINS", "http://localhost:3000")),
+		CORSAllowLAN:      getEnvBool("CORS_ALLOW_LAN", true),
 		CollectorEnabled:  getEnvBool("COLLECTOR_ENABLED", true),
 		PingIntervalSec:   getEnvInt("PING_INTERVAL_SEC", 5),
 		ModbusIntervalSec: getEnvInt("MODBUS_INTERVAL_SEC", 10),
@@ -42,6 +48,10 @@ func Load() Config {
 		JWTSecret:         getEnv("JWT_SECRET", "dev-mmrtec-altere-em-producao"),
 		JWTExpiry:         time.Duration(hours) * time.Hour,
 		FCMCredentialsFile: getEnv("FCM_CREDENTIALS_FILE", ""),
+		RotaExataBaseURL:   getEnv("ROTAEXATA_BASE_URL", ""),
+		RotaExataEmail:     getEnv("ROTAEXATA_EMAIL", ""),
+		RotaExataPassword:  getEnv("ROTAEXATA_PASSWORD", ""),
+		RotaExataSyncSec:   getEnvInt("ROTAEXATA_SYNC_INTERVAL_SEC", 60),
 	}
 }
 

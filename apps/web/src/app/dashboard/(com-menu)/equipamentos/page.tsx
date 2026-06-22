@@ -17,6 +17,7 @@ import {
   serializeSnmpPontos,
 } from "@/lib/snmp-presets";
 import { rotuloEquipamento } from "@/lib/unidade-form";
+import { randomId } from "@/lib/random-id";
 import type {
   Equipamento,
   ModbusPonto,
@@ -109,18 +110,18 @@ function equipamentoPayload(
 function cloneEquipamentoBody(eq: Equipamento) {
   const pontos = normalizeSnmpPontos(eq.config).map((p) => ({
     ...p,
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     estadosMulti: p.estadosMulti?.map((e) => ({
       ...e,
-      _localId: crypto.randomUUID(),
+      _localId: randomId(),
     })),
   }));
   const pontosModbus = normalizeModbusPontos(eq.config).map((p) => ({
     ...p,
-    _localId: crypto.randomUUID(),
+    _localId: randomId(),
     estadosMulti: p.estadosMulti?.map((e) => ({
       ...e,
-      _localId: crypto.randomUUID(),
+      _localId: randomId(),
     })),
   }));
   const modelo = eq.nome?.trim();

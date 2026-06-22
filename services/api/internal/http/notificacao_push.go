@@ -56,6 +56,9 @@ func notificacaoPushData(n domain.Notificacao) map[string]string {
 	if n.Payload.UnidadeID != "" {
 		data["unidadeId"] = n.Payload.UnidadeID
 	}
+	if n.Payload.VeiculoID != "" {
+		data["veiculoId"] = n.Payload.VeiculoID
+	}
 	return data
 }
 

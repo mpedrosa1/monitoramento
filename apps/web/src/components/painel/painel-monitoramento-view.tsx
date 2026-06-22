@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch, asArray } from "@/lib/api";
-import type { DeviceMetric, Equipamento, Unidade } from "@/lib/types";
+import type { DeviceMetric, Equipamento, Unidade, Veiculo, Colaborador } from "@/lib/types";
 import { monitorUnidadeHostTargetId } from "@/lib/types";
 import {
   sortUnidadesForPainel,
@@ -21,6 +21,7 @@ import {
 import { PainelMapaView } from "@/components/painel/painel-mapa-view";
 import { buildMetricMap } from "@/components/unidades/unidade-detail-panel";
 import { UnidadeEquipamentosSection } from "@/components/unidades/unidade-equipamentos-section";
+import { RastreamentoCatalogSync } from "@/components/dashboard/rastreamento-catalog-sync";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,10 +55,12 @@ function statusBadgeClass(
 }
 
 export function PainelMonitoramentoView() {
-  const { status, metrics } = useMonitoring();
+  const { status, metrics, veiculoPosicoes } = useMonitoring();
   const { canManageEquipamentosUnidade } = usePermissions();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [catalogo, setCatalogo] = useState<Equipamento[]>([]);
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapHudUnidadeId, setMapHudUnidadeId] = useState<string | null>(null);
@@ -80,12 +83,16 @@ export function PainelMonitoramentoView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [uns, eqs] = await Promise.all([
+      const [uns, eqs, veis, cols] = await Promise.all([
         apiFetch<Unidade[] | null>("/api/v1/unidades"),
         apiFetch<Equipamento[] | null>("/api/v1/equipamentos"),
+        apiFetch<Veiculo[] | null>("/api/v1/veiculos"),
+        apiFetch<Colaborador[] | null>("/api/v1/colaboradores"),
       ]);
       setUnidades(asArray(uns));
       setCatalogo(asArray(eqs));
+      setVeiculos(asArray(veis));
+      setColaboradores(asArray(cols));
     } finally {
       setLoading(false);
     }
@@ -107,6 +114,11 @@ export function PainelMonitoramentoView() {
 
   return (
     <div className="flex h-screen min-h-0 bg-background">
+      <RastreamentoCatalogSync
+        unidades={unidades}
+        veiculos={veiculos}
+        colaboradores={colaboradores}
+      />
       <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
         <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
           <MmrtecLogo className="h-8 w-auto max-w-full" />
@@ -215,6 +227,9 @@ export function PainelMonitoramentoView() {
             <PainelMapaView
               unidades={sortedUnidades}
               catalogo={catalogo}
+              veiculos={veiculos}
+              colaboradores={colaboradores}
+              veiculoPosicoes={veiculoPosicoes}
               metricMap={metricMap}
               socketStatus={status}
               mapHudUnidadeId={mapHudUnidadeId}

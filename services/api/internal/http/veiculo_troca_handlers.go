@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -300,23 +301,28 @@ func (a *API) ResponderTrocaVeiculo(w http.ResponseWriter, r *http.Request, id s
 		}
 	}
 
-	_ = a.registrarTrocaMotoristaVeiculo(
+	warnAlvo := a.aplicarMudancaMotoristaVeiculo(
 		r.Context(),
-		alvo.ID,
+		alvo,
 		alvoMotoristaAnterior,
 		alvo.ColaboradorID,
 		"",
 		"",
 	)
+	if warnAlvo != "" {
+		log.Printf("rota exata troca aceita: %s", warnAlvo)
+	}
 	if ofertado != nil {
-		_ = a.registrarTrocaMotoristaVeiculo(
+		if warnOfertado := a.aplicarMudancaMotoristaVeiculo(
 			r.Context(),
-			ofertado.ID,
+			ofertado,
 			ofertadoMotoristaAnterior,
 			ofertado.ColaboradorID,
 			"",
 			"",
-		)
+		); warnOfertado != "" {
+			log.Printf("rota exata troca aceita: %s", warnOfertado)
+		}
 	}
 
 	troca.Status = domain.TrocaVeiculoStatusAceita
@@ -393,8 +399,15 @@ func (a *API) TrocaAdminVeiculos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = a.registrarTrocaMotoristaVeiculo(r.Context(), veiculoA.ID, colabOrigA, veiculoA.ColaboradorID, "", "")
-	_ = a.registrarTrocaMotoristaVeiculo(r.Context(), veiculoB.ID, colabOrigB, veiculoB.ColaboradorID, "", "")
+	warnA := a.aplicarMudancaMotoristaVeiculo(r.Context(), veiculoA, colabOrigA, veiculoA.ColaboradorID, "", "")
+	warnB := a.aplicarMudancaMotoristaVeiculo(r.Context(), veiculoB, colabOrigB, veiculoB.ColaboradorID, "", "")
+	var syncWarnings []string
+	if warnA != "" {
+		syncWarnings = append(syncWarnings, warnA)
+	}
+	if warnB != "" {
+		syncWarnings = append(syncWarnings, warnB)
+	}
 
 	now := time.Now().UTC()
 	troca := domain.TrocaVeiculo{
@@ -415,8 +428,9 @@ func (a *API) TrocaAdminVeiculos(w http.ResponseWriter, r *http.Request) {
 	a.criarNotificacaoAdmin(r.Context(), colabOrigB, msgB, bOID.Hex(), aOID.Hex(), placaB, placaA)
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"veiculoA": veiculoA,
-		"veiculoB": veiculoB,
+		"veiculoA":                veiculoA,
+		"veiculoB":                veiculoB,
+		"rotaExataSyncWarnings": syncWarnings,
 	})
 }
 

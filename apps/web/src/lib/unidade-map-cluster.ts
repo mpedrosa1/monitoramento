@@ -126,6 +126,17 @@ export function clusterUnidadeMapPoints(
 
 type MapProjector = (lat: number, lng: number) => { x: number; y: number };
 
+/** Cada ponto como marcador individual (sem agrupamento por proximidade). */
+export function unidadeMapPointsIndividuais(
+  points: UnidadeMapPoint[]
+): UnidadeMapCluster[] {
+  return points.map((p) => ({
+    lat: p.lat,
+    lng: p.lng,
+    points: [p],
+  }));
+}
+
 /** Agrupa pela distância em pixels no zoom atual (dinâmico ao afastar/aproximar). */
 export function clusterUnidadeMapPointsByPixels(
   points: UnidadeMapPoint[],

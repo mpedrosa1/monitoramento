@@ -26,6 +26,7 @@ import {
 } from "@/lib/labels";
 import { salarioNumeroParaInput } from "@/lib/masks";
 import type { Colaborador } from "@/lib/types";
+import { useColaboradorStatusEfetivo } from "@/components/dashboard/colaborador-rastreamento-context";
 import { EditarColaboradorDialog } from "@/components/colaboradores/editar-colaborador-dialog";
 import { ExcluirColaboradorDialog } from "@/components/colaboradores/excluir-colaborador-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -121,6 +122,7 @@ export function ColaboradorDetail({
   const { canViewFinanceiro, isMaster, isLoading: permissoesLoading } =
     usePermissions();
   const showStatusBadge = !permissoesLoading && isMaster;
+  const status = useColaboradorStatusEfetivo(colaborador);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -179,10 +181,10 @@ export function ColaboradorDetail({
           </p>
           {showStatusBadge ? (
             <Badge
-              variant={colaboradorStatusVariant[colaborador.status]}
+              variant={colaboradorStatusVariant[status]}
               className="mt-3 px-2.5 py-0.5 text-[10px] uppercase tracking-wide"
             >
-              {colaboradorStatusLabel[colaborador.status]}
+              {colaboradorStatusLabel[status]}
             </Badge>
           ) : null}
 

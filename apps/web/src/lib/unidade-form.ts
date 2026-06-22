@@ -4,6 +4,7 @@ import {
   tipoMonitoramentoLabel,
 } from "./labels";
 import { parseCoordPair } from "./geocode";
+import { randomId } from "./random-id";
 import type {
   Equipamento,
   Unidade,
@@ -183,12 +184,12 @@ export function newEquipamentoVinculo(
 ): UnidadeEquipamento {
   return {
     ...partial,
-    _localId: partial._localId?.trim() || crypto.randomUUID(),
+    _localId: partial._localId?.trim() || randomId(),
   };
 }
 
 export function newMaquinaGrupoId(): string {
-  return crypto.randomUUID();
+  return randomId();
 }
 
 export function parseSlaveIdInput(raw: string): number | null {
@@ -241,7 +242,7 @@ export function normalizeEquipamentosVinculos(
 ): UnidadeEquipamento[] {
   return links.map((l) => ({
     ...l,
-    _localId: l._localId?.trim() || crypto.randomUUID(),
+    _localId: l._localId?.trim() || randomId(),
   }));
 }
 

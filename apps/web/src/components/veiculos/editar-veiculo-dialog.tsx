@@ -9,6 +9,10 @@ import {
   veiculoToForm,
   type VeiculoFormState,
 } from "@/lib/veiculo-form";
+import {
+  alertaAvisoSyncRotaExata,
+  type VeiculoComSyncRotaExata,
+} from "@/lib/veiculo-rotaexata-sync";
 import { tabFromVeiculoFormError, type VeiculoFormTab } from "@/lib/veiculo-form-tabs";
 import { VeiculoFormFields } from "@/components/veiculos/veiculo-form-fields";
 import { Button } from "@/components/ui/button";
@@ -69,12 +73,16 @@ export function EditarVeiculoDialog({
     setLoading(true);
     setErro(null);
     try {
-      await apiFetch<Veiculo>(`/api/v1/veiculos/${veiculo.id}`, {
-        method: "PUT",
-        body: JSON.stringify(formToVeiculoBody(form)),
-      });
+      const saved = await apiFetch<VeiculoComSyncRotaExata>(
+        `/api/v1/veiculos/${veiculo.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(formToVeiculoBody(form)),
+        }
+      );
       onOpenChange(false);
       await onSuccess?.();
+      alertaAvisoSyncRotaExata(saved.rotaExataSyncWarning);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar veículo.");
     } finally {
