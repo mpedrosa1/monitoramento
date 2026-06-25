@@ -527,11 +527,11 @@ export default function RecursosHumanosPage() {
               </Card>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground">
+            {/* <p className="text-center text-xs text-muted-foreground">
               Esta é uma versão inicial da área de Recursos Humanos. Vamos
               evoluí-la conforme suas necessidades (férias, documentos,
               avaliações, etc.).
-            </p>
+            </p> */}
           </>
         )}
       </div>

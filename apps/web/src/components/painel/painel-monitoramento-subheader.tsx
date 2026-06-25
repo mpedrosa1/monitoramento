@@ -1,9 +1,9 @@
 "use client";
 
-import { LayoutGrid, Map } from "lucide-react";
+import { LayoutGrid, Map, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type PainelMonitoramentoTab = "equipamentos" | "mapa";
+export type PainelMonitoramentoTab = "equipamentos" | "mapa" | "logs";
 
 export function PainelMonitoramentoSubheader({
   activeTab,
@@ -19,6 +19,7 @@ export function PainelMonitoramentoSubheader({
   }[] = [
     { id: "equipamentos", label: "Equipamentos", icon: LayoutGrid },
     { id: "mapa", label: "Mapa", icon: Map },
+    { id: "logs", label: "Registros", icon: ScrollText },
   ];
 
   return (

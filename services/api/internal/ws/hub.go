@@ -118,6 +118,10 @@ func (h *Hub) BroadcastVeiculoPosicoes(list []domain.VeiculoPosicao) {
 	}
 }
 
+func (h *Hub) BroadcastEvento(evento domain.EventoMonitoramento) {
+	h.Broadcast(Message{Type: "evento", Payload: evento})
+}
+
 func (h *Hub) BroadcastUpdate(metric domain.DeviceMetric) {
 	msg, err := json.Marshal(Message{Type: "update", Payload: metric})
 	if err != nil {

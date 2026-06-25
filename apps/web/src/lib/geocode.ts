@@ -103,3 +103,16 @@ export function googleMapsDirectionsUrl(
   }
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
+
+/**
+ * URL para embutir (iframe) o Google Street View de uma coordenada.
+ * Usa a Embed API oficial quando há `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`;
+ * caso contrário, recorre ao embed sem chave do Google Maps.
+ */
+export function googleStreetViewEmbedUrl(lat: number, lng: number): string {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (key) {
+    return `https://www.google.com/maps/embed/v1/streetview?key=${key}&location=${lat},${lng}&fov=90`;
+  }
+  return `https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=11,0,0,0,0&output=svembed`;
+}

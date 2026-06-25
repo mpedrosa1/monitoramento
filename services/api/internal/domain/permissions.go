@@ -138,6 +138,12 @@ func CanViewFinanceiro(t TipoAcessoSistema, p *PermissoesAdmin) bool {
 	return CanRhSalariosBonificacoes(t, p)
 }
 
+// CanVerFaixasConvenio libera a leitura da tabela de faixas para quem gerencia o
+// convênio ou para a folha de pagamento (financeiro), que usa o desconto do plano.
+func CanVerFaixasConvenio(t TipoAcessoSistema, p *PermissoesAdmin) bool {
+	return CanRhConvenioMedico(t, p) || CanRhSalariosBonificacoes(t, p)
+}
+
 func CanAccessRecursosHumanos(t TipoAcessoSistema, p *PermissoesAdmin) bool {
 	if IsMaster(t, p) {
 		return true

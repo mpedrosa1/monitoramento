@@ -20,12 +20,12 @@ func (a *API) NotifyVeiculoProximoUnidade(ctx context.Context, alerta domain.Vei
 	titulo := "Veículo próximo da unidade"
 	mensagem := formatMensagemProximidade(alerta)
 	payload := domain.NotificacaoPayload{
-		VeiculoID:      alerta.VeiculoID,
-		VeiculoAlvoID:  alerta.VeiculoID,
+		VeiculoID:        alerta.VeiculoID,
+		VeiculoAlvoID:    alerta.VeiculoID,
 		VeiculoAlvoPlaca: alerta.Placa,
-		UnidadeID:      alerta.UnidadeID,
-		UnidadeNome:    alerta.UnidadeNome,
-		DistanciaKm:    alerta.DistanciaKm,
+		UnidadeID:        alerta.UnidadeID,
+		UnidadeNome:      alerta.UnidadeNome,
+		DistanciaKm:      alerta.DistanciaKm,
 	}
 
 	colabs, err := a.Store.ListColaboradores(ctx)
@@ -52,10 +52,18 @@ func formatMensagemProximidade(a domain.VeiculoProximidadeAlerta) string {
 		placa = "—"
 	}
 	return fmt.Sprintf(
-		"Veículo %s entrou no raio de %.0f km da unidade %s (%.1f km de distância).",
+		"Veículo %s entrou no raio de %s da unidade %s (%s de distância).",
 		placa,
-		a.RaioKm,
+		formatDistanciaKm(a.RaioKm),
 		a.UnidadeNome,
-		a.DistanciaKm,
+		formatDistanciaKm(a.DistanciaKm),
 	)
+}
+
+// formatDistanciaKm exibe a distância em metros quando menor que 1 km.
+func formatDistanciaKm(km float64) string {
+	if km < 1 {
+		return fmt.Sprintf("%.0f m", km*1000)
+	}
+	return fmt.Sprintf("%.1f km", km)
 }

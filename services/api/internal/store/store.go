@@ -38,6 +38,20 @@ type Store interface {
 	ListDefinicoesSobreaviso(ctx context.Context) ([]domain.EscalaSobreavisoDefinida, error)
 	UpsertDefinicaoSobreaviso(ctx context.Context, d *domain.EscalaSobreavisoDefinida) error
 
+	ListAlertasEquipamento(ctx context.Context) ([]domain.AlertaEquipamento, error)
+	ListAlertasEquipamentoByAlvo(ctx context.Context, unidadeID, equipamentoID primitive.ObjectID, porta int) ([]domain.AlertaEquipamento, error)
+	GetAlertaEquipamento(ctx context.Context, id primitive.ObjectID) (*domain.AlertaEquipamento, error)
+	CreateAlertaEquipamento(ctx context.Context, a *domain.AlertaEquipamento) error
+	UpdateAlertaEquipamento(ctx context.Context, a *domain.AlertaEquipamento) error
+	DeleteAlertaEquipamento(ctx context.Context, id primitive.ObjectID) error
+
+	ListFaixasConvenioMedico(ctx context.Context) ([]domain.FaixaConvenioMedico, error)
+	GetFaixaConvenioMedico(ctx context.Context, id primitive.ObjectID) (*domain.FaixaConvenioMedico, error)
+	CreateFaixaConvenioMedico(ctx context.Context, f *domain.FaixaConvenioMedico) error
+	UpdateFaixaConvenioMedico(ctx context.Context, f *domain.FaixaConvenioMedico) error
+	DeleteFaixaConvenioMedico(ctx context.Context, id primitive.ObjectID) error
+	SeedFaixasConvenioMedicoIfEmpty(ctx context.Context) error
+
 	ListChamados(ctx context.Context, limit int) ([]domain.Chamado, error)
 	GetChamado(ctx context.Context, id primitive.ObjectID) (*domain.Chamado, error)
 	CreateChamado(ctx context.Context, c *domain.Chamado) error

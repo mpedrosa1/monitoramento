@@ -78,15 +78,40 @@ type Collector struct {
 	mu        sync.Mutex
 	active    map[string]collectWorker
 	wg        sync.WaitGroup
+	// offlineSince guarda quando cada alvo ficou offline, para calcular há quanto
+	// tempo ele estava fora ao voltar a ficar online.
+	offlineMu    sync.Mutex
+	offlineSince map[string]time.Time
+
+	notificador AlertaNotifier
+	// alertas indexa as configurações de alarme por TargetID; alertaAtivo guarda
+	// o estado atual (em alarme ou não) por ID de alerta para detectar transições.
+	alertasMu   sync.RWMutex
+	alertas     map[string][]domain.AlertaEquipamento
+	alertaAtivo map[string]bool
+}
+
+// AlertaNotifier entrega um alerta de equipamento a todos os usuários do sistema
+// (notificação in-app + push). Implementado pela camada HTTP/API.
+type AlertaNotifier interface {
+	NotificarAlertaEquipamento(titulo, mensagem string, tipo domain.NotificacaoTipo, payload domain.NotificacaoPayload)
+}
+
+// SetNotificador injeta o entregador de notificações (chamado após criar a API).
+func (c *Collector) SetNotificador(n AlertaNotifier) {
+	c.notificador = n
 }
 
 func New(cfg config.Config, st store.Store, state *cache.StateCache, hub *ws.Hub) *Collector {
 	return &Collector{
-		cfg:    cfg,
-		store:  st,
-		cache:  state,
-		hub:    hub,
-		active: make(map[string]collectWorker),
+		cfg:          cfg,
+		store:        st,
+		cache:        state,
+		hub:          hub,
+		active:       make(map[string]collectWorker),
+		offlineSince: make(map[string]time.Time),
+		alertas:      make(map[string][]domain.AlertaEquipamento),
+		alertaAtivo:  make(map[string]bool),
 	}
 }
 
@@ -108,6 +133,7 @@ func (c *Collector) Start(ctx context.Context) {
 	)
 	c.parentCtx, c.cancel = context.WithCancel(ctx)
 	c.RefreshTargets()
+	c.RefreshAlertas()
 }
 
 // RefreshTargets recarrega alvos (ex.: após criar/editar/excluir unidade).
@@ -300,25 +326,105 @@ func (c *Collector) publishMetric(ctx context.Context, t domain.MonitorTarget, m
 	c.cache.Set(metric)
 	c.hub.BroadcastUpdate(metric)
 
+	isUnidade := t.Tipo == domain.DispositivoPing && t.Porta == 0
+	alvo := "equipamento"
+	if isUnidade {
+		alvo = "unidade"
+	}
+	unidadeID := t.UnidadeID.Hex()
 	if had && prev.Online && !metric.Online {
-		msg := "equipamento offline: " + t.Nome
-		isUnidade := t.Tipo == domain.DispositivoPing && t.Porta == 0
-		if isUnidade {
-			msg = "unidade offline: " + t.Nome
-		}
-		_ = c.store.CreateEvento(ctx, &domain.EventoMonitoramento{
+		// Transição online → offline.
+		c.marcarOffline(metric.TargetID, time.Now())
+		evento := domain.EventoMonitoramento{
 			DispositivoID: t.EquipamentoID,
 			Tipo:          string(t.Tipo),
 			Severidade:    "alta",
-			Mensagem:      msg,
+			Mensagem:      alvo + " offline: " + t.Nome,
 			Dados: map[string]any{
-				"host":  t.Host,
-				"porta": t.Porta,
+				"host":      t.Host,
+				"porta":     t.Porta,
+				"status":    "offline",
+				"nome":      t.Nome,
+				"unidadeId": unidadeID,
 			},
-		})
+		}
+		if err := c.store.CreateEvento(ctx, &evento); err == nil {
+			c.hub.BroadcastEvento(evento)
+		}
 		if isUnidade {
 			go c.pushOfflineAlert(t.Nome, metric.TargetID)
 		}
+	} else if had && !prev.Online && metric.Online {
+		// Transição offline → online (restabelecimento).
+		dados := map[string]any{
+			"host":      t.Host,
+			"porta":     t.Porta,
+			"status":    "online",
+			"nome":      t.Nome,
+			"unidadeId": unidadeID,
+		}
+		msg := alvo + " online novamente: " + t.Nome
+		if inicio, ok := c.consumirOffline(metric.TargetID); ok {
+			d := time.Since(inicio)
+			if d < 0 {
+				d = 0
+			}
+			dados["offlineDesde"] = inicio.UTC().Format(time.RFC3339)
+			dados["offlineSegundos"] = int(d.Seconds())
+			msg += " (ficou " + formatDuracaoOffline(d) + " offline)"
+		}
+		evento := domain.EventoMonitoramento{
+			DispositivoID: t.EquipamentoID,
+			Tipo:          string(t.Tipo),
+			Severidade:    "info",
+			Mensagem:      msg,
+			Dados:         dados,
+		}
+		if err := c.store.CreateEvento(ctx, &evento); err == nil {
+			c.hub.BroadcastEvento(evento)
+		}
+	}
+
+	c.avaliarAlertas(t, metric)
+}
+
+func (c *Collector) marcarOffline(targetID string, quando time.Time) {
+	c.offlineMu.Lock()
+	c.offlineSince[targetID] = quando
+	c.offlineMu.Unlock()
+}
+
+func (c *Collector) consumirOffline(targetID string) (time.Time, bool) {
+	c.offlineMu.Lock()
+	defer c.offlineMu.Unlock()
+	t, ok := c.offlineSince[targetID]
+	if ok {
+		delete(c.offlineSince, targetID)
+	}
+	return t, ok
+}
+
+// formatDuracaoOffline gera um rótulo curto em pt-BR (ex.: "45s", "12min", "2h05min", "1d3h").
+func formatDuracaoOffline(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dmin", int(d.Minutes()))
+	case d < 24*time.Hour:
+		h := int(d.Hours())
+		m := int(d.Minutes()) % 60
+		if m == 0 {
+			return fmt.Sprintf("%dh", h)
+		}
+		return fmt.Sprintf("%dh%02dmin", h, m)
+	default:
+		dias := int(d.Hours()) / 24
+		h := int(d.Hours()) % 24
+		if h == 0 {
+			return fmt.Sprintf("%dd", dias)
+		}
+		return fmt.Sprintf("%dd%dh", dias, h)
 	}
 }
 

@@ -230,6 +230,8 @@ export function PainelMapaUnidadeHud({
   onLinhasCoordenadasVisiveisChange,
   veiculosInfoVisiveis,
   onVeiculosInfoVisiveisChange,
+  raioAlertaVisivel,
+  onRaioAlertaVisivelChange,
   veiculoSelecionado,
   onFecharVeiculoSelecionado,
 }: {
@@ -253,6 +255,8 @@ export function PainelMapaUnidadeHud({
   onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
   veiculosInfoVisiveis: boolean;
   onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
+  raioAlertaVisivel: boolean;
+  onRaioAlertaVisivelChange: (visivel: boolean) => void;
   veiculoSelecionado: VeiculoHudSelecao | null;
   onFecharVeiculoSelecionado: () => void;
 }) {
@@ -467,6 +471,8 @@ export function PainelMapaUnidadeHud({
           onLinhasCoordenadasVisiveisChange={onLinhasCoordenadasVisiveisChange}
           veiculosInfoVisiveis={veiculosInfoVisiveis}
           onVeiculosInfoVisiveisChange={onVeiculosInfoVisiveisChange}
+          raioAlertaVisivel={raioAlertaVisivel}
+          onRaioAlertaVisivelChange={onRaioAlertaVisivelChange}
         />
       ) : null}
 
@@ -566,7 +572,6 @@ export function PainelMapaUnidadeHud({
         <PainelMapaHudVeiculoCard
           selecao={veiculoSelecionado}
           hudScale={escala}
-          paddingRight={fullscreen ? 56 : 8}
           positionStorageKey={veiculoCardStorageKeyUnidade(unidade.id)}
           onClose={onFecharVeiculoSelecionado}
         />

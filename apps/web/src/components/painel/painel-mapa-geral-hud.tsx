@@ -77,6 +77,8 @@ export function PainelMapaGeralHud({
   onLinhasCoordenadasVisiveisChange,
   veiculosInfoVisiveis,
   onVeiculosInfoVisiveisChange,
+  raioAlertaVisivel,
+  onRaioAlertaVisivelChange,
   veiculoSelecionado,
   onFecharVeiculoSelecionado,
 }: {
@@ -95,6 +97,8 @@ export function PainelMapaGeralHud({
   onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
   veiculosInfoVisiveis: boolean;
   onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
+  raioAlertaVisivel: boolean;
+  onRaioAlertaVisivelChange: (visivel: boolean) => void;
   veiculoSelecionado: VeiculoHudSelecao | null;
   onFecharVeiculoSelecionado: () => void;
 }) {
@@ -150,6 +154,8 @@ export function PainelMapaGeralHud({
         onLinhasCoordenadasVisiveisChange={onLinhasCoordenadasVisiveisChange}
         veiculosInfoVisiveis={veiculosInfoVisiveis}
         onVeiculosInfoVisiveisChange={onVeiculosInfoVisiveisChange}
+        raioAlertaVisivel={raioAlertaVisivel}
+        onRaioAlertaVisivelChange={onRaioAlertaVisivelChange}
       />
 
       {!listaVisivel ? (

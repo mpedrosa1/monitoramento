@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import {
+  Circle,
   MapContainer,
   Marker,
   Polygon,
@@ -10,6 +11,7 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
+import { VEICULO_PRESENCA_RAIO_KM } from "@/lib/veiculo-presenca-unidade";
 import { unlockAlertAudio } from "@/lib/alert-sound";
 import { unidadeClusterMapIcon } from "@/lib/cluster-map-icon";
 import { SP_STATE_CENTER, MAP_ZOOM_COORD } from "@/lib/geocode";
@@ -42,6 +44,16 @@ import {
 } from "@/lib/mapa-tile-layers";
 
 import "leaflet/dist/leaflet.css";
+
+/** Raio de alerta (presença/proximidade) em metros, desenhado ao redor da unidade. */
+const RAIO_ALERTA_METROS = VEICULO_PRESENCA_RAIO_KM * 1000;
+
+const RAIO_ALERTA_PATH_OPTIONS = {
+  color: "#f59e0b",
+  weight: 1.5,
+  fillColor: "#f59e0b",
+  fillOpacity: 0.08,
+};
 
 function unidadeHostOnline(
   u: Unidade,
@@ -390,6 +402,7 @@ export default function PainelUnidadesMapInner({
   plotsAgrupados = true,
   mapTileVisao = "rua",
   mostrarInfoVeiculos = true,
+  mostrarRaioAlerta = false,
   veiculoSelecionadoId = null,
   onSelecionarVeiculo,
 }: {
@@ -406,6 +419,7 @@ export default function PainelUnidadesMapInner({
   plotsAgrupados?: boolean;
   mapTileVisao?: MapaTileVisao;
   mostrarInfoVeiculos?: boolean;
+  mostrarRaioAlerta?: boolean;
   veiculoSelecionadoId?: string | null;
   onSelecionarVeiculo?: (veiculoId: string) => void;
 }) {
@@ -482,6 +496,17 @@ export default function PainelUnidadesMapInner({
       <MapFitClustersOnce points={fitPoints} />
       <MapUnidadeFocusController focus={mapFocus} unidades={unidades} />
       <MapUnidadeAreaOverlay unidade={areaUnidade} visible={Boolean(areaUnidadeId)} />
+      {mostrarRaioAlerta
+        ? mapPoints.map((p) => (
+            <Circle
+              key={`raio-alerta-${p.unidade.id}`}
+              center={[p.lat, p.lng]}
+              radius={RAIO_ALERTA_METROS}
+              pathOptions={RAIO_ALERTA_PATH_OPTIONS}
+              interactive={false}
+            />
+          ))
+        : null}
       <DynamicClusterMarkers
         points={mapPoints}
         pointCoordsKey={pointCoordsKey}

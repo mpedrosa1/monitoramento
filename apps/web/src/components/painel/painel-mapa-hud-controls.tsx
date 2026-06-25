@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Car, Combine, Map, Minimize2, Route, Satellite, Ungroup } from "lucide-react";
+import { ArrowLeft, Car, Combine, Map, Minimize2, Radar, Route, Satellite, Ungroup } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PainelMapaHudGlass } from "@/components/painel/painel-mapa-hud-glass";
 import type { MapaTileVisao } from "@/lib/mapa-tile-layers";
@@ -78,6 +78,8 @@ export function PainelMapaHudControlesColuna({
   onLinhasCoordenadasVisiveisChange,
   veiculosInfoVisiveis,
   onVeiculosInfoVisiveisChange,
+  raioAlertaVisivel,
+  onRaioAlertaVisivelChange,
 }: {
   hudScale: number;
   onHudScaleChange: (scale: number) => void;
@@ -91,6 +93,8 @@ export function PainelMapaHudControlesColuna({
   onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
   veiculosInfoVisiveis: boolean;
   onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
+  raioAlertaVisivel: boolean;
+  onRaioAlertaVisivelChange: (visivel: boolean) => void;
 }) {
   return (
     <div className="flex w-10 shrink-0 flex-col items-center gap-2">
@@ -210,6 +214,28 @@ export function PainelMapaHudControlesColuna({
       >
         <Car className="h-4 w-4" />
       </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon-sm"
+        className={cn(
+          MAPA_HUD_ROUND_BTN_CLASS,
+          raioAlertaVisivel && "ring-2 ring-primary/55"
+        )}
+        onClick={() => onRaioAlertaVisivelChange(!raioAlertaVisivel)}
+        aria-label={
+          raioAlertaVisivel
+            ? "Ocultar raio de alerta das unidades"
+            : "Exibir raio de alerta das unidades"
+        }
+        title={
+          raioAlertaVisivel
+            ? "Ocultar raio de alerta das unidades"
+            : "Exibir raio de alerta das unidades"
+        }
+      >
+        <Radar className="h-4 w-4" />
+      </Button>
       <PainelMapaHudEscalaTrilha value={hudScale} onChange={onHudScaleChange} />
     </div>
   );
@@ -228,6 +254,8 @@ export function PainelMapaHudControlesFullscreen({
   onLinhasCoordenadasVisiveisChange,
   veiculosInfoVisiveis,
   onVeiculosInfoVisiveisChange,
+  raioAlertaVisivel,
+  onRaioAlertaVisivelChange,
 }: {
   hudScale: number;
   onHudScaleChange: (scale: number) => void;
@@ -241,6 +269,8 @@ export function PainelMapaHudControlesFullscreen({
   onLinhasCoordenadasVisiveisChange: (visiveis: boolean) => void;
   veiculosInfoVisiveis: boolean;
   onVeiculosInfoVisiveisChange: (visiveis: boolean) => void;
+  raioAlertaVisivel: boolean;
+  onRaioAlertaVisivelChange: (visivel: boolean) => void;
 }) {
   return (
     <div className="pointer-events-auto absolute right-3 top-3 z-[1200] flex w-10 flex-col items-center gap-2 sm:right-4 sm:top-4">
@@ -257,6 +287,8 @@ export function PainelMapaHudControlesFullscreen({
         onLinhasCoordenadasVisiveisChange={onLinhasCoordenadasVisiveisChange}
         veiculosInfoVisiveis={veiculosInfoVisiveis}
         onVeiculosInfoVisiveisChange={onVeiculosInfoVisiveisChange}
+        raioAlertaVisivel={raioAlertaVisivel}
+        onRaioAlertaVisivelChange={onRaioAlertaVisivelChange}
       />
     </div>
   );

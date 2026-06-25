@@ -11,26 +11,28 @@ import (
 )
 
 type MemoryStore struct {
-	mu                   sync.RWMutex
-	unidades             []domain.Unidade
-	colaboradores        []domain.Colaborador
-	escalas              []domain.EscalaTrabalho
-	sobreavisos          []domain.Sobreaviso
-	definicoesSobreaviso []domain.EscalaSobreavisoDefinida
-	chamados             []domain.Chamado
-	missoes              []domain.Missao
-	dispositivos         []domain.Equipamento
-	veiculos             []domain.Veiculo
-	veiculoPeriodosMotorista []domain.VeiculoPeriodoMotorista
-	veiculoMultas        []domain.VeiculoMulta
-	trocasVeiculo        []domain.TrocaVeiculo
+	mu                            sync.RWMutex
+	unidades                      []domain.Unidade
+	colaboradores                 []domain.Colaborador
+	escalas                       []domain.EscalaTrabalho
+	sobreavisos                   []domain.Sobreaviso
+	definicoesSobreaviso          []domain.EscalaSobreavisoDefinida
+	faixasConvenio                []domain.FaixaConvenioMedico
+	alertasEquipamento            []domain.AlertaEquipamento
+	chamados                      []domain.Chamado
+	missoes                       []domain.Missao
+	dispositivos                  []domain.Equipamento
+	veiculos                      []domain.Veiculo
+	veiculoPeriodosMotorista      []domain.VeiculoPeriodoMotorista
+	veiculoMultas                 []domain.VeiculoMulta
+	trocasVeiculo                 []domain.TrocaVeiculo
 	condutorRotaExataDivergencias []domain.CondutorRotaExataDivergencia
-	notificacoes         []domain.Notificacao
-	pushTokens           []domain.PushToken
-	eventos              []domain.EventoMonitoramento
-	despesas             []domain.Despesa
-	depositosDespesa     []domain.DepositoDespesa
-	ajustesSaldoDespesa  []domain.AjusteSaldoDespesa
+	notificacoes                  []domain.Notificacao
+	pushTokens                    []domain.PushToken
+	eventos                       []domain.EventoMonitoramento
+	despesas                      []domain.Despesa
+	depositosDespesa              []domain.DepositoDespesa
+	ajustesSaldoDespesa           []domain.AjusteSaldoDespesa
 }
 
 func NewMemoryStore() *MemoryStore {

@@ -206,6 +206,40 @@ func NewRouter(cfg config.Config, api *API, hub *ws.Hub) http.Handler {
 				})
 			})
 
+			r.Route("/alertas-equipamento", func(r chi.Router) {
+
+				r.Use(RequireEquipAlarmes)
+
+				r.Get("/", api.ListAlertasEquipamento)
+
+				r.Post("/", api.CreateAlertaEquipamento)
+
+				r.Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateAlertaEquipamento(w, req, chi.URLParam(req, "id"))
+				})
+
+				r.Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteAlertaEquipamento(w, req, chi.URLParam(req, "id"))
+				})
+
+			})
+
+			r.Route("/convenio-medico/faixas", func(r chi.Router) {
+
+				r.With(RequireVerFaixasConvenio).Get("/", api.ListFaixasConvenioMedico)
+
+				r.With(RequireRhConvenioMedico).Post("/", api.CreateFaixaConvenioMedico)
+
+				r.With(RequireRhConvenioMedico).Put("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.UpdateFaixaConvenioMedico(w, req, chi.URLParam(req, "id"))
+				})
+
+				r.With(RequireRhConvenioMedico).Delete("/{id}", func(w http.ResponseWriter, req *http.Request) {
+					api.DeleteFaixaConvenioMedico(w, req, chi.URLParam(req, "id"))
+				})
+
+			})
+
 			r.Get("/antenas/proximas", api.ListAntenasProximas)
 
 			r.Route("/veiculos", func(r chi.Router) {

@@ -32,6 +32,16 @@ const tabs = [
     label: "Recargas e despesas",
     permission: "rhRecargasDespesas" as const,
   },
+  {
+    href: "/dashboard/recursos-humanos/convenio-medico",
+    label: "Convênio médico",
+    permission: "rhConvenioMedico" as const,
+  },
+  {
+    href: "/dashboard/recursos-humanos/folha-pagamento",
+    label: "Folha de pagamento",
+    permission: "rhSalariosBonificacoes" as const,
+  },
 ];
 
 export default function RecursosHumanosLayout({
@@ -50,6 +60,7 @@ export default function RecursosHumanosLayout({
     canRhRegistrarDespesaOutros,
     canManageRecargas,
     canViewFinanceiro,
+    canRhConvenioMedico,
     isLoading,
   } = usePermissions();
 
@@ -87,6 +98,12 @@ export default function RecursosHumanosLayout({
     }
     if (t.permission === "rhRecargasDespesas") {
       return canRhRegistrarDespesaOutros || canManageRecargas;
+    }
+    if (t.permission === "rhConvenioMedico") {
+      return canRhConvenioMedico;
+    }
+    if (t.permission === "rhSalariosBonificacoes") {
+      return canViewFinanceiro;
     }
     return true;
   });

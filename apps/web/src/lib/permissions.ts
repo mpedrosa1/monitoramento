@@ -153,6 +153,20 @@ export function canRhRegistrarDespesaOutros(
   return can(tipoAcesso, permissoesAdmin, "rhRegistrarDespesaOutros");
 }
 
+export function canRhConvenioMedico(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "rhConvenioMedico");
+}
+
+export function canEquipAlarmes(
+  tipoAcesso: TipoAcessoSistema | undefined | null,
+  permissoesAdmin?: PermissoesAdmin | null
+): boolean {
+  return can(tipoAcesso, permissoesAdmin, "equipAlarmes");
+}
+
 export function canViewTodasMultasVeiculo(
   tipoAcesso: TipoAcessoSistema | undefined | null,
   permissoesAdmin?: PermissoesAdmin | null
@@ -213,7 +227,8 @@ export function canAccessRecursosHumanos(
     p.rhEscalaTrabalho ||
     p.rhCalendarioSobreaviso ||
     p.rhRecarregarSaldos ||
-    p.rhRegistrarDespesaOutros
+    p.rhRegistrarDespesaOutros ||
+    p.rhConvenioMedico
   );
 }
 

@@ -19,13 +19,13 @@ const (
 type ColaboradorStatus string
 
 const (
-	ColaboradorAtrasado   ColaboradorStatus = "atrasado"
-	ColaboradorEmMissao      ColaboradorStatus = "em_missao"
+	ColaboradorAtrasado       ColaboradorStatus = "atrasado"
+	ColaboradorEmMissao       ColaboradorStatus = "em_missao"
 	ColaboradorEmDeslocamento ColaboradorStatus = "em_deslocamento"
-	ColaboradorEscritorio    ColaboradorStatus = "escritorio"
-	ColaboradorAlmoco     ColaboradorStatus = "almoco"
-	ColaboradorFerias     ColaboradorStatus = "ferias"
-	ColaboradorAtestado   ColaboradorStatus = "atestado"
+	ColaboradorEscritorio     ColaboradorStatus = "escritorio"
+	ColaboradorAlmoco         ColaboradorStatus = "almoco"
+	ColaboradorFerias         ColaboradorStatus = "ferias"
+	ColaboradorAtestado       ColaboradorStatus = "atestado"
 )
 
 type MissaoStatus string
@@ -150,7 +150,7 @@ const (
 	TipoAcessoMaster             TipoAcessoSistema = "master"
 	TipoAcessoAdminComFinanceiro TipoAcessoSistema = "admin_com_financeiro" // legado
 	TipoAcessoAdminSemFinanceiro TipoAcessoSistema = "admin_sem_financeiro" // legado
-	TipoAcessoDesenvolvedor      TipoAcessoSistema = "desenvolvedor"         // legado
+	TipoAcessoDesenvolvedor      TipoAcessoSistema = "desenvolvedor"        // legado
 )
 
 // PermissoesAdmin — flags legadas + permissões granulares do administrador.
@@ -161,24 +161,26 @@ type PermissoesAdmin struct {
 	Master         bool `json:"master" bson:"master"`
 	Desenvolvedor  bool `json:"desenvolvedor,omitempty" bson:"desenvolvedor,omitempty"` // legado → master
 
-	CrudColaboradores       bool `json:"crudColaboradores,omitempty" bson:"crudColaboradores,omitempty"`
-	CrudUnidades            bool `json:"crudUnidades,omitempty" bson:"crudUnidades,omitempty"`
-	CrudVeiculos            bool `json:"crudVeiculos,omitempty" bson:"crudVeiculos,omitempty"`
-	CrudEquipamentos        bool `json:"crudEquipamentos,omitempty" bson:"crudEquipamentos,omitempty"`
-	CrudMissoes             bool `json:"crudMissoes,omitempty" bson:"crudMissoes,omitempty"`
-	CrudChamados            bool `json:"crudChamados,omitempty" bson:"crudChamados,omitempty"`
-	ConcluirMissaoQualquer  bool `json:"concluirMissaoQualquer,omitempty" bson:"concluirMissaoQualquer,omitempty"`
-	EncerrarChamadoQualquer bool `json:"encerrarChamadoQualquer,omitempty" bson:"encerrarChamadoQualquer,omitempty"`
-	FrotaValoresAlugueis    bool `json:"frotaValoresAlugueis,omitempty" bson:"frotaValoresAlugueis,omitempty"`
+	CrudColaboradores        bool `json:"crudColaboradores,omitempty" bson:"crudColaboradores,omitempty"`
+	CrudUnidades             bool `json:"crudUnidades,omitempty" bson:"crudUnidades,omitempty"`
+	CrudVeiculos             bool `json:"crudVeiculos,omitempty" bson:"crudVeiculos,omitempty"`
+	CrudEquipamentos         bool `json:"crudEquipamentos,omitempty" bson:"crudEquipamentos,omitempty"`
+	CrudMissoes              bool `json:"crudMissoes,omitempty" bson:"crudMissoes,omitempty"`
+	CrudChamados             bool `json:"crudChamados,omitempty" bson:"crudChamados,omitempty"`
+	ConcluirMissaoQualquer   bool `json:"concluirMissaoQualquer,omitempty" bson:"concluirMissaoQualquer,omitempty"`
+	EncerrarChamadoQualquer  bool `json:"encerrarChamadoQualquer,omitempty" bson:"encerrarChamadoQualquer,omitempty"`
+	FrotaValoresAlugueis     bool `json:"frotaValoresAlugueis,omitempty" bson:"frotaValoresAlugueis,omitempty"`
 	FrotaVisualizarContratos bool `json:"frotaVisualizarContratos,omitempty" bson:"frotaVisualizarContratos,omitempty"`
-	FrotaRegistrarPeriodo   bool `json:"frotaRegistrarPeriodo,omitempty" bson:"frotaRegistrarPeriodo,omitempty"`
-	FrotaRegistrarMulta     bool `json:"frotaRegistrarMulta,omitempty" bson:"frotaRegistrarMulta,omitempty"`
-	FrotaTrocarVeiculos     bool `json:"frotaTrocarVeiculos,omitempty" bson:"frotaTrocarVeiculos,omitempty"`
-	RhSalariosBonificacoes  bool `json:"rhSalariosBonificacoes,omitempty" bson:"rhSalariosBonificacoes,omitempty"`
-	RhEscalaTrabalho        bool `json:"rhEscalaTrabalho,omitempty" bson:"rhEscalaTrabalho,omitempty"`
-	RhCalendarioSobreaviso  bool `json:"rhCalendarioSobreaviso,omitempty" bson:"rhCalendarioSobreaviso,omitempty"`
-	RhRecarregarSaldos      bool `json:"rhRecarregarSaldos,omitempty" bson:"rhRecarregarSaldos,omitempty"`
+	FrotaRegistrarPeriodo    bool `json:"frotaRegistrarPeriodo,omitempty" bson:"frotaRegistrarPeriodo,omitempty"`
+	FrotaRegistrarMulta      bool `json:"frotaRegistrarMulta,omitempty" bson:"frotaRegistrarMulta,omitempty"`
+	FrotaTrocarVeiculos      bool `json:"frotaTrocarVeiculos,omitempty" bson:"frotaTrocarVeiculos,omitempty"`
+	RhSalariosBonificacoes   bool `json:"rhSalariosBonificacoes,omitempty" bson:"rhSalariosBonificacoes,omitempty"`
+	RhEscalaTrabalho         bool `json:"rhEscalaTrabalho,omitempty" bson:"rhEscalaTrabalho,omitempty"`
+	RhCalendarioSobreaviso   bool `json:"rhCalendarioSobreaviso,omitempty" bson:"rhCalendarioSobreaviso,omitempty"`
+	RhRecarregarSaldos       bool `json:"rhRecarregarSaldos,omitempty" bson:"rhRecarregarSaldos,omitempty"`
 	RhRegistrarDespesaOutros bool `json:"rhRegistrarDespesaOutros,omitempty" bson:"rhRegistrarDespesaOutros,omitempty"`
+	RhConvenioMedico         bool `json:"rhConvenioMedico,omitempty" bson:"rhConvenioMedico,omitempty"`
+	EquipAlarmes             bool `json:"equipAlarmes,omitempty" bson:"equipAlarmes,omitempty"`
 }
 
 const ColaboradorFotoURLPadrao = "/avatar-placeholder.svg"
@@ -247,30 +249,32 @@ type NotificacaoTipo string
 
 const (
 	NotificacaoTrocaSolicitacao      NotificacaoTipo = "troca_veiculo_solicitacao"
-	NotificacaoTrocaResposta           NotificacaoTipo = "troca_veiculo_resposta"
-	NotificacaoTrocaAdmin              NotificacaoTipo = "troca_veiculo_admin"
-	NotificacaoTrocaNaoAutorizada      NotificacaoTipo = "troca_veiculo_nao_autorizada"
-	NotificacaoCondutorRotaExata       NotificacaoTipo = "condutor_rota_exata_divergencia"
-	NotificacaoChamadoAberto           NotificacaoTipo = "chamado_aberto"
-	NotificacaoMissaoAgendada     NotificacaoTipo = "missao_agendada"
-	NotificacaoSobreavisoDefinido      NotificacaoTipo = "sobreaviso_definido"
-	NotificacaoVeiculoProximoUnidade   NotificacaoTipo = "veiculo_proximo_unidade"
+	NotificacaoTrocaResposta         NotificacaoTipo = "troca_veiculo_resposta"
+	NotificacaoTrocaAdmin            NotificacaoTipo = "troca_veiculo_admin"
+	NotificacaoTrocaNaoAutorizada    NotificacaoTipo = "troca_veiculo_nao_autorizada"
+	NotificacaoCondutorRotaExata     NotificacaoTipo = "condutor_rota_exata_divergencia"
+	NotificacaoChamadoAberto         NotificacaoTipo = "chamado_aberto"
+	NotificacaoMissaoAgendada        NotificacaoTipo = "missao_agendada"
+	NotificacaoSobreavisoDefinido    NotificacaoTipo = "sobreaviso_definido"
+	NotificacaoVeiculoProximoUnidade NotificacaoTipo = "veiculo_proximo_unidade"
+	NotificacaoAlertaEquipamento     NotificacaoTipo = "alerta_equipamento"
+	NotificacaoAlertaNormalizado     NotificacaoTipo = "alerta_equipamento_normalizado"
 )
 
 type NotificacaoPayload struct {
-	TrocaID                  string `json:"trocaId,omitempty" bson:"trocaId,omitempty"`
-	VeiculoAlvoID            string `json:"veiculoAlvoId,omitempty" bson:"veiculoAlvoId,omitempty"`
-	VeiculoOfertadoID        string `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
-	SolicitanteColaboradorID string `json:"solicitanteColaboradorId,omitempty" bson:"solicitanteColaboradorId,omitempty"`
-	SolicitanteNome          string `json:"solicitanteNome,omitempty" bson:"solicitanteNome,omitempty"`
-	VeiculoAlvoPlaca         string `json:"veiculoAlvoPlaca,omitempty" bson:"veiculoAlvoPlaca,omitempty"`
-	VeiculoOfertadoPlaca     string `json:"veiculoOfertadoPlaca,omitempty" bson:"veiculoOfertadoPlaca,omitempty"`
-	Aceita                   *bool  `json:"aceita,omitempty" bson:"aceita,omitempty"`
-	ChamadoID                string `json:"chamadoId,omitempty" bson:"chamadoId,omitempty"`
-	ChamadoNumero            string `json:"chamadoNumero,omitempty" bson:"chamadoNumero,omitempty"`
-	MissaoID                 string `json:"missaoId,omitempty" bson:"missaoId,omitempty"`
-	UnidadeID                string `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
-	DataInicio               string `json:"dataInicio,omitempty" bson:"dataInicio,omitempty"`
+	TrocaID                  string  `json:"trocaId,omitempty" bson:"trocaId,omitempty"`
+	VeiculoAlvoID            string  `json:"veiculoAlvoId,omitempty" bson:"veiculoAlvoId,omitempty"`
+	VeiculoOfertadoID        string  `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
+	SolicitanteColaboradorID string  `json:"solicitanteColaboradorId,omitempty" bson:"solicitanteColaboradorId,omitempty"`
+	SolicitanteNome          string  `json:"solicitanteNome,omitempty" bson:"solicitanteNome,omitempty"`
+	VeiculoAlvoPlaca         string  `json:"veiculoAlvoPlaca,omitempty" bson:"veiculoAlvoPlaca,omitempty"`
+	VeiculoOfertadoPlaca     string  `json:"veiculoOfertadoPlaca,omitempty" bson:"veiculoOfertadoPlaca,omitempty"`
+	Aceita                   *bool   `json:"aceita,omitempty" bson:"aceita,omitempty"`
+	ChamadoID                string  `json:"chamadoId,omitempty" bson:"chamadoId,omitempty"`
+	ChamadoNumero            string  `json:"chamadoNumero,omitempty" bson:"chamadoNumero,omitempty"`
+	MissaoID                 string  `json:"missaoId,omitempty" bson:"missaoId,omitempty"`
+	UnidadeID                string  `json:"unidadeId,omitempty" bson:"unidadeId,omitempty"`
+	DataInicio               string  `json:"dataInicio,omitempty" bson:"dataInicio,omitempty"`
 	HoraInicio               string  `json:"horaInicio,omitempty" bson:"horaInicio,omitempty"`
 	Competencia              string  `json:"competencia,omitempty" bson:"competencia,omitempty"`
 	VeiculoID                string  `json:"veiculoId,omitempty" bson:"veiculoId,omitempty"`
@@ -278,6 +282,8 @@ type NotificacaoPayload struct {
 	DistanciaKm              float64 `json:"distanciaKm,omitempty" bson:"distanciaKm,omitempty"`
 	DivergenciaCondutorID    string  `json:"divergenciaCondutorId,omitempty" bson:"divergenciaCondutorId,omitempty"`
 	RotaExataMotoristaNome   string  `json:"rotaExataMotoristaNome,omitempty" bson:"rotaExataMotoristaNome,omitempty"`
+	EquipamentoID            string  `json:"equipamentoId,omitempty" bson:"equipamentoId,omitempty"`
+	AlertaEquipamentoID      string  `json:"alertaEquipamentoId,omitempty" bson:"alertaEquipamentoId,omitempty"`
 }
 
 type Notificacao struct {
@@ -297,7 +303,7 @@ type TrocaVeiculo struct {
 	DestinatarioColaboradorID primitive.ObjectID  `json:"destinatarioColaboradorId" bson:"destinatarioColaboradorId"`
 	VeiculoAlvoID             primitive.ObjectID  `json:"veiculoAlvoId" bson:"veiculoAlvoId"`
 	VeiculoOfertadoID         *primitive.ObjectID `json:"veiculoOfertadoId,omitempty" bson:"veiculoOfertadoId,omitempty"`
-	SolicitanteNaoAutorizado   bool                `json:"solicitanteNaoAutorizado,omitempty" bson:"solicitanteNaoAutorizado,omitempty"`
+	SolicitanteNaoAutorizado  bool                `json:"solicitanteNaoAutorizado,omitempty" bson:"solicitanteNaoAutorizado,omitempty"`
 	Status                    TrocaVeiculoStatus  `json:"status" bson:"status"`
 	Origem                    TrocaVeiculoOrigem  `json:"origem" bson:"origem"`
 	CreatedAt                 time.Time           `json:"createdAt" bson:"createdAt"`
@@ -454,17 +460,17 @@ type EventoMonitoramento struct {
 }
 
 type DeviceMetric struct {
-	TargetID      string          `json:"targetId"`
-	EquipamentoID string          `json:"equipamentoId"`
-	UnidadeID     string          `json:"unidadeId"`
-	Tipo          DispositivoTipo `json:"tipo"`
-	Host          string          `json:"host"`
-	Porta         int             `json:"porta,omitempty"`
-	Online        bool            `json:"online"`
-	LatenciaMs    float64         `json:"latenciaMs,omitempty"`
-	Valores       map[string]any  `json:"valores,omitempty"`
-	UltimosValores map[string]any `json:"ultimosValores,omitempty"`
-	UpdatedAt     time.Time       `json:"updatedAt"`
+	TargetID       string          `json:"targetId"`
+	EquipamentoID  string          `json:"equipamentoId"`
+	UnidadeID      string          `json:"unidadeId"`
+	Tipo           DispositivoTipo `json:"tipo"`
+	Host           string          `json:"host"`
+	Porta          int             `json:"porta,omitempty"`
+	Online         bool            `json:"online"`
+	LatenciaMs     float64         `json:"latenciaMs,omitempty"`
+	Valores        map[string]any  `json:"valores,omitempty"`
+	UltimosValores map[string]any  `json:"ultimosValores,omitempty"`
+	UpdatedAt      time.Time       `json:"updatedAt"`
 	// DispositivoID legado para clientes antigos (igual a targetId).
 	DispositivoID string `json:"dispositivoId"`
 }

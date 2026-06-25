@@ -19,6 +19,7 @@ import {
   type PainelMonitoramentoTab,
 } from "@/components/painel/painel-monitoramento-subheader";
 import { PainelMapaView } from "@/components/painel/painel-mapa-view";
+import { PainelLogsView } from "@/components/painel/painel-logs-view";
 import { buildMetricMap } from "@/components/unidades/unidade-detail-panel";
 import { UnidadeEquipamentosSection } from "@/components/unidades/unidade-equipamentos-section";
 import { RastreamentoCatalogSync } from "@/components/dashboard/rastreamento-catalog-sync";
@@ -223,6 +224,8 @@ export function PainelMonitoramentoView() {
                 </div>
               ) : null}
             </div>
+          ) : activeTab === "logs" ? (
+            <PainelLogsView selectedUnidade={selected} />
           ) : (
             <PainelMapaView
               unidades={sortedUnidades}

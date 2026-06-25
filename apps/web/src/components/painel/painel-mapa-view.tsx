@@ -62,6 +62,7 @@ export function PainelMapaView({
   const [linhasCoordenadasVisiveis, setLinhasCoordenadasVisiveis] =
     useState(true);
   const [veiculosInfoVisiveis, setVeiculosInfoVisiveis] = useState(true);
+  const [raioAlertaVisivel, setRaioAlertaVisivel] = useState(false);
   const [veiculoSelecionadoId, setVeiculoSelecionadoId] = useState<
     string | null
   >(null);
@@ -203,6 +204,7 @@ export function PainelMapaView({
             plotsAgrupados={plotsAgrupados}
             mapTileVisao={mapTileVisao}
             mostrarInfoVeiculos={veiculosInfoVisiveis}
+            mostrarRaioAlerta={raioAlertaVisivel}
             veiculoSelecionadoId={veiculoSelecionadoId}
             onSelecionarVeiculo={
               hudMapaAtivo ? handleSelecionarVeiculo : undefined
@@ -237,6 +239,8 @@ export function PainelMapaView({
             onLinhasCoordenadasVisiveisChange={setLinhasCoordenadasVisiveis}
             veiculosInfoVisiveis={veiculosInfoVisiveis}
             onVeiculosInfoVisiveisChange={setVeiculosInfoVisiveis}
+            raioAlertaVisivel={raioAlertaVisivel}
+            onRaioAlertaVisivelChange={setRaioAlertaVisivel}
             veiculoSelecionado={veiculoHudSelecionado}
             onFecharVeiculoSelecionado={() => setVeiculoSelecionadoId(null)}
             onOpenHudUnidade={(id) => {
@@ -278,6 +282,8 @@ export function PainelMapaView({
             onLinhasCoordenadasVisiveisChange={setLinhasCoordenadasVisiveis}
             veiculosInfoVisiveis={veiculosInfoVisiveis}
             onVeiculosInfoVisiveisChange={setVeiculosInfoVisiveis}
+            raioAlertaVisivel={raioAlertaVisivel}
+            onRaioAlertaVisivelChange={setRaioAlertaVisivel}
             veiculoSelecionado={veiculoHudSelecionado}
             onFecharVeiculoSelecionado={() => setVeiculoSelecionadoId(null)}
             onExitFullscreen={

@@ -59,6 +59,10 @@ func main() {
 		st = store.NewMemoryStore()
 	}
 
+	if err := st.SeedFaixasConvenioMedicoIfEmpty(ctx); err != nil {
+		log.Printf("aviso: não foi possível popular faixas do convênio médico: %v", err)
+	}
+
 	stateCache := cache.NewStateCache()
 	hub := ws.NewHub(stateCache)
 	go hub.Run()
@@ -100,6 +104,7 @@ func main() {
 	}
 	rastreamentoSvc.SetProximityNotifier(api)
 	rastreamentoSvc.SetCondutorNotifier(api)
+	col.SetNotificador(api)
 	router := httpapi.NewRouter(cfg, api, hub)
 
 	addr := ":" + cfg.Port

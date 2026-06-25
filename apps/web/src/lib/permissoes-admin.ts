@@ -19,7 +19,9 @@ export type PermissaoAdminDetalhadaKey =
   | "rhEscalaTrabalho"
   | "rhCalendarioSobreaviso"
   | "rhRecarregarSaldos"
-  | "rhRegistrarDespesaOutros";
+  | "rhRegistrarDespesaOutros"
+  | "rhConvenioMedico"
+  | "equipAlarmes";
 
 export const PERMISSOES_ADMIN_GRUPOS: {
   titulo: string;
@@ -63,6 +65,15 @@ export const PERMISSOES_ADMIN_GRUPOS: {
     ],
   },
   {
+    titulo: "Equipamentos",
+    itens: [
+      {
+        key: "equipAlarmes",
+        label: "Criar e configurar alarmes nos equipamentos",
+      },
+    ],
+  },
+  {
     titulo: "Recursos Humanos",
     itens: [
       { key: "rhSalariosBonificacoes", label: "Salários e bonificações" },
@@ -82,6 +93,10 @@ export const PERMISSOES_ADMIN_GRUPOS: {
       {
         key: "rhRegistrarDespesaOutros",
         label: "Registrar despesa (para outros colaboradores)",
+      },
+      {
+        key: "rhConvenioMedico",
+        label: "Convênio médico (ver e cadastrar faixas de valores)",
       },
     ],
   },
@@ -107,6 +122,8 @@ const PERMISSOES_DETALHADAS_DEFAULTS: Record<PermissaoAdminDetalhadaKey, boolean
     rhCalendarioSobreaviso: false,
     rhRecarregarSaldos: false,
     rhRegistrarDespesaOutros: false,
+    rhConvenioMedico: false,
+    equipAlarmes: false,
   };
 
 export function emptyPermissoesAdminDetalhadas(): PermissoesAdmin {
@@ -249,6 +266,7 @@ export function migrarPermissoesLegadoParaDetalhadas(
     next.frotaRegistrarPeriodo = true;
     next.frotaRegistrarMulta = true;
     next.frotaTrocarVeiculos = true;
+    next.equipAlarmes = true;
   }
 
   if (permissoes.gestaoRecargas) {
@@ -263,6 +281,7 @@ export function migrarPermissoesLegadoParaDetalhadas(
   if (permissoes.padrao || permissoes.gestaoRecargas || permissoes.financeiro) {
     next.rhEscalaTrabalho = true;
     next.rhCalendarioSobreaviso = true;
+    next.rhConvenioMedico = true;
   }
 
   return next;

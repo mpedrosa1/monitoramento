@@ -32,6 +32,7 @@ export function PainelUnidadesMap({
   plotsAgrupados,
   mapTileVisao,
   mostrarInfoVeiculos,
+  mostrarRaioAlerta,
   veiculoSelecionadoId,
   onSelecionarVeiculo,
 }: {
@@ -49,6 +50,7 @@ export function PainelUnidadesMap({
   plotsAgrupados?: boolean;
   mapTileVisao?: MapaTileVisao;
   mostrarInfoVeiculos?: boolean;
+  mostrarRaioAlerta?: boolean;
   veiculoSelecionadoId?: string | null;
   onSelecionarVeiculo?: (veiculoId: string) => void;
 }) {
@@ -68,6 +70,7 @@ export function PainelUnidadesMap({
         plotsAgrupados={plotsAgrupados}
         mapTileVisao={mapTileVisao}
         mostrarInfoVeiculos={mostrarInfoVeiculos}
+        mostrarRaioAlerta={mostrarRaioAlerta}
         veiculoSelecionadoId={veiculoSelecionadoId}
         onSelecionarVeiculo={onSelecionarVeiculo}
       />

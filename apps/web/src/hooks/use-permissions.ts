@@ -28,6 +28,8 @@ import {
   canRhCalendarioSobreaviso,
   canRhEscalaTrabalho,
   canRhRegistrarDespesaOutros,
+  canRhConvenioMedico,
+  canEquipAlarmes,
   canViewFinanceiro,
   canViewTodasMultasVeiculo,
   isDesenvolvedor,
@@ -80,6 +82,8 @@ export function usePermissions() {
       tipoAcesso,
       permissoesAdmin
     ),
+    canRhConvenioMedico: canRhConvenioMedico(tipoAcesso, permissoesAdmin),
+    canEquipAlarmes: canEquipAlarmes(tipoAcesso, permissoesAdmin),
     canManageMissoes: canManageMissoes(tipoAcesso, permissoesAdmin),
     canManageEquipamentosUnidade: canManageEquipamentosUnidade(
       tipoAcesso,

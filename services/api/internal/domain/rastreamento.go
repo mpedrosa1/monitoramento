@@ -1,7 +1,11 @@
 package domain
 
-// VeiculoProximidadeRaioKm raio padrão para alerta de chegada à unidade.
-const VeiculoProximidadeRaioKm = 5.0
+// VeiculoProximidadeRaioKm raio padrão para alerta de chegada à unidade (1 km).
+const VeiculoProximidadeRaioKm = 1.0
+
+// VeiculoPresencaRaioKm raio para considerar o colaborador presente na unidade
+// (HUD e status operacional, 1 km). Mantido em sincronia com o frontend.
+const VeiculoPresencaRaioKm = 1.0
 
 // VeiculoProximidadeAlerta evento de entrada no raio de uma unidade.
 type VeiculoProximidadeAlerta struct {

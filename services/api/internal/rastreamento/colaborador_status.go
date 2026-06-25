@@ -12,7 +12,7 @@ import (
 
 const (
 	velocidadeDeslocamentoKmH = 2.0
-	presencaUpdatesEstaveis    = 5
+	presencaUpdatesEstaveis   = 5
 )
 
 type vehiclePresenceTrack struct {
@@ -149,7 +149,7 @@ func (s *Service) syncColaboradorStatusRastreamento(
 			continue
 		}
 		active[pos.VeiculoID] = struct{}{}
-		track := s.statusTracker.updateTrack(pos, unidades, domain.VeiculoProximidadeRaioKm)
+		track := s.statusTracker.updateTrack(pos, unidades, domain.VeiculoPresencaRaioKm)
 
 		v, ok := veiculoPorID[pos.VeiculoID]
 		if !ok || v.ColaboradorID.IsZero() {

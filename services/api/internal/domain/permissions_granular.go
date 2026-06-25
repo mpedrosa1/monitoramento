@@ -9,7 +9,8 @@ func temPermissaoGranularExplicita(p PermissoesAdmin) bool {
 		p.FrotaValoresAlugueis || p.FrotaVisualizarContratos ||
 		p.FrotaRegistrarPeriodo || p.FrotaRegistrarMulta || p.FrotaTrocarVeiculos ||
 		p.RhSalariosBonificacoes || p.RhEscalaTrabalho || p.RhCalendarioSobreaviso ||
-		p.RhRecarregarSaldos || p.RhRegistrarDespesaOutros
+		p.RhRecarregarSaldos || p.RhRegistrarDespesaOutros || p.RhConvenioMedico ||
+		p.EquipAlarmes
 }
 
 func limparFlagsLegadoPermissoes(p *PermissoesAdmin) {
@@ -42,6 +43,7 @@ func migrarPermissoesLegadoParaDetalhadas(p *PermissoesAdmin) {
 		p.FrotaRegistrarPeriodo = true
 		p.FrotaRegistrarMulta = true
 		p.FrotaTrocarVeiculos = true
+		p.EquipAlarmes = true
 	}
 	if p.GestaoRecargas {
 		p.RhRecarregarSaldos = true
@@ -53,6 +55,7 @@ func migrarPermissoesLegadoParaDetalhadas(p *PermissoesAdmin) {
 	if p.Padrao || p.GestaoRecargas || p.Financeiro {
 		p.RhEscalaTrabalho = true
 		p.RhCalendarioSobreaviso = true
+		p.RhConvenioMedico = true
 	}
 }
 
@@ -65,7 +68,8 @@ func permissoesAdminComTudo() PermissoesAdmin {
 		FrotaValoresAlugueis: true, FrotaVisualizarContratos: true,
 		FrotaRegistrarPeriodo: true, FrotaRegistrarMulta: true, FrotaTrocarVeiculos: true,
 		RhSalariosBonificacoes: true, RhEscalaTrabalho: true, RhCalendarioSobreaviso: true,
-		RhRecarregarSaldos: true, RhRegistrarDespesaOutros: true,
+		RhRecarregarSaldos: true, RhRegistrarDespesaOutros: true, RhConvenioMedico: true,
+		EquipAlarmes: true,
 	}
 }
 
@@ -114,7 +118,9 @@ func permissoesGranularesIguais(a, b PermissoesAdmin) bool {
 		ea.RhEscalaTrabalho == eb.RhEscalaTrabalho &&
 		ea.RhCalendarioSobreaviso == eb.RhCalendarioSobreaviso &&
 		ea.RhRecarregarSaldos == eb.RhRecarregarSaldos &&
-		ea.RhRegistrarDespesaOutros == eb.RhRegistrarDespesaOutros
+		ea.RhRegistrarDespesaOutros == eb.RhRegistrarDespesaOutros &&
+		ea.RhConvenioMedico == eb.RhConvenioMedico &&
+		ea.EquipAlarmes == eb.EquipAlarmes
 }
 
 func permissoesGranularesSubset(editor, target PermissoesAdmin) bool {
@@ -139,6 +145,8 @@ func permissoesGranularesSubset(editor, target PermissoesAdmin) bool {
 		{t.RhCalendarioSobreaviso, e.RhCalendarioSobreaviso},
 		{t.RhRecarregarSaldos, e.RhRecarregarSaldos},
 		{t.RhRegistrarDespesaOutros, e.RhRegistrarDespesaOutros},
+		{t.RhConvenioMedico, e.RhConvenioMedico},
+		{t.EquipAlarmes, e.EquipAlarmes},
 	}
 	for _, c := range checks {
 		if c.need && !c.have {
@@ -150,7 +158,7 @@ func permissoesGranularesSubset(editor, target PermissoesAdmin) bool {
 
 func temPermissaoRH(p PermissoesAdmin) bool {
 	return p.RhSalariosBonificacoes || p.RhEscalaTrabalho || p.RhCalendarioSobreaviso ||
-		p.RhRecarregarSaldos || p.RhRegistrarDespesaOutros
+		p.RhRecarregarSaldos || p.RhRegistrarDespesaOutros || p.RhConvenioMedico
 }
 
 func CanCrudColaboradores(t TipoAcessoSistema, p *PermissoesAdmin) bool {
@@ -331,6 +339,26 @@ func CanRhRegistrarDespesaOutros(t TipoAcessoSistema, p *PermissoesAdmin) bool {
 		return false
 	}
 	return PermissoesEfetivas(t, p).RhRegistrarDespesaOutros
+}
+
+func CanRhConvenioMedico(t TipoAcessoSistema, p *PermissoesAdmin) bool {
+	if IsMaster(t, p) {
+		return true
+	}
+	if t != TipoAcessoAdministrador {
+		return false
+	}
+	return PermissoesEfetivas(t, p).RhConvenioMedico
+}
+
+func CanEquipAlarmes(t TipoAcessoSistema, p *PermissoesAdmin) bool {
+	if IsMaster(t, p) {
+		return true
+	}
+	if t != TipoAcessoAdministrador {
+		return false
+	}
+	return PermissoesEfetivas(t, p).EquipAlarmes
 }
 
 // CanViewTodasMultasVeiculo — usuário comum vê só multas em seu nome.

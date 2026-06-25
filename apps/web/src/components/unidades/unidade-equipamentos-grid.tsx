@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { ExternalLink } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
+import { EquipamentoAlertasDialog } from "@/components/equipamentos/equipamento-alertas-dialog";
 import type { DeviceMetric, Equipamento, Unidade, UnidadeEquipamento } from "@/lib/types";
 import { monitorTargetId, monitorUnidadeHostTargetId } from "@/lib/types";
 import {
@@ -19,6 +21,8 @@ import type {
   EquipamentosLayout,
 } from "@/lib/equipamentos-layout";
 import { UnidadeEquipamentoLeituras } from "@/components/unidades/unidade-equipamento-leituras";
+
+type ConfigAlertasFn = (link: UnidadeEquipamento, eq?: Equipamento) => void;
 
 function EquipamentoStatusDot({ online }: { online: boolean }) {
   return (
@@ -42,6 +46,7 @@ function EquipamentoAvulsoCard({
   unidadeOffline,
   layout,
   hideWebLink = false,
+  onConfigAlertas,
 }: {
   unidadeIp?: string;
   link: UnidadeEquipamento;
@@ -50,6 +55,7 @@ function EquipamentoAvulsoCard({
   unidadeOffline: boolean;
   layout: EquipamentosLayout;
   hideWebLink?: boolean;
+  onConfigAlertas?: ConfigAlertasFn;
 }) {
   const webUrl = hideWebLink ? undefined : urlPaginaWebEquipamento(unidadeIp, link);
 
@@ -72,6 +78,18 @@ function EquipamentoAvulsoCard({
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {onConfigAlertas ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onConfigAlertas(link, eq)}
+              aria-label="Configurar alertas"
+              title="Configurar alertas"
+            >
+              <Bell className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
           {webUrl ? (
             <Button
               type="button"
@@ -112,6 +130,7 @@ function MaquinaEquipamentosCard({
   unidadeOffline,
   layout,
   hideWebLink = false,
+  onConfigAlertas,
 }: {
   unidadeId: string;
   unidadeIp?: string;
@@ -121,6 +140,7 @@ function MaquinaEquipamentosCard({
   unidadeOffline: boolean;
   layout: EquipamentosLayout;
   hideWebLink?: boolean;
+  onConfigAlertas?: ConfigAlertasFn;
 }) {
   const linkRef = links[0];
   const maquinaNome = nomeMaquinaVinculo(linkRef);
@@ -198,9 +218,23 @@ function MaquinaEquipamentosCard({
               <span className="min-w-0 truncate text-xs font-medium text-foreground">
                 {nomeSensorMaquina(link, eq)}
               </span>
-              {metric ? (
-                <EquipamentoStatusDot online={metric.online} />
-              ) : null}
+              <div className="flex shrink-0 items-center gap-1">
+                {onConfigAlertas ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => onConfigAlertas(link, eq)}
+                    aria-label="Configurar alertas"
+                    title="Configurar alertas"
+                  >
+                    <Bell className="h-3.5 w-3.5" />
+                  </Button>
+                ) : null}
+                {metric ? (
+                  <EquipamentoStatusDot online={metric.online} />
+                ) : null}
+              </div>
             </div>
             <UnidadeEquipamentoLeituras
               eq={eq}
@@ -279,6 +313,7 @@ export function UnidadeEquipamentoGrupoCard({
   layout,
   surface = "painel",
   className,
+  onConfigAlertas,
 }: {
   grupo: GrupoEquipamentoUnidade;
   unidade: Unidade;
@@ -287,6 +322,7 @@ export function UnidadeEquipamentoGrupoCard({
   layout: EquipamentosLayout;
   surface?: "painel" | "hud";
   className?: string;
+  onConfigAlertas?: ConfigAlertasFn;
 }) {
   const unidadeOffline = !(
     metricMap.get(monitorUnidadeHostTargetId(unidade.id))?.online ?? false
@@ -311,6 +347,7 @@ export function UnidadeEquipamentoGrupoCard({
           unidadeOffline={unidadeOffline}
           layout={layout}
           hideWebLink={hideWebLink}
+          onConfigAlertas={onConfigAlertas}
         />
       </div>
     );
@@ -332,6 +369,7 @@ export function UnidadeEquipamentoGrupoCard({
         unidadeOffline={unidadeOffline}
         layout={layout}
         hideWebLink={hideWebLink}
+        onConfigAlertas={onConfigAlertas}
       />
     </div>
   );
@@ -387,6 +425,16 @@ export function UnidadeEquipamentosGrid({
     [grupos, filtro, equipById]
   );
 
+  const { canEquipAlarmes } = usePermissions();
+  const [alertaTarget, setAlertaTarget] = useState<{
+    link: UnidadeEquipamento;
+    eq?: Equipamento;
+  } | null>(null);
+
+  const onConfigAlertas: ConfigAlertasFn | undefined = canEquipAlarmes
+    ? (link, eq) => setAlertaTarget({ link, eq })
+    : undefined;
+
   if (grupos.length === 0) {
     return (
       <p className={cn("text-sm text-muted-foreground", className)}>
@@ -408,26 +456,40 @@ export function UnidadeEquipamentosGrid({
   const isLista = layout === "lista";
 
   return (
-    <ul
-      className={cn(
-        isLista
-          ? "flex flex-col gap-2"
-          : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-        className
-      )}
-    >
-      {gruposVisiveis.map((grupo) => (
-        <li key={getGrupoEquipamentoKey(grupo)}>
-          <UnidadeEquipamentoGrupoCard
-            grupo={grupo}
-            unidade={unidade}
-            equipById={equipById}
-            metricMap={metricMap}
-            layout={layout}
-            surface="painel"
-          />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul
+        className={cn(
+          isLista
+            ? "flex flex-col gap-2"
+            : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+          className
+        )}
+      >
+        {gruposVisiveis.map((grupo) => (
+          <li key={getGrupoEquipamentoKey(grupo)}>
+            <UnidadeEquipamentoGrupoCard
+              grupo={grupo}
+              unidade={unidade}
+              equipById={equipById}
+              metricMap={metricMap}
+              layout={layout}
+              surface="painel"
+              onConfigAlertas={onConfigAlertas}
+            />
+          </li>
+        ))}
+      </ul>
+      {alertaTarget ? (
+        <EquipamentoAlertasDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setAlertaTarget(null);
+          }}
+          unidade={unidade}
+          link={alertaTarget.link}
+          equipamento={alertaTarget.eq}
+        />
+      ) : null}
+    </>
   );
 }

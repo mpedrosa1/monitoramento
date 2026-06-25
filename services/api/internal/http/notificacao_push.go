@@ -59,7 +59,37 @@ func notificacaoPushData(n domain.Notificacao) map[string]string {
 	if n.Payload.VeiculoID != "" {
 		data["veiculoId"] = n.Payload.VeiculoID
 	}
+	if n.Payload.EquipamentoID != "" {
+		data["equipamentoId"] = n.Payload.EquipamentoID
+	}
+	if n.Payload.AlertaEquipamentoID != "" {
+		data["alertaEquipamentoId"] = n.Payload.AlertaEquipamentoID
+	}
 	return data
+}
+
+// NotificarAlertaEquipamento entrega um alerta de equipamento a todos os usuários
+// do sistema (notificação in-app + push). Implementa collector.AlertaNotifier.
+func (a *API) NotificarAlertaEquipamento(titulo, mensagem string, tipo domain.NotificacaoTipo, payload domain.NotificacaoPayload) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		colabs, err := a.Store.ListColaboradores(ctx)
+		if err != nil {
+			log.Printf("notificar alerta equipamento: listar colaboradores: %v", err)
+			return
+		}
+		for _, colab := range colabs {
+			a.criarENotificar(ctx, domain.Notificacao{
+				DestinatarioColaboradorID: colab.ID,
+				Tipo:                      tipo,
+				Titulo:                    titulo,
+				Mensagem:                  mensagem,
+				Payload:                   payload,
+			})
+		}
+	}()
 }
 
 func (a *API) criarENotificar(ctx context.Context, notif domain.Notificacao) {

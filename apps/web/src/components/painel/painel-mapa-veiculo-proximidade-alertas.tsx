@@ -15,8 +15,13 @@ function formatPlaca(placa: string) {
   return placa.trim() || "—";
 }
 
+/** Exibe a distância em metros quando menor que 1 km. */
+function formatDistancia(km: number) {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
+
 function buildDescription(alerta: VeiculoProximidadeAlerta) {
-  return `Veículo ${formatPlaca(alerta.placa)} entrou no raio de ${alerta.raioKm.toFixed(0)} km da unidade ${alerta.unidadeNome} (${alerta.distanciaKm.toFixed(1)} km de distância).`;
+  return `Veículo ${formatPlaca(alerta.placa)} entrou no raio de ${formatDistancia(alerta.raioKm)} da unidade ${alerta.unidadeNome} (${formatDistancia(alerta.distanciaKm)} de distância).`;
 }
 
 /** Exibe toast e som quando um veículo entra no raio de uma unidade. */

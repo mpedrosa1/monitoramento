@@ -8,8 +8,8 @@ import type {
   VeiculoPosicao,
 } from "@/lib/types";
 
-/** Raio em km para considerar veículo próximo da unidade (igual ao backend). */
-export const VEICULO_PRESENCA_RAIO_KM = 5;
+/** Raio em km (1 km) para considerar o veículo presente na unidade (igual ao backend). */
+export const VEICULO_PRESENCA_RAIO_KM = 1;
 
 /** Atualizações consecutivas estáveis para confirmar presença na unidade. */
 export const VEICULO_PRESENCA_UPDATES_ESTAVEIS = 5;

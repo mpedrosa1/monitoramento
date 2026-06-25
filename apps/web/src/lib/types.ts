@@ -230,6 +230,53 @@ export interface PermissoesAdmin {
   rhCalendarioSobreaviso?: boolean;
   rhRecarregarSaldos?: boolean;
   rhRegistrarDespesaOutros?: boolean;
+  rhConvenioMedico?: boolean;
+  equipAlarmes?: boolean;
+}
+
+export type AlertaTipo = "numerico" | "estado";
+
+export type AlertaOperador =
+  | "gt"
+  | "lt"
+  | "gte"
+  | "lte"
+  | "fora"
+  | "entre"
+  | "igual"
+  | "diferente";
+
+/** Configuração de alarme de um ponto de um equipamento numa unidade. */
+export interface AlertaEquipamento {
+  id: string;
+  unidadeId: string;
+  equipamentoId: string;
+  porta: number;
+  unidadeNome?: string;
+  equipamentoNome?: string;
+  pontoNome: string;
+  pontoUnidade?: string;
+  tipo: AlertaTipo;
+  operador: AlertaOperador;
+  valor?: number;
+  valor2?: number;
+  estadoChave?: string;
+  estadoExibicao?: string;
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Faixa etária da tabela do convênio médico (mensalidade + desconto em folha). */
+export interface FaixaConvenioMedico {
+  id: string;
+  idadeMin: number;
+  /** Limite superior inclusivo; <= 0 indica faixa sem teto (ex.: 59+). */
+  idadeMax: number;
+  valor: number;
+  descontoFolha: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ColaboradorEndereco {
@@ -691,7 +738,9 @@ export interface WSMessage<T = unknown> {
     | "update"
     | "notification"
     | "veiculo_posicoes_snapshot"
-    | "veiculo_posicoes_update";
+    | "veiculo_posicoes_update"
+    | "veiculo_proximidade_alerta"
+    | "evento";
   payload: T;
 }
 
@@ -701,5 +750,7 @@ export interface EventoMonitoramento {
   tipo: string;
   severidade: string;
   mensagem: string;
+  /** Metadados do evento: { status: "online"|"offline", host, porta, nome }. */
+  dados?: Record<string, unknown>;
   createdAt: string;
 }

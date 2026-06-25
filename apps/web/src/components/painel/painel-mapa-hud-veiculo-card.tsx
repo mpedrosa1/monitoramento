@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Car, GripVertical, X } from "lucide-react";
 import { COLABORADOR_AVATAR_PADRAO } from "@/lib/colaborador-avatar";
+import { googleStreetViewEmbedUrl } from "@/lib/geocode";
 import { PainelMapaHudGlass } from "@/components/painel/painel-mapa-hud-glass";
 import {
   formatOdometroKm,
@@ -18,7 +18,7 @@ import {
   saveVeiculoCardPos,
 } from "@/lib/mapa-hud-layout-storage";
 import type { Colaborador, Veiculo, VeiculoPosicao } from "@/lib/types";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { mapaHudCornerScaleStyle } from "@/lib/mapa-hud-scale";
 import { cn } from "@/lib/utils";
 
@@ -28,23 +28,21 @@ export type VeiculoHudSelecao = {
   motorista?: Colaborador;
 };
 
-const CARD_WIDTH = 288;
+const CARD_WIDTH = 352;
 const CARD_MIN_HEIGHT = 200;
 
-function posicaoInicialInferiorDireita(
+function posicaoInicialCentro(
   containerWidth: number,
   containerHeight: number,
   cardWidth: number,
   cardHeight: number,
-  hudScale: number,
-  paddingRight: number,
-  paddingBottom: number
+  hudScale: number
 ): HudEquipamentoPos {
   const w = cardWidth * hudScale;
   const h = cardHeight * hudScale;
   return clampHudEquipamentoPos(
-    containerWidth - w - paddingRight,
-    containerHeight - h - paddingBottom,
+    (containerWidth - w) / 2,
+    (containerHeight - h) / 2,
     cardWidth,
     cardHeight,
     containerWidth,
@@ -75,15 +73,11 @@ function clampPosicaoNoContainer(
 export function PainelMapaHudVeiculoCard({
   selecao,
   hudScale = 1,
-  paddingRight = 8,
-  paddingBottom = 8,
   positionStorageKey,
   onClose,
 }: {
   selecao: VeiculoHudSelecao;
   hudScale?: number;
-  paddingRight?: number;
-  paddingBottom?: number;
   /** Chave para persistir a posição no navegador (ex.: "geral" ou "unidade:abc"). */
   positionStorageKey: string;
   onClose: () => void;
@@ -111,6 +105,18 @@ export function PainelMapaHudVeiculoCard({
   const motoristaFoto =
     motorista?.fotoUrl?.trim() || COLABORADOR_AVATAR_PADRAO;
   const moving = (posicao.velocidadeKm ?? 0) >= 2;
+  const temCoords =
+    Number.isFinite(posicao.lat) &&
+    Number.isFinite(posicao.lng) &&
+    posicao.lat !== 0 &&
+    posicao.lng !== 0;
+  // Arredonda (~1 m) para não recarregar o Street View a cada microajuste de GPS.
+  const streetViewUrl = temCoords
+    ? googleStreetViewEmbedUrl(
+        Number(posicao.lat.toFixed(5)),
+        Number(posicao.lng.toFixed(5))
+      )
+    : null;
 
   const persistirPosicao = useCallback(
     (pos: HudEquipamentoPos) => {
@@ -123,18 +129,16 @@ export function PainelMapaHudVeiculoCard({
     const container = overlayRef.current;
     const card = cardRef.current;
     if (!container || !card) return;
-    const next = posicaoInicialInferiorDireita(
+    const next = posicaoInicialCentro(
       container.clientWidth,
       container.clientHeight,
       card.offsetWidth || CARD_WIDTH,
       card.offsetHeight || CARD_MIN_HEIGHT,
-      hudScale,
-      paddingRight + 12,
-      paddingBottom + 12
+      hudScale
     );
     setPosition(next);
     positionRef.current = next;
-  }, [hudScale, paddingRight, paddingBottom]);
+  }, [hudScale]);
 
   useLayoutEffect(() => {
     if (positionedForKeyRef.current === positionStorageKey) return;
@@ -248,7 +252,7 @@ export function PainelMapaHudVeiculoCard({
       <div
         ref={cardRef}
         className={cn(
-          "pointer-events-auto absolute max-w-[min(100%,20rem)] animate-in fade-in zoom-in-95 duration-300",
+          "pointer-events-auto absolute max-w-[min(100%,24rem)] animate-in fade-in zoom-in-95 duration-300",
           position == null && "invisible"
         )}
         style={
@@ -256,15 +260,15 @@ export function PainelMapaHudVeiculoCard({
             ? {
                 left: position.x,
                 top: position.y,
-                width: "min(100%, 18rem)",
+                width: "min(100%, 22rem)",
                 ...mapaHudCornerScaleStyle(hudScale, "top left"),
               }
-            : { left: 0, top: 0, width: "min(100%, 18rem)" }
+            : { left: 0, top: 0, width: "min(100%, 22rem)" }
         }
       >
         <PainelMapaHudGlass
           accent={moving ? "online" : "sem_ip"}
-          className="w-[min(100%,18rem)] shadow-xl sm:w-[min(100%,20rem)]"
+          className="w-[min(100%,22rem)] shadow-xl sm:w-[min(100%,24rem)]"
         >
           <div
             className="flex cursor-grab items-center border-b border-white/10 bg-background/30 active:cursor-grabbing"
@@ -345,16 +349,17 @@ export function PainelMapaHudVeiculoCard({
               </p>
             ) : null}
 
-            {veiculo ? (
-              <Link
-                href={`/dashboard/veiculos/${veiculo.id}`}
-                className={cn(
-                  buttonVariants({ variant: "secondary", size: "sm" }),
-                  "w-full bg-background/50"
-                )}
-              >
-                Ver ficha do veículo
-              </Link>
+            {streetViewUrl ? (
+              <div className="overflow-hidden rounded-lg border border-white/10">
+                <iframe
+                  title="Street View do local do veículo"
+                  src={streetViewUrl}
+                  className="block h-56 w-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
             ) : null}
           </div>
         </PainelMapaHudGlass>

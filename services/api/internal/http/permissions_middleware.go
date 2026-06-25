@@ -85,3 +85,15 @@ func RequireRhCalendarioSobreaviso(next http.Handler) http.Handler {
 func RequireRhRegistrarDespesaOutros(next http.Handler) http.Handler {
 	return requirePerm(domain.CanRhRegistrarDespesaOutros, "sem permissão para registrar despesas de outros colaboradores")(next)
 }
+
+func RequireRhConvenioMedico(next http.Handler) http.Handler {
+	return requirePerm(domain.CanRhConvenioMedico, "sem permissão para o convênio médico")(next)
+}
+
+func RequireEquipAlarmes(next http.Handler) http.Handler {
+	return requirePerm(domain.CanEquipAlarmes, "sem permissão para configurar alarmes de equipamentos")(next)
+}
+
+func RequireVerFaixasConvenio(next http.Handler) http.Handler {
+	return requirePerm(domain.CanVerFaixasConvenio, "sem permissão para ver as faixas do convênio")(next)
+}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/lib/auth-session";
 import { getWsBaseUrl } from "@/lib/api-base-url";
-import type { DeviceMetric, Notificacao, VeiculoPosicao, VeiculoProximidadeAlerta, WSMessage } from "@/lib/types";
+import type { DeviceMetric, EventoMonitoramento, Notificacao, VeiculoPosicao, VeiculoProximidadeAlerta, WSMessage } from "@/lib/types";
 
 function wsUrlWithToken(): string | null {
   const token = getAuthToken();
@@ -17,6 +17,7 @@ export type SocketStatus = "connecting" | "connected" | "disconnected";
 
 type NotificationListener = (notification: Notificacao) => void;
 type ProximityAlertListener = (alerta: VeiculoProximidadeAlerta) => void;
+type EventoListener = (evento: EventoMonitoramento) => void;
 
 export function useMonitoringSocket() {
   const [status, setStatus] = useState<SocketStatus>("disconnected");
@@ -26,6 +27,7 @@ export function useMonitoringSocket() {
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationListenersRef = useRef<Set<NotificationListener>>(new Set());
   const proximityListenersRef = useRef<Set<ProximityAlertListener>>(new Set());
+  const eventoListenersRef = useRef<Set<EventoListener>>(new Set());
 
   const subscribeNotifications = useCallback(
     (listener: NotificationListener) => {
@@ -46,6 +48,13 @@ export function useMonitoringSocket() {
     },
     []
   );
+
+  const subscribeEventos = useCallback((listener: EventoListener) => {
+    eventoListenersRef.current.add(listener);
+    return () => {
+      eventoListenersRef.current.delete(listener);
+    };
+  }, []);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -70,6 +79,7 @@ export function useMonitoringSocket() {
           | Notificacao
           | VeiculoPosicao[]
           | VeiculoProximidadeAlerta
+          | EventoMonitoramento
         >;
         if (msg.type === "snapshot" && Array.isArray(msg.payload)) {
           setMetrics(msg.payload as DeviceMetric[]);
@@ -101,6 +111,11 @@ export function useMonitoringSocket() {
           for (const listener of proximityListenersRef.current) {
             listener(alerta);
           }
+        } else if (msg.type === "evento" && msg.payload) {
+          const evento = msg.payload as EventoMonitoramento;
+          for (const listener of eventoListenersRef.current) {
+            listener(evento);
+          }
         }
       } catch {
         /* ignore malformed */
@@ -124,5 +139,5 @@ export function useMonitoringSocket() {
     };
   }, [connect]);
 
-  return { status, metrics, veiculoPosicoes, subscribeNotifications, subscribeProximityAlerts };
+  return { status, metrics, veiculoPosicoes, subscribeNotifications, subscribeProximityAlerts, subscribeEventos };
 }
